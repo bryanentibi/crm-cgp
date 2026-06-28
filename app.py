@@ -1,165 +1,252 @@
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
-import json, os, threading, time
+import json, os
 from datetime import datetime, date
 
 app = Flask(__name__, static_folder='static')
 CORS(app)
+
+DATABASE_URL = os.environ.get('DATABASE_URL')
+
+if DATABASE_URL:
+    import psycopg2
+    from psycopg2.extras import RealDictCursor
+    def get_db():
+        return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+    USE_DB = True
+    print("Mode PostgreSQL Railway")
+else:
+    USE_DB = False
+    print("CRM demarré sur http://localhost:8181")
+
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
 
-def load_json(f):
-    p = os.path.join(DATA_DIR, f)
-    if not os.path.exists(p): return []
-    with open(p, 'r', encoding='utf-8') as fh: return json.load(fh)
+def load_json(filename):
+    path = os.path.join(DATA_DIR, filename)
+    if os.path.exists(path):
+        with open(path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    return []
 
-def save_json(f, data):
-    p = os.path.join(DATA_DIR, f)
-    with open(p, 'w', encoding='utf-8') as fh: json.dump(data, fh, ensure_ascii=False, indent=2, default=str)
+def save_json(filename, data):
+    path = os.path.join(DATA_DIR, filename)
+    with open(path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
 
 @app.route('/')
-def index(): return send_from_directory('static', 'index.html')
+def index():
+    return send_from_directory('static', 'index.html')
 
 @app.route('/api/stats')
 def stats():
-    s = load_json('professionnels_sante.json')
-    p = load_json('pharmacies.json')
-    today = date.today().isoformat()
-    def by_status(lst):
-        c = {}
-        for x in lst: c[x.get('statut','nouveau')] = c.get(x.get('statut','nouveau'),0)+1
-        return c
-    def by_spe(lst):
-        c = {}
-        for x in lst: c[x.get('specialite','?')] = c.get(x.get('specialite','?'),0)+1
-        return dict(sorted(c.items(), key=lambda x: -x[1]))
-    return jsonify({
-        'sante': {'total': len(s), 'statuts': by_status(s), 'par_specialite': by_spe(s), 'nouveaux_jour': sum(1 for x in s if x.get('date_ajout','').startswith(today)), 'avec_tel': sum(1 for x in s if x.get('telephone_direct'))},
-        'pharmacies': {'total': len(p), 'statuts': by_status(p), 'avec_dirigeant': sum(1 for x in p if x.get('dirigeant')), 'avec_tel': sum(1 for x in p if x.get('telephone_direct'))},
-        'mise_a_jour': datetime.now().isoformat()
-    })
+    if USE_DB:
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) as total FROM sante")
+        total_sante = cur.fetchone()['total']
+        cur.execute("SELECT COUNT(*) as total FROM sante WHERE telephone_direct IS NOT NULL AND telephone_direct != ''")
+        avec_tel = cur.fetchone()['total']
+        cur.execute("SELECT COUNT(*) as total FROM sante WHERE date_ajout = CURRENT_DATE::text")
+        nouveaux = cur.fetchone()['total']
+        cur.execute("SELECT specialite, COUNT(*) as cnt FROM sante GROUP BY specialite ORDER BY cnt DESC LIMIT 10")
+        par_spe = {r['specialite']: r['cnt'] for r in cur.fetchall() if r['specialite']}
+        cur.execute("SELECT statut, COUNT(*) as cnt FROM sante GROUP BY statut")
+        statuts_s = {r['statut']: r['cnt'] for r in cur.fetchall()}
+        cur.execute("SELECT COUNT(*) as total FROM pharmacies")
+        total_phr = cur.fetchone()['total']
+        cur.execute("SELECT COUNT(*) as total FROM pharmacies WHERE dirigeant IS NOT NULL AND dirigeant != ''")
+        avec_dir = cur.fetchone()['total']
+        cur.execute("SELECT statut, COUNT(*) as cnt FROM pharmacies GROUP BY statut")
+        statuts_p = {r['statut']: r['cnt'] for r in cur.fetchall()}
+        conn.close()
+        return jsonify({
+            'sante': {'total': total_sante, 'avec_tel': avec_tel, 'nouveaux_jour': nouveaux, 'par_specialite': par_spe, 'statuts': statuts_s},
+            'pharmacies': {'total': total_phr, 'avec_dirigeant': avec_dir, 'avec_tel': 0, 'statuts': statuts_p},
+            'mise_a_jour': datetime.now().isoformat()
+        })
+    else:
+        sante = load_json('professionnels_sante.json')
+        pharmacies = load_json('pharmacies.json')
+        today = date.today().isoformat()
+        par_spe = {}
+        statuts_s = {}
+        avec_tel = 0
+        nouveaux = 0
+        for c in sante:
+            s = c.get('specialite', 'Inconnu') or 'Inconnu'
+            par_spe[s] = par_spe.get(s, 0) + 1
+            st = c.get('statut', 'nouveau') or 'nouveau'
+            statuts_s[st] = statuts_s.get(st, 0) + 1
+            if c.get('telephone_direct'): avec_tel += 1
+            if c.get('date_ajout', '')[:10] == today: nouveaux += 1
+        statuts_p = {}
+        avec_dir = 0
+        for p in pharmacies:
+            st = p.get('statut', 'nouveau') or 'nouveau'
+            statuts_p[st] = statuts_p.get(st, 0) + 1
+            if p.get('dirigeant'): avec_dir += 1
+        return jsonify({
+            'sante': {'total': len(sante), 'avec_tel': avec_tel, 'nouveaux_jour': nouveaux, 'par_specialite': par_spe, 'statuts': statuts_s},
+            'pharmacies': {'total': len(pharmacies), 'avec_dirigeant': avec_dir, 'avec_tel': 0, 'statuts': statuts_p},
+            'mise_a_jour': datetime.now().isoformat()
+        })
 
 @app.route('/api/sante')
-def get_sante():
-    data = load_json('professionnels_sante.json')
-    search = request.args.get('search','').lower()
-    statut = request.args.get('statut','')
-    specialites = request.args.get('specialites','')
-    mode = request.args.get('mode','')
-    dept = request.args.get('dept','')
-    nouveaux = request.args.get('nouveaux','')
-    sans_direct = request.args.get('sans_direct','')
-    avec_direct = request.args.get('avec_direct','')
-    sort = request.args.get('sort','date_debut')
-    page = max(1, int(request.args.get('page',1)))
-    per_page = min(500, int(request.args.get('per_page',50)))
+def api_sante():
+    page = int(request.args.get('page', 1))
+    per_page = int(request.args.get('per_page', 50))
+    search = request.args.get('search', '').lower()
+    statut = request.args.get('statut', '')
+    avec_direct = request.args.get('avec_direct', '')
+    sans_direct = request.args.get('sans_direct', '')
+    nouveaux = request.args.get('nouveaux', '')
+    specialites = request.args.get('specialites', '')
 
-    f = data
-    if search: f = [x for x in f if search in (x.get('nom','')+' '+x.get('prenom','')+' '+x.get('ville','')).lower()]
-    if statut: f = [x for x in f if x.get('statut') == statut]
-    if specialites:
-        sl = [s.lower() for s in specialites.split('|')]
-        f = [x for x in f if any(s in x.get('specialite','').lower() for s in sl)]
-    if mode: f = [x for x in f if mode.lower() in x.get('mode_exercice','').lower()]
-    if dept: f = [x for x in f if x.get('cp','').startswith(dept)]
-    if nouveaux == '1':
-        today = date.today().isoformat()
-        f = [x for x in f if x.get('date_ajout','').startswith(today)]
-    if sans_direct == '1': f = [x for x in f if not x.get('telephone_direct')]
-    if avec_direct == '1': f = [x for x in f if x.get('telephone_direct')]
+    if USE_DB:
+        conn = get_db()
+        cur = conn.cursor()
+        where = ["1=1"]
+        params = []
+        if search:
+            where.append("(LOWER(nom) LIKE %s OR LOWER(ville) LIKE %s OR LOWER(prenom) LIKE %s)")
+            params += [f'%{search}%', f'%{search}%', f'%{search}%']
+        if statut:
+            where.append("statut = %s")
+            params.append(statut)
+        if avec_direct:
+            where.append("telephone_direct IS NOT NULL AND telephone_direct != ''")
+        if sans_direct:
+            where.append("(telephone_direct IS NULL OR telephone_direct = '')")
+        if nouveaux:
+            where.append("date_ajout = CURRENT_DATE::text")
+        if specialites:
+            spes = specialites.split('|')
+            where.append("(" + " OR ".join(["LOWER(specialite) LIKE %s"] * len(spes)) + ")")
+            params += [f'%{s.lower()}%' for s in spes]
+        where_str = " AND ".join(where)
+        cur.execute(f"SELECT COUNT(*) as total FROM sante WHERE {where_str}", params)
+        total = cur.fetchone()['total']
+        offset = (page - 1) * per_page
+        cur.execute(f"SELECT * FROM sante WHERE {where_str} ORDER BY id LIMIT %s OFFSET %s", params + [per_page, offset])
+        rows = [dict(r) for r in cur.fetchall()]
+        conn.close()
+        return jsonify({'data': rows, 'total': total, 'page': page, 'pages': (total + per_page - 1) // per_page})
+    else:
+        data = load_json('professionnels_sante.json')
+        if search:
+            data = [c for c in data if search in (c.get('nom','') or '').lower() or search in (c.get('ville','') or '').lower() or search in (c.get('prenom','') or '').lower()]
+        if statut:
+            data = [c for c in data if c.get('statut','nouveau') == statut]
+        if avec_direct:
+            data = [c for c in data if c.get('telephone_direct')]
+        if sans_direct:
+            data = [c for c in data if not c.get('telephone_direct')]
+        if specialites:
+            spes = [s.lower() for s in specialites.split('|')]
+            data = [c for c in data if any(s in (c.get('specialite','') or '').lower() for s in spes)]
+        total = len(data)
+        start = (page - 1) * per_page
+        return jsonify({'data': data[start:start+per_page], 'total': total, 'page': page, 'pages': (total + per_page - 1) // per_page})
 
-    # Tri : avec tel d'abord, puis par date
-    f = sorted(f, key=lambda x: (0 if x.get('telephone_direct') else 1, x.get('date_debut') or x.get('date_ajout') or ''), reverse=False)
-    if sort == 'date_desc': f = sorted(f, key=lambda x: x.get('date_debut') or x.get('date_ajout') or '', reverse=True)
-
-    total = len(f)
-    start = (page-1)*per_page
-    return jsonify({'data': f[start:start+per_page], 'total': total, 'page': page, 'pages': max(1,(total+per_page-1)//per_page)})
-
-@app.route('/api/sante/<int:sid>', methods=['PATCH'])
-def update_sante(sid):
-    data = load_json('professionnels_sante.json')
+@app.route('/api/sante/<int:id>', methods=['PATCH'])
+def update_sante(id):
     body = request.json
-    for x in data:
-        if x['id'] == sid:
-            for k,v in body.items(): x[k] = v
-            x['date_modif'] = datetime.now().isoformat()
-            break
-    save_json('professionnels_sante.json', data)
+    if USE_DB:
+        conn = get_db()
+        cur = conn.cursor()
+        fields = []
+        params = []
+        for k in ['statut', 'note', 'telephone_direct']:
+            if k in body:
+                fields.append(f"{k} = %s")
+                params.append(body[k])
+        if fields:
+            cur.execute(f"UPDATE sante SET {', '.join(fields)} WHERE id = %s", params + [id])
+            conn.commit()
+        conn.close()
+    else:
+        data = load_json('professionnels_sante.json')
+        for c in data:
+            if c.get('id') == id:
+                c.update(body)
+                break
+        save_json('professionnels_sante.json', data)
     return jsonify({'ok': True})
 
 @app.route('/api/pharmacies')
-def get_pharmacies():
-    data = load_json('pharmacies.json')
-    search = request.args.get('search','').lower()
-    statut = request.args.get('statut','')
-    sans_direct = request.args.get('sans_direct','')
-    avec_direct = request.args.get('avec_direct','')
-    dept = request.args.get('dept','')
-    page = max(1, int(request.args.get('page',1)))
-    per_page = min(500, int(request.args.get('per_page',50)))
+def api_pharmacies():
+    page = int(request.args.get('page', 1))
+    per_page = int(request.args.get('per_page', 50))
+    search = request.args.get('search', '').lower()
+    statut = request.args.get('statut', '')
+    avec_direct = request.args.get('avec_direct', '')
 
-    f = data
-    if search: f = [x for x in f if search in (x.get('nom','')+' '+x.get('dirigeant','')+' '+x.get('ville','')).lower()]
-    if statut: f = [x for x in f if x.get('statut') == statut]
-    if dept: f = [x for x in f if x.get('cp','').startswith(dept)]
-    if sans_direct == '1': f = [x for x in f if not x.get('telephone_direct')]
-    if avec_direct == '1': f = [x for x in f if x.get('telephone_direct')]
+    if USE_DB:
+        conn = get_db()
+        cur = conn.cursor()
+        where = ["1=1"]
+        params = []
+        if search:
+            where.append("(LOWER(nom) LIKE %s OR LOWER(dirigeant) LIKE %s OR LOWER(ville) LIKE %s)")
+            params += [f'%{search}%', f'%{search}%', f'%{search}%']
+        if statut:
+            where.append("statut = %s")
+            params.append(statut)
+        if avec_direct:
+            where.append("telephone_direct IS NOT NULL AND telephone_direct != ''")
+        where_str = " AND ".join(where)
+        cur.execute(f"SELECT COUNT(*) as total FROM pharmacies WHERE {where_str}", params)
+        total = cur.fetchone()['total']
+        offset = (page - 1) * per_page
+        cur.execute(f"SELECT * FROM pharmacies WHERE {where_str} ORDER BY id LIMIT %s OFFSET %s", params + [per_page, offset])
+        rows = [dict(r) for r in cur.fetchall()]
+        conn.close()
+        return jsonify({'data': rows, 'total': total, 'page': page, 'pages': (total + per_page - 1) // per_page})
+    else:
+        data = load_json('pharmacies.json')
+        if search:
+            data = [c for c in data if search in (c.get('nom','') or '').lower() or search in (c.get('dirigeant','') or '').lower() or search in (c.get('ville','') or '').lower()]
+        if statut:
+            data = [c for c in data if c.get('statut','nouveau') == statut]
+        if avec_direct:
+            data = [c for c in data if c.get('telephone_direct')]
+        total = len(data)
+        start = (page - 1) * per_page
+        return jsonify({'data': data[start:start+per_page], 'total': total, 'page': page, 'pages': (total + per_page - 1) // per_page})
 
-    f = sorted(f, key=lambda x: (0 if x.get('telephone_direct') else 1, x.get('nom','')))
-
-    total = len(f)
-    start = (page-1)*per_page
-    return jsonify({'data': f[start:start+per_page], 'total': total, 'page': page, 'pages': max(1,(total+per_page-1)//per_page)})
-
-@app.route('/api/pharmacies/<int:pid>', methods=['PATCH'])
-def update_pharmacie(pid):
-    data = load_json('pharmacies.json')
+@app.route('/api/pharmacies/<int:id>', methods=['PATCH'])
+def update_pharmacies(id):
     body = request.json
-    for x in data:
-        if x['id'] == pid:
-            for k,v in body.items(): x[k] = v
-            x['date_modif'] = datetime.now().isoformat()
-            break
-    save_json('pharmacies.json', data)
+    if USE_DB:
+        conn = get_db()
+        cur = conn.cursor()
+        fields = []
+        params = []
+        for k in ['statut', 'note', 'telephone_direct']:
+            if k in body:
+                fields.append(f"{k} = %s")
+                params.append(body[k])
+        if fields:
+            cur.execute(f"UPDATE pharmacies SET {', '.join(fields)} WHERE id = %s", params + [id])
+            conn.commit()
+        conn.close()
+    else:
+        data = load_json('pharmacies.json')
+        for c in data:
+            if c.get('id') == id:
+                c.update(body)
+                break
+        save_json('pharmacies.json', data)
     return jsonify({'ok': True})
-
-scraping_status = {'running': False, 'progress': 0, 'message': '', 'nouveaux': 0}
-
-@app.route('/api/scraping/status')
-def scraping_status_route(): return jsonify(scraping_status)
 
 @app.route('/api/scraping/launch', methods=['POST'])
 def launch_scraping():
-    if scraping_status['running']: return jsonify({'error': 'Déjà en cours'}), 400
-    sources = request.json.get('sources', ['powerbi'])
-    t = threading.Thread(target=run_scraping, args=(sources,))
-    t.daemon = True
-    t.start()
-    return jsonify({'ok': True})
+    return jsonify({'ok': True, 'message': 'Scraping non disponible sur Railway'})
 
-def run_scraping(sources):
-    import subprocess, sys
-    scraping_status['running'] = True
-    scraping_status['progress'] = 0
-    try:
-        for i, src in enumerate(sources):
-            scraping_status['message'] = f'Scraping {src}...'
-            scraping_status['progress'] = int(i/len(sources)*90)
-            script = os.path.join(os.path.dirname(__file__), 'scrapers', f'{src}.py')
-            if os.path.exists(script):
-                subprocess.run([sys.executable, script], timeout=600)
-            time.sleep(1)
-        scraping_status['progress'] = 100
-        scraping_status['message'] = 'Terminé !'
-    except Exception as e:
-        scraping_status['message'] = f'Erreur: {e}'
-    finally:
-        scraping_status['running'] = False
+@app.route('/api/scraping/status')
+def scraping_status():
+    return jsonify({'running': False, 'progress': 100, 'message': 'Idle'})
 
 if __name__ == '__main__':
-    os.makedirs(DATA_DIR, exist_ok=True)
-    for f in ['professionnels_sante.json', 'pharmacies.json']:
-        if not os.path.exists(os.path.join(DATA_DIR, f)):
-            save_json(f, [])
-    print('CRM démarré sur http://localhost:5000')
-    app.run(debug=True, host='0.0.0.0', port=int(os.environ.get("PORT", 8181)))
+    port = int(os.environ.get('PORT', 8181))
+    app.run(debug=True, host='0.0.0.0', port=port)
