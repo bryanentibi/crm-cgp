@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ProspectSanté CRM</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0D1117;--bg2:#161B22;--bg3:#1C2128;--bg4:#21262D;
+  --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.15);
+  --text:#E6EDF3;--text2:#8B949E;--text3:#484F58;
+  --blue:#2F81F7;--blue2:#388BFD;--blue-dim:rgba(47,129,247,0.15);
+  --green:#3FB950;--green-dim:rgba(63,185,80,0.15);
+  --orange:#F78166;--orange-dim:rgba(247,129,102,0.15);
+  --purple:#BC8CFF;--purple-dim:rgba(188,140,255,0.15);
+  --cyan:#79C0FF;--cyan-dim:rgba(121,192,255,0.15);
+  --yellow:#E3B341;--yellow-dim:rgba(227,179,65,0.15);
+  --red:#F85149;--red-dim:rgba(248,81,73,0.15);
+  --pink:#F778BA;--pink-dim:rgba(247,120,186,0.15);
+  --r:8px;--r2:12px;
+  --sidebar:220px;
+}
+
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;display:flex;flex-direction:column}
+
+/* ── TOP NAV ── */
+.topnav{
+  height:48px;background:var(--bg2);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 16px;gap:12px;flex-shrink:0;
+  position:relative;z-index:100;
+}
+.logo{display:flex;align-items:center;gap:10px;margin-right:8px}
+.logo-mark{
+  width:30px;height:30px;border-radius:8px;
+  background:linear-gradient(135deg,var(--blue),var(--purple));
+  display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;
+}
+.logo-name{font-size:14px;font-weight:700;letter-spacing:-.4px;white-space:nowrap}
+.logo-sub{font-size:10px;color:var(--text3);margin-top:-1px}
+
+/* profession tabs in top nav */
+.prof-nav{display:flex;align-items:center;gap:2px;flex:1;overflow-x:auto;scrollbar-width:none;padding:0 8px}
+.prof-nav::-webkit-scrollbar{display:none}
+.ptab{
+  display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:6px;
+  cursor:pointer;color:var(--text2);font-size:12px;font-weight:500;
+  border:1px solid transparent;white-space:nowrap;transition:all .15s;flex-shrink:0;
+}
+.ptab:hover{background:var(--bg3);color:var(--text)}
+.ptab.active{background:var(--bg4);border-color:var(--border2);color:var(--text)}
+.ptab-dot{width:7px;height:7px;border-radius:50%}
+.ptab-cnt{font-size:10px;font-weight:700;padding:1px 5px;border-radius:10px;background:rgba(255,255,255,0.06);color:var(--text3)}
+
+.topnav-right{display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:auto}
+.btn{
+  display:inline-flex;align-items:center;gap:5px;padding:6px 12px;
+  border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;
+  border:1px solid var(--border);background:var(--bg3);color:var(--text2);
+  transition:all .15s;white-space:nowrap;text-decoration:none;
+}
+.btn:hover{background:var(--bg4);color:var(--text);border-color:var(--border2)}
+.btn-blue{background:var(--blue);border-color:var(--blue2);color:#fff}
+.btn-blue:hover{background:var(--blue2);color:#fff}
+
+/* ── BODY LAYOUT ── */
+.body{display:flex;flex:1;min-height:0}
+
+/* ── SIDEBAR ── */
+.sidebar{
+  width:var(--sidebar);min-width:var(--sidebar);
+  background:var(--bg2);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;
+}
+.sb-section{padding:8px 0}
+.sb-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.7px;color:var(--text3);padding:6px 14px 4px}
+.sb-item{
+  display:flex;align-items:center;gap:8px;padding:7px 14px;
+  cursor:pointer;color:var(--text2);font-size:12.5px;transition:all .12s;
+  border-left:2px solid transparent;
+}
+.sb-item:hover{background:var(--bg3);color:var(--text)}
+.sb-item.active{background:var(--bg3);color:var(--text);border-left-color:var(--blue)}
+.sb-num{margin-left:auto;font-size:10px;color:var(--text3);font-weight:600;background:var(--bg4);padding:1px 6px;border-radius:10px}
+.sb-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+
+/* KPI cards in sidebar */
+.sb-kpis{padding:12px}
+.kpi-mini{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px}
+.kpi-mini-label{font-size:10px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.kpi-mini-val{font-size:20px;font-weight:800;letter-spacing:-1px}
+
+/* ── MAIN CONTENT ── */
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+
+/* ── CONTENT HEADER (pipeline bar) ── */
+.content-hdr{
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  padding:10px 16px;display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap;
+}
+.pipeline{display:flex;align-items:center;gap:0;flex:1;min-width:0}
+.pipe-stage{
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  padding:6px 14px;font-size:11.5px;font-weight:600;cursor:pointer;
+  position:relative;flex:1;white-space:nowrap;transition:all .15s;
+  clip-path:polygon(0 0,calc(100% - 10px) 0,100% 50%,calc(100% - 10px) 100%,0 100%,10px 50%);
+  background:var(--bg3);color:var(--text2);
+}
+.pipe-stage:first-child{clip-path:polygon(0 0,calc(100% - 10px) 0,100% 50%,calc(100% - 10px) 100%,0 100%)}
+.pipe-stage:hover{background:var(--bg4);color:var(--text)}
+.pipe-stage.active{color:#fff}
+.pipe-stage[data-s=nouveau].active{background:var(--blue)}
+.pipe-stage[data-s=contacte].active{background:var(--yellow)}
+.pipe-stage[data-s=interesse].active{background:var(--purple)}
+.pipe-stage[data-s=a-rappeler].active{background:var(--cyan)}
+.pipe-stage[data-s=client].active{background:var(--green)}
+.pipe-cnt{font-size:10px;font-weight:700;background:rgba(255,255,255,.2);padding:1px 5px;border-radius:10px}
+
+/* sub-tabs avec/sans tel */
+.sub-tabs{display:flex;gap:4px;padding:8px 16px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0}
+.stab{padding:4px 12px;border-radius:20px;font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid var(--border);color:var(--text2);transition:all .15s}
+.stab:hover{color:var(--text)}
+.stab.on-green{background:var(--green-dim);border-color:var(--green);color:var(--green)}
+.stab.on-gray{background:var(--bg4);border-color:var(--border2);color:var(--text)}
+.stab.on-all{background:var(--bg4);border-color:var(--border2);color:var(--text)}
+
+/* ── TOOLBAR ── */
+.toolbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:8px 16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0}
+.sw{position:relative;flex:1;min-width:150px;max-width:260px}
+.sw svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);width:13px;height:13px;color:var(--text3);pointer-events:none}
+.sw input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 10px 6px 30px;color:var(--text);font-size:12px;outline:none}
+.sw input:focus{border-color:var(--blue)}
+.sw input::placeholder{color:var(--text3)}
+select.fsel{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text2);font-size:12px;outline:none;cursor:pointer}
+.cnt-chip{font-size:11px;color:var(--text3);padding:4px 10px;background:var(--bg3);border-radius:20px;border:1px solid var(--border);margin-left:auto;white-space:nowrap}
+
+/* ── TABLE ── */
+.tbl-wrap{flex:1;overflow:auto;position:relative}
+table{width:100%;border-collapse:collapse;min-width:680px}
+thead{position:sticky;top:0;z-index:10}
+thead th{
+  background:var(--bg2);padding:9px 14px;text-align:left;
+  font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;
+  color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap;
+  cursor:pointer;user-select:none;
+}
+thead th:hover{color:var(--text2)}
+tbody tr{border-bottom:1px solid var(--border);cursor:pointer;transition:background .08s}
+tbody tr:hover{background:var(--bg3)}
+tbody tr.selected{background:var(--blue-dim)!important;border-left:2px solid var(--blue)}
+tbody tr.has-tel{background:rgba(63,185,80,.03)}
+tbody tr.has-tel:hover{background:rgba(63,185,80,.06)}
+tbody td{padding:10px 14px;font-size:12.5px;vertical-align:middle}
+.tn{font-weight:600;font-size:13px;color:var(--text)}
+.ts{font-size:11px;color:var(--text3);margin-top:1px}
+
+/* badges */
+.age{display:inline-flex;padding:2px 7px;border-radius:20px;font-size:11px;font-weight:700}
+.age-new{background:var(--green-dim);color:var(--green);border:1px solid rgba(63,185,80,.25)}
+.age-mid{background:var(--yellow-dim);color:var(--yellow);border:1px solid rgba(227,179,65,.25)}
+.age-old{background:var(--bg4);color:var(--text3);border:1px solid var(--border)}
+.tel-ok{color:var(--green);font-weight:700;font-family:monospace;font-size:12px}
+.tel-fix{color:var(--text2);font-family:monospace;font-size:12px}
+.tel-no{color:var(--text3);font-size:11px;font-style:italic}
+.spec{display:inline-flex;padding:2px 7px;border-radius:4px;font-size:10.5px;font-weight:600}
+.st{display:inline-flex;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600}
+.st-nouveau{background:var(--blue-dim);color:var(--blue)}
+.st-contacte{background:var(--yellow-dim);color:var(--yellow)}
+.st-interesse{background:var(--purple-dim);color:var(--purple)}
+.st-a-rappeler{background:var(--cyan-dim);color:var(--cyan)}
+.st-client{background:var(--green-dim);color:var(--green)}
+.st-sans-suite{background:var(--bg4);color:var(--text3)}
+
+/* ── PAGINATION ── */
+.pag{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-top:1px solid var(--border);background:var(--bg2);flex-shrink:0}
+.pag-info{font-size:11.5px;color:var(--text3)}
+.pag-btns{display:flex;gap:3px}
+.pgb{width:28px;height:28px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;color:var(--text2);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .12s}
+.pgb:hover:not(:disabled){background:var(--bg4);color:var(--text)}
+.pgb.act{background:var(--blue);border-color:var(--blue2);color:#fff;font-weight:700}
+.pgb:disabled{opacity:.25;cursor:not-allowed}
+
+/* ── DETAIL PANEL (fiche client style Creatio) ── */
+.detail-panel{
+  width:0;min-width:0;background:var(--bg2);border-left:1px solid var(--border);
+  overflow:hidden;transition:width .25s ease,min-width .25s ease;
+  display:flex;flex-direction:column;flex-shrink:0;
+}
+.detail-panel.open{width:400px;min-width:400px}
+
+.dp-header{padding:16px;border-bottom:1px solid var(--border);flex-shrink:0}
+.dp-name{font-size:17px;font-weight:700;color:var(--text);margin-bottom:2px}
+.dp-sub{font-size:12px;color:var(--text2)}
+.dp-actions{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
+
+/* pipeline mini dans la fiche */
+.dp-pipeline{display:flex;padding:12px 16px;gap:3px;border-bottom:1px solid var(--border);flex-shrink:0}
+.dp-ps{flex:1;padding:4px 6px;border-radius:4px;font-size:10px;font-weight:700;text-align:center;cursor:pointer;border:1px solid transparent;transition:all .15s;color:var(--text3)}
+.dp-ps:hover{background:var(--bg4)}
+.dp-ps.active{color:#fff}
+.dp-ps[data-s=nouveau].active{background:var(--blue);border-color:var(--blue2)}
+.dp-ps[data-s=contacte].active{background:var(--yellow);border-color:#d4a017;color:#000}
+.dp-ps[data-s=interesse].active{background:var(--purple);border-color:#a87ef0}
+.dp-ps[data-s=a-rappeler].active{background:var(--cyan);border-color:#5ab0f0;color:#000}
+.dp-ps[data-s=client].active{background:var(--green);border-color:#32a045;color:#000}
+
+/* onglets dans la fiche */
+.dp-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
+.dp-tab{padding:10px 14px;font-size:12px;font-weight:600;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;transition:all .12s}
+.dp-tab:hover{color:var(--text)}
+.dp-tab.active{color:var(--blue);border-bottom-color:var(--blue)}
+
+.dp-body{flex:1;overflow-y:auto;padding:16px}
+.dp-section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--text3);margin-bottom:8px;margin-top:16px}
+.dp-section-title:first-child{margin-top:0}
+.dp-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.dp-field{}
+.dp-field-label{font-size:10px;color:var(--text3);margin-bottom:2px;font-weight:500}
+.dp-field-val{font-size:13px;color:var(--text);font-weight:500}
+.dp-field-val.phone{color:var(--green);font-family:monospace;font-size:15px;font-weight:700}
+.dp-field-val.email{color:var(--blue);font-size:12px}
+
+/* stat cards in fiche */
+.dp-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px}
+.dp-stat{border-radius:8px;padding:10px 12px;text-align:center}
+.dp-stat-val{font-size:22px;font-weight:800;letter-spacing:-1px}
+.dp-stat-label{font-size:10px;color:rgba(255,255,255,.7);margin-top:1px}
+
+/* notes */
+.dp-note-area{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:12.5px;resize:vertical;min-height:72px;outline:none;font-family:inherit}
+.dp-note-area:focus{border-color:var(--blue)}
+.dp-save-btn{margin-top:8px;width:100%;padding:8px;background:var(--blue);border:none;border-radius:6px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s}
+.dp-save-btn:hover{background:var(--blue2)}
+
+/* contrats list */
+.contrat-row{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:6px}
+.contrat-ref{font-size:12px;font-weight:600;color:var(--text);font-family:monospace}
+.contrat-details{font-size:11px;color:var(--text2);margin-top:2px}
+
+/* close btn */
+.dp-close{position:absolute;top:12px;right:12px;width:24px;height:24px;background:var(--bg4);border:1px solid var(--border);border-radius:5px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text2);font-size:12px}
+.dp-close:hover{color:var(--text)}
+
+/* ── VIEWS ── */
+.view{display:none;flex-direction:column;flex:1;min-height:0}
+.view.active{display:flex}
+
+/* ── ANCIEN R&O VIEW ── */
+.ro-wrap{flex:1;overflow-y:auto;padding:20px}
+.ro-section{margin-bottom:28px}
+.ro-section-title{font-size:14px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.ro-badge{padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700}
+.ro-card{
+  background:var(--bg2);border:1px solid var(--border);border-radius:10px;
+  margin-bottom:8px;overflow:hidden;cursor:pointer;transition:border-color .15s;
+}
+.ro-card:hover{border-color:var(--border2)}
+.ro-card-hdr{padding:12px 16px;display:flex;align-items:center;gap:12px}
+.ro-avatar{
+  width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-weight:700;font-size:13px;flex-shrink:0;
+}
+.ro-name{font-weight:600;font-size:13px}
+.ro-meta{font-size:11px;color:var(--text2);margin-top:1px}
+.ro-card-body{padding:0 16px 12px;display:none}
+.ro-card.expanded .ro-card-body{display:block}
+.ro-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.ro-field-label{font-size:10px;color:var(--text3);margin-bottom:2px}
+.ro-field-val{font-size:12px;color:var(--text);font-weight:500}
+.statut-badge{padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:700;display:inline-flex}
+.s-valide{background:var(--green-dim);color:var(--green)}
+.s-ko{background:var(--red-dim);color:var(--red)}
+.s-nrp{background:var(--yellow-dim);color:var(--yellow)}
+.s-arap{background:var(--cyan-dim);color:var(--cyan)}
+.s-reno{background:var(--orange-dim);color:var(--orange)}
+.s-rachat{background:var(--purple-dim);color:var(--purple)}
+
+/* ── TOASTS ── */
+.toasts{position:fixed;bottom:16px;right:16px;z-index:9999;display:flex;flex-direction:column;gap:6px}
+.toast{background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:10px 14px;font-size:13px;min-width:240px;animation:slideUp .2s ease;box-shadow:0 8px 30px rgba(0,0,0,.6)}
+.toast.ok{border-color:rgba(63,185,80,.4)}
+.toast.err{border-color:rgba(248,81,73,.4);color:var(--red)}
+@keyframes slideUp{from{transform:translateY(8px);opacity:0}to{opacity:1}}
+.spin{display:inline-block;width:13px;height:13px;border:2px solid var(--border2);border-top-color:var(--blue);border-radius:50%;animation:sp .6s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.empty td{text-align:center;padding:40px;color:var(--text3)}
+</style>
+</head>
+<body>
+
+<!-- ══ TOP NAV ══ -->
+<nav class="topnav">
+  <div class="logo">
+    <div class="logo-mark">P</div>
+    <div><div class="logo-name">ProspectSanté</div><div class="logo-sub">CRM Bryan Entibi</div></div>
+  </div>
+
+  <div class="prof-nav" id="prof-nav">
+    <div class="ptab active" data-p="all" onclick="switchProf('all')"><div class="ptab-dot" style="background:#8B949E"></div>Tous<span class="ptab-cnt" id="cnt-all">—</span></div>
+    <div class="ptab" data-p="inf" onclick="switchProf('inf')"><div class="ptab-dot" style="background:#79C0FF"></div>Infirmiers<span class="ptab-cnt" id="cnt-inf">—</span></div>
+    <div class="ptab" data-p="kin" onclick="switchProf('kin')"><div class="ptab-dot" style="background:#BC8CFF"></div>Kiné/Ostéo<span class="ptab-cnt" id="cnt-kin">—</span></div>
+    <div class="ptab" data-p="med" onclick="switchProf('med')"><div class="ptab-dot" style="background:#2F81F7"></div>Médecins<span class="ptab-cnt" id="cnt-med">—</span></div>
+    <div class="ptab" data-p="den" onclick="switchProf('den')"><div class="ptab-dot" style="background:#F78166"></div>Dentistes<span class="ptab-cnt" id="cnt-den">—</span></div>
+    <div class="ptab" data-p="psy" onclick="switchProf('psy')"><div class="ptab-dot" style="background:#F778BA"></div>Psy/Ortho<span class="ptab-cnt" id="cnt-psy">—</span></div>
+    <div class="ptab" data-p="phr" onclick="switchProf('phr')"><div class="ptab-dot" style="background:#3FB950"></div>Pharmacies<span class="ptab-cnt" id="cnt-phr">—</span></div>
+    <div class="ptab" data-p="ro" onclick="switchProf('ro')"><div class="ptab-dot" style="background:#E3B341"></div>Ancien R&O<span class="ptab-cnt" style="background:var(--yellow-dim);color:var(--yellow)">48</span></div>
+  </div>
+
+  <div class="topnav-right">
+    <button class="btn" onclick="exportCSV()">⬇ CSV</button>
+    <button class="btn btn-blue" onclick="showScraping()">⚡ Scraping</button>
+  </div>
+</nav>
+
+<!-- ══ BODY ══ -->
+<div class="body">
+
+  <!-- ─ SIDEBAR ─ -->
+  <aside class="sidebar">
+    <div class="sb-kpis">
+      <div class="kpi-mini">
+        <div class="kpi-mini-label">Pros santé</div>
+        <div class="kpi-mini-val" id="kpi-sante" style="color:var(--blue)">—</div>
+      </div>
+      <div class="kpi-mini">
+        <div class="kpi-mini-label">Avec 06 direct</div>
+        <div class="kpi-mini-val" id="kpi-tel" style="color:var(--green)">—</div>
+      </div>
+      <div class="kpi-mini">
+        <div class="kpi-mini-label">Clients signés</div>
+        <div class="kpi-mini-val" id="kpi-clients" style="color:var(--purple)">—</div>
+      </div>
+    </div>
+
+    <div class="sb-section">
+      <div class="sb-label">Vues rapides</div>
+      <div class="sb-item active" onclick="setSide('all',this)">📋 Tous les prospects</div>
+      <div class="sb-item" onclick="setSide('new_today',this)">🆕 Nouveaux du jour<span class="sb-num" id="sb-new">0</span></div>
+      <div class="sb-item" onclick="setSide('avec_tel',this)">📱 Avec 06 direct</div>
+      <div class="sb-item" onclick="setSide('sans_tel',this)">— Sans numéro direct</div>
+    </div>
+
+    <div class="sb-section">
+      <div class="sb-label">Statut pipeline</div>
+      <div class="sb-item" onclick="setSide('st_nouveau',this)"><div class="sb-dot" style="background:var(--blue)"></div>Nouveaux<span class="sb-num" id="sb-s1">—</span></div>
+      <div class="sb-item" onclick="setSide('st_contacte',this)"><div class="sb-dot" style="background:var(--yellow)"></div>Contactés<span class="sb-num" id="sb-s2">—</span></div>
+      <div class="sb-item" onclick="setSide('st_interesse',this)"><div class="sb-dot" style="background:var(--purple)"></div>Intéressés<span class="sb-num" id="sb-s3">—</span></div>
+      <div class="sb-item" onclick="setSide('st_a-rappeler',this)"><div class="sb-dot" style="background:var(--cyan)"></div>À rappeler<span class="sb-num" id="sb-s4">—</span></div>
+      <div class="sb-item" onclick="setSide('st_client',this)"><div class="sb-dot" style="background:var(--green)"></div>Clients signés<span class="sb-num" id="sb-s5">—</span></div>
+    </div>
+  </aside>
+
+  <!-- ─ MAIN ─ -->
+  <main class="main">
+
+    <!-- VUE LISTE PROFESSIONNELS -->
+    <div class="view active" id="view-sante">
+      <!-- Pipeline bar -->
+      <div class="content-hdr">
+        <div class="pipeline">
+          <div class="pipe-stage active" data-s="all" onclick="setPipe('all',this)">Tous <span class="pipe-cnt" id="pc-all">—</span></div>
+          <div class="pipe-stage" data-s="nouveau" onclick="setPipe('nouveau',this)">Nouveaux <span class="pipe-cnt" id="pc-nouveau">—</span></div>
+          <div class="pipe-stage" data-s="contacte" onclick="setPipe('contacte',this)">Contactés <span class="pipe-cnt" id="pc-contacte">—</span></div>
+          <div class="pipe-stage" data-s="interesse" onclick="setPipe('interesse',this)">Intéressés <span class="pipe-cnt" id="pc-interesse">—</span></div>
+          <div class="pipe-stage" data-s="a-rappeler" onclick="setPipe('a-rappeler',this)">À rappeler <span class="pipe-cnt" id="pc-rappeler">—</span></div>
+          <div class="pipe-stage" data-s="client" onclick="setPipe('client',this)">Clients ✓ <span class="pipe-cnt" id="pc-client">—</span></div>
+        </div>
+      </div>
+
+      <!-- Sub-tabs -->
+      <div class="sub-tabs">
+        <div class="stab on-all" id="stab-all" onclick="setSubTab('all')">Tous</div>
+        <div class="stab" id="stab-avec" onclick="setSubTab('avec')">📱 Avec 06 direct</div>
+        <div class="stab" id="stab-sans" onclick="setSubTab('sans')">— Sans numéro</div>
+      </div>
+
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <div class="sw">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M11 11l3 3"/></svg>
+          <input type="text" id="search" placeholder="Nom, ville..." oninput="applyFilters()">
+        </div>
+        <select class="fsel" id="sel-dept" onchange="applyFilters()"><option value="">Tous dép.</option></select>
+        <select class="fsel" id="sel-mode" onchange="applyFilters()"><option value="">Lib. + Sal.</option><option value="liberal">Libéral</option><option value="salarie">Salarié</option></select>
+        <span class="cnt-chip" id="cnt-results">—</span>
+      </div>
+
+      <!-- Table + Detail Panel -->
+      <div style="display:flex;flex:1;min-height:0;overflow:hidden">
+        <div class="tbl-wrap" id="tbl-wrap">
+          <table>
+            <thead id="thead"></thead>
+            <tbody id="tbody"><tr class="empty"><td colspan="8"><span class="spin"></span> Chargement...</td></tr></tbody>
+          </table>
+        </div>
+
+        <!-- FICHE DETAIL -->
+        <div class="detail-panel" id="detail-panel">
+          <div style="position:relative;flex-shrink:0">
+            <div class="dp-close" onclick="closeDetail()">✕</div>
+          </div>
+          <div class="dp-header">
+            <div class="dp-name" id="dp-name">—</div>
+            <div class="dp-sub" id="dp-sub">—</div>
+            <div class="dp-actions">
+              <a class="btn btn-blue" id="dp-call" href="#" style="display:none">📞 Appeler</a>
+              <button class="btn" onclick="saveDetail()">💾 Sauvegarder</button>
+            </div>
+          </div>
+
+          <!-- Pipeline mini -->
+          <div class="dp-pipeline">
+            <div class="dp-ps" data-s="nouveau" onclick="setDetailStatut('nouveau')">Nouveau</div>
+            <div class="dp-ps" data-s="contacte" onclick="setDetailStatut('contacte')">Contacté</div>
+            <div class="dp-ps" data-s="interesse" onclick="setDetailStatut('interesse')">Intéressé</div>
+            <div class="dp-ps" data-s="a-rappeler" onclick="setDetailStatut('a-rappeler')">À rappeler</div>
+            <div class="dp-ps" data-s="client" onclick="setDetailStatut('client')">Client ✓</div>
+          </div>
+
+          <!-- Onglets fiche -->
+          <div class="dp-tabs">
+            <div class="dp-tab active" onclick="setDpTab('overview',this)">Vue générale</div>
+            <div class="dp-tab" onclick="setDpTab('notes',this)">Notes</div>
+            <div class="dp-tab" onclick="setDpTab('contrats',this)" id="dp-tab-contrats" style="display:none">Contrats</div>
+          </div>
+
+          <!-- Corps fiche -->
+          <div class="dp-body">
+            <!-- Overview -->
+            <div id="dpt-overview">
+              <!-- Stat cards -->
+              <div class="dp-stats" id="dp-stat-cards"></div>
+
+              <div class="dp-section-title">Coordonnées</div>
+              <div class="dp-grid" id="dp-coords"></div>
+
+              <div class="dp-section-title">Informations professionnelles</div>
+              <div class="dp-grid" id="dp-pro"></div>
+
+              <div class="dp-section-title">📱 Numéro direct</div>
+              <input type="text" id="dp-tel-input" placeholder="0612345678" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--green);font-size:16px;font-weight:700;font-family:monospace;letter-spacing:1px;outline:none">
+            </div>
+
+            <!-- Notes -->
+            <div id="dpt-notes" style="display:none">
+              <div class="dp-section-title">Notes d'appel</div>
+              <textarea class="dp-note-area" id="dp-note" placeholder="Résumé de l'échange, objections, prochaine étape..."></textarea>
+              <button class="dp-save-btn" onclick="saveDetail()">💾 Sauvegarder</button>
+            </div>
+
+            <!-- Contrats (pour Ancien R&O) -->
+            <div id="dpt-contrats" style="display:none">
+              <div class="dp-section-title">Historique contrats</div>
+              <div id="dp-contrats-list"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pag"><div class="pag-info" id="pag-info">—</div><div class="pag-btns" id="pag-btns"></div></div>
+    </div>
+
+    <!-- VUE ANCIEN R&O -->
+    <div class="view" id="view-ro">
+      <div class="toolbar">
+        <div class="sw">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M11 11l3 3"/></svg>
+          <input type="text" id="ro-search" placeholder="Nom, ville, profession..." oninput="renderRO()">
+        </div>
+        <select class="fsel" id="ro-filter" onchange="renderRO()">
+          <option value="">Toutes les sources</option>
+          <option value="liste">📋 Anciens clients (AVIVA/OPTIMUM)</option>
+          <option value="team">👥 Team Entibi - Prospection</option>
+          <option value="opti">🔄 Renonciations PER Sérénité</option>
+        </select>
+        <span class="cnt-chip" id="ro-cnt">48 contacts</span>
+      </div>
+      <div class="ro-wrap" id="ro-wrap">
+        <div style="color:var(--text3);text-align:center;padding:40px">Chargement...</div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ── SCRAPING MODAL ── -->
+<div id="scrap-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;backdrop-filter:blur(4px);align-items:center;justify-content:center">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;width:540px;max-width:95vw;padding:24px;box-shadow:0 30px 80px rgba(0,0,0,.7)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+      <div style="font-size:16px;font-weight:700">⚡ Scraping automatique</div>
+      <div style="cursor:pointer;color:var(--text2);font-size:20px" onclick="hideScrap()">✕</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px">
+      <div style="background:var(--bg3);border:1px solid var(--blue);border-radius:8px;padding:14px">
+        <div style="font-size:12.5px;font-weight:600;margin-bottom:3px">🏥 Ordre Infirmiers</div>
+        <div style="font-size:11px;color:var(--text3)">510 728 infirmiers + portables</div>
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:14px">
+        <div style="font-size:12.5px;font-weight:600;margin-bottom:3px">📋 RPPS data.gouv.fr</div>
+        <div style="font-size:11px;color:var(--text3)">Tous pros de santé</div>
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:14px">
+        <div style="font-size:12.5px;font-weight:600;margin-bottom:3px">🏢 Infogreffe</div>
+        <div style="font-size:11px;color:var(--text3)">Dates de début d'activité</div>
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:14px">
+        <div style="font-size:12.5px;font-weight:600;margin-bottom:3px">💊 Pharmacies</div>
+        <div style="font-size:11px;color:var(--text3)">25 472 contacts</div>
+      </div>
+    </div>
+    <button onclick="launchScraping()" style="width:100%;padding:10px;background:var(--blue);border:none;border-radius:8px;color:#fff;font-size:14px;font-weight:700;cursor:pointer">⚡ Lancer maintenant</button>
+    <div id="scrap-prog" style="display:none;margin-top:14px">
+      <div style="background:var(--bg3);border-radius:20px;height:5px;overflow:hidden"><div id="scrap-bar" style="height:100%;background:linear-gradient(90deg,var(--blue),var(--purple));border-radius:20px;transition:width .5s;width:0%"></div></div>
+      <div id="scrap-msg" style="font-size:11.5px;color:var(--text3);margin-top:6px"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<script>
+const API = 'http://localhost:8080/api';
+let curProf='all', curSide='all', curSubTab='all', curPage=1, curPipe='all';
+let editId=null, editType=null, curDpTab='overview';
+let scrapInterval=null;
+
+const COLS = {
+  all:  ['NOM','SPÉCIALITÉ','VILLE','📱 PORTABLE','📞 FIXE','⏱ ANCIENNETÉ','STATUT',''],
+  inf:  ['NOM / PRÉNOM','VILLE','📱 PORTABLE','📞 FIXE','⏱ ANCIENNETÉ','MODE','STATUT',''],
+  kin:  ['NOM / PRÉNOM','SPÉCIALITÉ','VILLE','📱 PORTABLE','📞 FIXE','⏱ ANCIENNETÉ','STATUT',''],
+  med:  ['NOM / PRÉNOM','SPÉCIALITÉ','VILLE','📱 PORTABLE','📞 FIXE','⏱ ANCIENNETÉ','STATUT',''],
+  den:  ['NOM / PRÉNOM','VILLE','📱 PORTABLE','📞 FIXE','⏱ ANCIENNETÉ','STATUT',''],
+  psy:  ['NOM / PRÉNOM','SPÉCIALITÉ','VILLE','📱 PORTABLE','📞 FIXE','⏱ ANCIENNETÉ','STATUT',''],
+  phr:  ['PHARMACIE','DIRIGEANT','VILLE','📱 PORTABLE','📞 FIXE','EMAIL','CA','STATUT',''],
+};
+const FIELDS = {
+  all:  ['nom_prenom','specialite','ville','tel_direct','tel_fixe','age','statut','actions'],
+  inf:  ['nom_prenom','ville','tel_direct','tel_fixe','age','mode','statut','actions'],
+  kin:  ['nom_prenom','specialite','ville','tel_direct','tel_fixe','age','statut','actions'],
+  med:  ['nom_prenom','specialite','ville','tel_direct','tel_fixe','age','statut','actions'],
+  den:  ['nom_prenom','ville','tel_direct','tel_fixe','age','statut','actions'],
+  psy:  ['nom_prenom','specialite','ville','tel_direct','tel_fixe','age','statut','actions'],
+  phr:  ['nom','dirigeant','ville','tel_direct','tel_fixe','email','ca','statut','actions'],
+};
+const SPES = {
+  inf:['Infirmier','Infirmière'],
+  kin:['Masseur','Kinési','Ostéo'],
+  med:['Médecin','Cardio','Radio','Chirur','Gynéco','Pédiatre','Dermato','Ophtalmo','Psychiatre','Pneumo','Rhumato','Neuro','ORL','Anesthé'],
+  den:['Dentiste','Chirurgien-dentiste'],
+  psy:['Psycho','Orthophon','Pédicure','Sage-femme'],
+};
+const COLORS = {inf:'#79C0FF',kin:'#BC8CFF',med:'#2F81F7',den:'#F78166',psy:'#F778BA',phr:'#3FB950',all:'#8B949E',ro:'#E3B341'};
+const SL = {nouveau:'st-nouveau',contacte:'st-contacte',interesse:'st-interesse','a-rappeler':'st-a-rappeler',client:'st-client','sans-suite':'st-sans-suite'};
+const SN = {nouveau:'Nouveau',contacte:'Contacté',interesse:'Intéressé','a-rappeler':'À rappeler',client:'Client','sans-suite':'Sans suite'};
+
+// ── Navigation ──
+function switchProf(p){
+  curProf=p; curPage=1; curSide='all'; curPipe='all';
+  document.querySelectorAll('.ptab').forEach(t=>t.classList.remove('active'));
+  document.querySelector(`.ptab[data-p="${p}"]`)?.classList.add('active');
+  if(p==='ro'){
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    document.getElementById('view-ro').classList.add('active');
+    renderRO(); return;
+  }
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-sante').classList.add('active');
+  renderHead(); loadTable();
+}
+
+function setSide(s,el){
+  curSide=s; curPage=1;
+  document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
+  el.classList.add('active');
+  loadTable();
+}
+
+function setPipe(s,el){
+  curPipe=s; curPage=1;
+  document.querySelectorAll('.pipe-stage').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  loadTable();
+}
+
+function setSubTab(s){
+  curSubTab=s; curPage=1;
+  document.querySelectorAll('.stab').forEach(t=>t.className='stab');
+  if(s==='avec') document.getElementById('stab-avec').classList.add('on-green');
+  else if(s==='sans') document.getElementById('stab-sans').classList.add('on-gray');
+  else document.getElementById('stab-all').classList.add('on-all');
+  loadTable();
+}
+
+function applyFilters(){curPage=1;loadTable();}
+
+// ── Table head ──
+function renderHead(){
+  const cols = COLS[curProf]||COLS['all'];
+  document.getElementById('thead').innerHTML='<tr>'+cols.map(c=>`<th>${c}</th>`).join('')+'</tr>';
+}
+
+// ── Load table ──
+async function loadTable(){
+  const ep = curProf==='phr'?'pharmacies':'sante';
+  const cols = COLS[curProf]||COLS['all'];
+  const fields = FIELDS[curProf]||FIELDS['all'];
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML=`<tr class="empty"><td colspan="${cols.length}"><span class="spin"></span></td></tr>`;
+
+  const p=new URLSearchParams({page:curPage,per_page:50});
+  const q=document.getElementById('search')?.value||'';
+  const dept=document.getElementById('sel-dept')?.value||'';
+  const mode=document.getElementById('sel-mode')?.value||'';
+  if(q) p.set('search',q);
+  if(dept) p.set('dept',dept);
+  if(mode) p.set('mode',mode);
+  if(SPES[curProf]) p.set('specialites',SPES[curProf].join('|'));
+  if(curSide==='new_today') p.set('nouveaux','1');
+  else if(curSide.startsWith('st_')) p.set('statut',curSide.replace('st_',''));
+  else if(curSide==='avec_tel') p.set('avec_direct','1');
+  else if(curSide==='sans_tel') p.set('sans_direct','1');
+  if(curPipe!=='all') p.set('statut',curPipe);
+  if(curSubTab==='avec') p.set('avec_direct','1');
+  else if(curSubTab==='sans') p.set('sans_direct','1');
+
+  try{
+    const r=await fetch(`${API}/${ep}?${p}`);
+    const d=await r.json();
+    document.getElementById('cnt-results').textContent=d.total.toLocaleString('fr')+' résultats';
+    if(!d.data.length){
+      tbody.innerHTML=`<tr class="empty"><td colspan="${cols.length}">Aucun résultat</td></tr>`;
+      renderPag(0,0,0);return;
+    }
+    const color=COLORS[curProf]||'#8B949E';
+    tbody.innerHTML=d.data.map(row=>{
+      const hasTel=row.telephone_direct;
+      const sel=row.id===editId&&editType===ep?'selected':'';
+      return `<tr class="${hasTel?'has-tel':''} ${sel}" onclick="openDetail(${row.id},'${ep}',this)">
+        ${fields.map(f=>`<td>${renderCell(f,row,color)}</td>`).join('')}
+      </tr>`;
+    }).join('');
+    renderPag(d.page,d.pages,d.total);
+  }catch(e){
+    tbody.innerHTML=`<tr class="empty"><td colspan="${cols.length}">⚠️ Serveur hors ligne — lance python3 app.py</td></tr>`;
+  }
+}
+
+function renderCell(f,r,color){
+  switch(f){
+    case 'nom_prenom':return`<div class="tn">${esc(r.nom)} ${esc(r.prenom||'')}</div>${r.rpps?`<div class="ts">RPPS ${r.rpps}</div>`:''}`;
+    case 'nom':return`<div class="tn">${esc(r.nom)}</div><div class="ts">${esc((r.forme_juridique||'').substring(0,28))}</div>`;
+    case 'specialite':return`<span class="spec" style="background:${color}18;color:${color}">${esc(r.specialite||'—')}</span>`;
+    case 'ville':return`<div>${esc(r.ville||'—')}</div><div class="ts">${r.cp||''}</div>`;
+    case 'tel_direct':return r.telephone_direct?`<span class="tel-ok">${fmt(r.telephone_direct)}</span>`:`<span class="tel-no">—</span>`;
+    case 'tel_fixe':return r.telephone?`<span class="tel-fix">${fmt(r.telephone)}</span>`:`<span class="ts">—</span>`;
+    case 'age':return ageBadge(r.date_debut||r.date_ajout);
+    case 'mode':return`<span class="ts">${r.mode_exercice||'—'}</span>`;
+    case 'email':return`<span class="ts" style="font-size:11px">${(r.email||'').substring(0,22)||'—'}</span>`;
+    case 'dirigeant':return r.dirigeant?`<div>${esc(r.dirigeant)}</div>`:`<span class="ts">—</span>`;
+    case 'ca':return r.ca?`<span class="ts">${(r.ca/1000).toFixed(0)}k€</span>`:`<span class="ts">—</span>`;
+    case 'statut':return`<span class="st ${SL[r.statut]||'st-nouveau'}">${SN[r.statut]||'Nouveau'}</span>`;
+    case 'actions':{
+      const tel=r.telephone_direct||r.telephone;
+      return`<div style="display:flex;gap:4px">
+        <button class="btn" style="padding:3px 7px;font-size:11px" onclick="event.stopPropagation();openDetail(${r.id},'${r.telephone_direct?'pharmacies':'sante'}',this.closest('tr'))">✏️</button>
+        ${tel?`<a href="tel:${tel.replace(/\s/g,'')}" class="btn" style="padding:3px 7px;font-size:11px;text-decoration:none;color:var(--green);border-color:var(--green)" onclick="event.stopPropagation()">📞</a>`:''}
+      </div>`;
+    }
+    default:return esc(String(r[f]||'—'));
+  }
+}
+
+// ── Detail panel ──
+async function openDetail(id,type,tr){
+  editId=id; editType=type;
+  document.querySelectorAll('tbody tr').forEach(r=>r.classList.remove('selected'));
+  tr?.classList.add('selected');
+
+  const ep=type==='pharmacies'?'pharmacies':'sante';
+  try{
+    const r=await fetch(`${API}/${ep}?per_page=9999`);
+    const d=await r.json();
+    const c=d.data.find(x=>x.id===id);
+    if(!c)return;
+
+    const isPhr=type==='pharmacies';
+    document.getElementById('dp-name').textContent=isPhr?c.nom:`${c.nom} ${c.prenom||''}`;
+    document.getElementById('dp-sub').textContent=isPhr?(c.ville||''):(c.specialite||'');
+
+    // Tel
+    const tel=c.telephone_direct||c.telephone;
+    const callBtn=document.getElementById('dp-call');
+    if(tel){callBtn.style.display='flex';callBtn.href=`tel:${tel.replace(/\s/g,'')}`;}
+    else callBtn.style.display='none';
+
+    // Pipeline
+    document.querySelectorAll('.dp-ps').forEach(p=>p.classList.remove('active'));
+    document.querySelector(`.dp-ps[data-s="${c.statut||'nouveau'}"]`)?.classList.add('active');
+
+    // Stat cards
+    const days=c.date_debut||c.date_ajout?Math.round((Date.now()-new Date(c.date_debut||c.date_ajout).getTime())/86400000):null;
+    document.getElementById('dp-stat-cards').innerHTML=`
+      <div class="dp-stat" style="background:var(--blue-dim)"><div class="dp-stat-val" style="color:var(--blue)">${days!==null?days+'j':'—'}</div><div class="dp-stat-label">Ancienneté</div></div>
+      <div class="dp-stat" style="background:var(--green-dim)"><div class="dp-stat-val" style="color:var(--green)">${c.telephone_direct?'✓':'✗'}</div><div class="dp-stat-label">06 Direct</div></div>
+    `;
+
+    // Coords
+    document.getElementById('dp-coords').innerHTML=isPhr?`
+      <div class="dp-field"><div class="dp-field-label">Téléphone fixe</div><div class="dp-field-val phone">${fmt(c.telephone)||'—'}</div></div>
+      <div class="dp-field"><div class="dp-field-label">Email</div><div class="dp-field-val email">${c.email||'—'}</div></div>
+      <div class="dp-field"><div class="dp-field-label">Adresse</div><div class="dp-field-val">${c.adresse||'—'}</div></div>
+      <div class="dp-field"><div class="dp-field-label">Ville</div><div class="dp-field-val">${c.cp||''} ${c.ville||''}</div></div>
+    `:`
+      <div class="dp-field"><div class="dp-field-label">Téléphone cabinet</div><div class="dp-field-val phone">${fmt(c.telephone)||'—'}</div></div>
+      <div class="dp-field"><div class="dp-field-label">Email</div><div class="dp-field-val email">${c.email||'—'}</div></div>
+      <div class="dp-field"><div class="dp-field-label">Adresse</div><div class="dp-field-val">${c.adresse||'—'}</div></div>
+      <div class="dp-field"><div class="dp-field-label">Ville</div><div class="dp-field-val">${c.cp||''} ${c.ville||''}</div></div>
+    `;
+
+    // Pro
+    document.getElementById('dp-pro').innerHTML=isPhr?`
+      <div class="dp-field"><div class="dp-field-label">Dirigeant</div><div class="dp-field-val">${c.dirigeant||'—'}</div></div>
+      <div class="dp-field"><div class="dp-field-label">Forme juridique</div><div class="dp-field-val">${c.forme_juridique||'—'}</div></div>
+      <div class="dp-field"><div class="dp-field-label">CA</div><div class="dp-field-val">${c.ca?(c.ca/1000).toFixed(0)+'k €':'—'}</div></div>
+      <div class="dp-field"><div class="dp-field-label">SIRET</div><div class="dp-field-val" style="font-family:monospace;font-size:11px">${c.siret||'—'}</div></div>
+    `:`
+      <div class="dp-field"><div class="dp-field-label">Spécialité</div><div class="dp-field-val">${c.specialite||'—'}</div></div>
+      <div class="dp-field"><div class="dp-field-label">Mode exercice</div><div class="dp-field-val">${c.mode_exercice||'—'}</div></div>
+      <div class="dp-field"><div class="dp-field-label">RPPS</div><div class="dp-field-val" style="font-family:monospace;font-size:11px">${c.rpps||'—'}</div></div>
+      <div class="dp-field"><div class="dp-field-label">Début activité</div><div class="dp-field-val">${c.date_debut||'—'}</div></div>
+    `;
+
+    document.getElementById('dp-tel-input').value=c.telephone_direct||'';
+    document.getElementById('dp-note').value=c.note||'';
+    document.getElementById('dp-tab-contrats').style.display='none';
+    document.getElementById('detail-panel').classList.add('open');
+  }catch(e){toast('❌ Erreur chargement','err');}
+}
+
+function closeDetail(){
+  document.getElementById('detail-panel').classList.remove('open');
+  document.querySelectorAll('tbody tr').forEach(r=>r.classList.remove('selected'));
+  editId=null;
+}
+
+function setDetailStatut(s){
+  document.querySelectorAll('.dp-ps').forEach(p=>p.classList.remove('active'));
+  document.querySelector(`.dp-ps[data-s="${s}"]`)?.classList.add('active');
+}
+
+function setDpTab(t,el){
+  curDpTab=t;
+  document.querySelectorAll('.dp-tab').forEach(x=>x.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('dpt-overview').style.display=t==='overview'?'block':'none';
+  document.getElementById('dpt-notes').style.display=t==='notes'?'block':'none';
+  document.getElementById('dpt-contrats').style.display=t==='contrats'?'block':'none';
+}
+
+async function saveDetail(){
+  if(!editId)return;
+  const ep=editType==='pharmacies'?'pharmacies':'sante';
+  const statut=document.querySelector('.dp-ps.active')?.dataset.s||'nouveau';
+  const body={
+    telephone_direct:document.getElementById('dp-tel-input').value.replace(/\s/g,''),
+    statut,
+    note:document.getElementById('dp-note').value
+  };
+  try{
+    const r=await fetch(`${API}/${ep}/${editId}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(r.ok){toast('✅ Sauvegardé','ok');loadTable();loadStats();}
+    else toast('❌ Erreur','err');
+  }catch(e){toast('❌ Serveur hors ligne','err');}
+}
+
+// ── Ancien R&O ──
+const RO_DATA = {
+  liste: [
+    {nom:"ANDIAZABAL",prenom:"SEVERINE",naissance:"01/09/1978",profession:"Graphiste",telephone:"06 76 32 04 44",email:"sev.andiazabal@gmail.com",adresse:"11 SQUARE DES LOGARITHMES",cp:"77240",ville:"CESSON",contrats:[{ref:"D130085659",date:"09/09/2022",montant:50,assureur:"AVIVA"},{ref:"*000003420",date:"09/09/2022",montant:50,assureur:"OPTIMUM"}]},
+    {nom:"ANDONOFF",prenom:"ROBERT",naissance:"22/12/1994",profession:"Infirmier",telephone:"06 70 89 72 28",email:"robert.andonoff@gmail.com",ville:"VIVIERS LES MONTAGNES",contrats:[{ref:"D130049422",date:"03/08/2021",montant:400,assureur:"AVIVA"}]},
+    {nom:"ANDRADE",prenom:"CINDY",naissance:"28/03/1993",profession:"Infirmier",telephone:"06 75 98 17 37",email:"cindy-scp@hotmail.fr",ville:"CHILLY MAZARIN",contrats:[{ref:"D130087445",date:"15/04/2022",montant:300,assureur:"AVIVA"}]},
+    {nom:"ANDRE",prenom:"ANTOINE",naissance:"07/05/1991",profession:"Médecin",telephone:"06 66 28 12 36",email:"antoine.andre91@gmail.com",ville:"ST LEONARD",contrats:[{ref:"D130084894",date:"28/02/2022",montant:700,assureur:"AVIVA"}]},
+    {nom:"ANDRE",prenom:"EVE",naissance:"16/10/1971",profession:"Infirmier",telephone:"06 13 99 73 39",email:"eveandre987@gmail.com",ville:"MIREPOIX",contrats:[{ref:"D130082782",date:"15/02/2022",montant:300,assureur:"AVIVA"}]},
+    {nom:"ANDRE",prenom:"QUENTIN",naissance:"20/03/1996",profession:"Kinésithérapeute",telephone:"07 60 03 93 99",email:"quentin.38@free.fr",ville:"STE COLOMBE",contrats:[{ref:"D130090020",date:"05/10/2022",montant:1000,assureur:"AVIVA"}]},
+    {nom:"ANDREANI",prenom:"FREDERIC",naissance:"05/11/1974",profession:"Infirmier",telephone:"06 14 15 87 52",email:"frederic.andreani2b@gmail.com",ville:"PRUNELLI DE FIUMORBO",contrats:[{ref:"T00027768",date:"20/06/2022",montant:300,assureur:"OPTIMUM"}]},
+    {nom:"ANDREANI",prenom:"CLAIRE",naissance:"16/10/1997",profession:"Infirmier",telephone:"06 09 64 75 39",email:"claire.andreani@hotmail.fr",ville:"CALENZANA",contrats:[{ref:"D130070028",date:"20/10/2021",montant:100,assureur:"AVIVA"}]},
+    {nom:"BELLANGER",prenom:"DANIELLE",naissance:"21/01/1955",profession:"Pédiatre",telephone:"06 71 41 24 04",email:"danielle.bellanger@dbmail.com",ville:"MARSEILLE",contrats:[{ref:"T00026233",date:"06/03/2022",montant:342,assureur:"OPTIMUM"}]},
+    {nom:"BELLANGER",prenom:"CAMILLE",naissance:"12/09/1994",profession:"Orthophoniste",telephone:"06 50 88 34 91",email:"camille.bellanger94@gmail.com",ville:"LYON",contrats:[{ref:"D130068647",date:"10/12/2021",montant:150,assureur:"AVIVA"}]},
+    {nom:"BEL-HADJ",prenom:"ZOHRA",naissance:"19/08/1991",profession:"Infirmière",telephone:"06 28 16 23 76",email:"zohradu42@hotmail.fr",ville:"VAULX EN VELIN",contrats:[{ref:"2292105849",date:"06/11/2021",montant:200,assureur:"GENERALIVI"}]},
+    {nom:"BOURBIER",prenom:"HUGO",naissance:"13/05/1992",profession:"Dentiste",telephone:"06 07 29 58 66",email:"hbourbier@icloud.com",ville:"CLOHARS CARNOET",contrats:[{ref:"D130087330",date:"28/03/2022",montant:1800,assureur:"AVIVA"}]},
+  ],
+  team: [
+    {nom:"ZEREBECKI",prenom:"GRZEGORZ",profession:"Masseur-kinésithérapeute",telephone:"07 67 26 73 40",ville:"CHATEAU THIERRY",dept:"Aisne",dda:"02/01/2024",statut_prosp:"VALIDÉ"},
+    {nom:"HEYSEN",prenom:"SEBASTIEN",profession:"Infirmier",telephone:"06 09 65 12 12",ville:"TOMBLAINE",dept:"Meurthe et Moselle",dda:"02/01/2024",statut_prosp:"NRP1"},
+    {nom:"BARRIENTOS",prenom:"ANAIS",profession:"Infirmier",telephone:"07 45 26 29 12",ville:"REIMS",dept:"Marne",dda:"01/01/2024",statut_prosp:"KO"},
+    {nom:"DEKOKER",prenom:"CAMILLE",profession:"Masseur-kinésithérapeute",telephone:"02 48 21 02 51",ville:"BOURGES",dept:"Cher",dda:"19/10/2023",statut_prosp:"VALIDÉ"},
+    {nom:"LAIGLE",prenom:"ESTELLE",profession:"Infirmier",telephone:"06 36 08 17 07",ville:"BERTRICHAMPS",dept:"Meurthe et Moselle",dda:"01/09/2023",statut_prosp:"VALIDÉ"},
+    {nom:"KOWALCZYK",prenom:"JAKUB",profession:"Masseur-kinésithérapeute",telephone:"06 64 00 86 39",ville:"GEX",dept:"Ain",dda:"17/08/2023",statut_prosp:"NRP1"},
+    {nom:"FAVRE",prenom:"LISA",profession:"Masseur-kinésithérapeute",telephone:"06 30 52 52 50",ville:"DIVONNE LES BAINS",dept:"Ain",dda:"24/07/2023",statut_prosp:"NRP1"},
+    {nom:"ALLARD",prenom:"GUILLAUME",profession:"Infirmier",telephone:"07 66 03 81 59",ville:"LAY ST CHRISTOPHE",dept:"Meurthe et Moselle",dda:"28/02/2022",statut_prosp:"VALIDÉ"},
+    {nom:"GARNIER",prenom:"CAROLE",profession:"Infirmier",telephone:"07 66 89 85 97",ville:"REIMS",dept:"Marne",dda:"01/02/2023",statut_prosp:"NRP1"},
+    {nom:"PERCHET",prenom:"DAMIEN",profession:"Masseur-kinésithérapeute",telephone:"07 76 33 89 51",ville:"NEYRON",dept:"Ain",dda:"22/09/2021",statut_prosp:"NRP1"},
+    {nom:"BERNARD",prenom:"CAROLINE",profession:"Infirmier",telephone:"06 38 20 71 15",ville:"TAISSY",dept:"Marne",dda:"14/03/2022",statut_prosp:"NRP1"},
+  ],
+  opti: [
+    {nom:"VESSIERE",prenom:"JOHANNE",naissance:"17/02/1992",telephone:"06 75 64 62 58",ville:"CROISY SUR ANDELLE",montant:250,statut_contrat:"Renonciation"},
+    {nom:"WARUSFEL",prenom:"CORALINE",naissance:"30/01/1993",telephone:"06 87 06 98 07",ville:"HENIN BEAUMONT",montant:300,statut_contrat:"Renonciation"},
+    {nom:"PAULOS",prenom:"LAETITIA",naissance:"23/04/1993",telephone:"07 67 90 90 21",ville:"MONTEVRAIN",montant:550,statut_contrat:"Renonciation",commentaire:"DEJA RE SIGNÉ ET RE DECOM"},
+    {nom:"RIBO",prenom:"VINCENT",naissance:"02/03/1997",telephone:"07 87 74 52 88",ville:"TOULOUSE",montant:200,statut_contrat:"Renonciation",commentaire:"SIGNÉ SPP95"},
+    {nom:"RICHARD",prenom:"CECILIA",naissance:"16/04/1989",telephone:"07 61 18 59 44",ville:"NICE",montant:400,statut_contrat:"Renonciation"},
+    {nom:"SAY",prenom:"ROMAIN",naissance:"14/03/1993",telephone:"06 92 11 92 44",ville:"LA PETITE ILE",montant:250,statut_contrat:"Renonciation",commentaire:"SIGNÉ SPP95"},
+    {nom:"TOUSSAINT",prenom:"DELPHINE",naissance:"19/08/1993",telephone:"06 81 99 56 74",ville:"SAINT OUEN",montant:250,statut_contrat:"Renonciation"},
+    {nom:"NOUI",prenom:"MELISSA",naissance:"30/01/1994",telephone:"06 15 58 35 21",ville:"MONTPLAISIR",montant:150,statut_contrat:"Renonciation",commentaire:"ANCIENNE CLIENTE BLOQUÉE"},
+    {nom:"MILLET",prenom:"PIERRE ANTOINE",naissance:"15/04/1992",telephone:"06 50 37 03 51",ville:"VIRELADE",montant:0,statut_contrat:"Rachat total",commentaire:"MAUVAIS NUM"},
+    {nom:"THOMIN",prenom:"CAMILLE",naissance:"12/06/1984",telephone:"06 59 20 80 87",ville:"LYON",montant:0,statut_contrat:"Rachat total",commentaire:"SIGNÉ SPP45"},
+    {nom:"VASSEUR",prenom:"MELANIE",naissance:"10/11/1988",telephone:"06 72 30 04 77",ville:"CARNIEN",montant:250,statut_contrat:"Rachat total"},
+    {nom:"SALNOT",prenom:"SEVERINE",naissance:"07/11/1998",telephone:"06 47 00 07 61",ville:"MARSEILLE",montant:150,statut_contrat:"Renonciation",commentaire:"SIGNÉ SPP95"},
+  ]
+};
+
+function renderRO(){
+  const q=(document.getElementById('ro-search')?.value||'').toLowerCase();
+  const filter=document.getElementById('ro-filter')?.value||'';
+  const wrap=document.getElementById('ro-wrap');
+
+  const sections=[
+    {key:'liste',label:'📋 Anciens clients — Contrats AVIVA / OPTIMUM',color:'#2F81F7'},
+    {key:'team',label:'👥 Team Entibi — Fichier prospection',color:'#BC8CFF'},
+    {key:'opti',label:'🔄 Renonciations PER Sérénité 2024',color:'#F78166'},
+  ];
+
+  let html='';
+  let total=0;
+  for(const sec of sections){
+    if(filter && filter!==sec.key) continue;
+    let items=RO_DATA[sec.key].filter(c=>{
+      if(!q) return true;
+      return (c.nom+' '+c.prenom+' '+(c.ville||'')+' '+(c.profession||'')).toLowerCase().includes(q);
+    });
+    total+=items.length;
+    if(!items.length) continue;
+
+    html+=`<div class="ro-section">
+      <div class="ro-section-title">
+        ${sec.label}
+        <span class="ro-badge" style="background:${sec.color}18;color:${sec.color}">${items.length}</span>
+      </div>`;
+
+    for(const c of items){
+      const initials=(c.nom[0]||'')+(c.prenom?.[0]||'');
+      let badge='';
+      if(c.statut_prosp) badge=`<span class="statut-badge ${stClass(c.statut_prosp)}">${c.statut_prosp}</span>`;
+      else if(c.statut_contrat) badge=`<span class="statut-badge ${stClassOpti(c.statut_contrat)}">${c.statut_contrat}</span>`;
+
+      html+=`<div class="ro-card" onclick="toggleRoCard(this)">
+        <div class="ro-card-hdr">
+          <div class="ro-avatar" style="background:${sec.color}20;color:${sec.color}">${initials}</div>
+          <div style="flex:1;min-width:0">
+            <div class="ro-name">${esc(c.nom)} ${esc(c.prenom)}</div>
+            <div class="ro-meta">${c.profession||c.statut_contrat||''} • ${c.ville||''}</div>
+          </div>
+          ${badge}
+          ${c.telephone?`<a href="tel:${c.telephone.replace(/\s/g,'')}" onclick="event.stopPropagation()" class="btn" style="padding:4px 8px;font-size:11px;color:var(--green);border-color:var(--green);text-decoration:none">📞</a>`:''}
+        </div>
+        <div class="ro-card-body">
+          <div class="ro-grid">
+            ${c.telephone?`<div><div class="ro-field-label">Téléphone</div><div class="ro-field-val" style="color:var(--green);font-family:monospace;font-weight:700">${c.telephone}</div></div>`:''}
+            ${c.email?`<div><div class="ro-field-label">Email</div><div class="ro-field-val" style="color:var(--blue);font-size:11px">${c.email}</div></div>`:''}
+            ${c.naissance?`<div><div class="ro-field-label">Naissance</div><div class="ro-field-val">${c.naissance}</div></div>`:''}
+            ${c.ville?`<div><div class="ro-field-label">Ville</div><div class="ro-field-val">${c.ville}${c.cp?' ('+c.cp+')':''}</div></div>`:''}
+            ${c.dept?`<div><div class="ro-field-label">Département</div><div class="ro-field-val">${c.dept}</div></div>`:''}
+            ${c.dda?`<div><div class="ro-field-label">Date de début</div><div class="ro-field-val">${c.dda}</div></div>`:''}
+            ${c.montant?`<div><div class="ro-field-label">Montant</div><div class="ro-field-val">${c.montant}€/mois</div></div>`:''}
+            ${c.commentaire?`<div style="grid-column:span 3"><div class="ro-field-label">Commentaire</div><div class="ro-field-val" style="color:var(--orange)">${esc(c.commentaire)}</div></div>`:''}
+          </div>
+          ${c.contrats?`<div style="margin-top:10px"><div class="ro-field-label" style="margin-bottom:6px">Contrats</div>${c.contrats.map(ct=>`<div class="contrat-row"><div class="contrat-ref">${ct.assureur} — ${ct.ref}</div><div class="contrat-details">Signé le ${ct.date} • ${ct.montant}€/mois</div></div>`).join('')}</div>`:''}
+        </div>
+      </div>`;
+    }
+    html+='</div>';
+  }
+
+  document.getElementById('ro-cnt').textContent=total+' contacts';
+  wrap.innerHTML=html||'<div style="color:var(--text3);text-align:center;padding:40px">Aucun résultat</div>';
+}
+
+function toggleRoCard(el){el.classList.toggle('expanded')}
+
+function stClass(s){
+  if(!s) return '';
+  s=s.toUpperCase();
+  if(s==='VALIDÉ') return 's-valide';
+  if(s==='KO') return 's-ko';
+  if(s.includes('NRP')) return 's-nrp';
+  if(s.includes('RAP')||s.includes('A RAP')) return 's-arap';
+  return '';
+}
+
+function stClassOpti(s){
+  if(!s) return '';
+  if(s==='Renonciation') return 's-reno';
+  if(s==='Rachat total') return 's-rachat';
+  return '';
+}
+
+// ── Pagination ──
+function renderPag(page,pages,total){
+  document.getElementById('pag-info').textContent=total?`Page ${page}/${pages} · ${total.toLocaleString('fr')} résultats`:'0 résultat';
+  const b=document.getElementById('pag-btns');
+  if(!pages){b.innerHTML='';return;}
+  let h=`<button class="pgb" onclick="goPage(${page-1})" ${page<=1?'disabled':''}>‹</button>`;
+  const s=Math.max(1,page-2),e=Math.min(pages,page+2);
+  if(s>1) h+=`<button class="pgb" onclick="goPage(1)">1</button>`;
+  if(s>2) h+=`<span style="color:var(--text3);padding:0 3px;align-self:center">…</span>`;
+  for(let i=s;i<=e;i++) h+=`<button class="pgb ${i===page?'act':''}" onclick="goPage(${i})">${i}</button>`;
+  if(e<pages-1) h+=`<span style="color:var(--text3);padding:0 3px;align-self:center">…</span>`;
+  if(e<pages) h+=`<button class="pgb" onclick="goPage(${pages})">${pages}</button>`;
+  h+=`<button class="pgb" onclick="goPage(${page+1})" ${page>=pages?'disabled':''}>›</button>`;
+  b.innerHTML=h;
+}
+function goPage(p){curPage=p;loadTable();window.scrollTo(0,0);}
+
+// ── Stats ──
+async function loadStats(){
+  try{
+    const r=await fetch(API+'/stats');
+    const d=await r.json();
+    const s=d.sante,p=d.pharmacies;
+    document.getElementById('kpi-sante').textContent=(s.total+p.total).toLocaleString('fr');
+    document.getElementById('kpi-tel').textContent=(s.avec_tel+p.avec_tel).toLocaleString('fr');
+    document.getElementById('kpi-clients').textContent=((s.statuts?.client||0)+(p.statuts?.client||0));
+    document.getElementById('sb-new').textContent=s.nouveaux_jour||0;
+    document.getElementById('sb-s1').textContent=s.statuts?.nouveau||0;
+    document.getElementById('sb-s2').textContent=s.statuts?.contacte||0;
+    document.getElementById('sb-s3').textContent=s.statuts?.interesse||0;
+    document.getElementById('sb-s4').textContent=s.statuts?.['a-rappeler']||0;
+    document.getElementById('sb-s5').textContent=s.statuts?.client||0;
+    // Pipeline counts
+    const st=s.statuts||{};
+    document.getElementById('pc-all').textContent=s.total;
+    document.getElementById('pc-nouveau').textContent=st.nouveau||0;
+    document.getElementById('pc-contacte').textContent=st.contacte||0;
+    document.getElementById('pc-interesse').textContent=st.interesse||0;
+    document.getElementById('pc-rappeler').textContent=st['a-rappeler']||0;
+    document.getElementById('pc-client').textContent=st.client||0;
+    // Tab counts
+    const sp=s.par_specialite||{};
+    const inf=Object.entries(sp).filter(([k])=>k.toLowerCase().includes('infirm')).reduce((a,[,v])=>a+v,0);
+    const kin=Object.entries(sp).filter(([k])=>k.toLowerCase().includes('masseur')||k.toLowerCase().includes('ostéo')).reduce((a,[,v])=>a+v,0);
+    const med=Object.entries(sp).filter(([k])=>['médecin','cardio','radio','ophtalmo','psychiatre','pneumo','rhumato','neuro','irl','gynéco'].some(x=>k.toLowerCase().includes(x))).reduce((a,[,v])=>a+v,0);
+    const den=Object.entries(sp).filter(([k])=>k.toLowerCase().includes('dentiste')||k.toLowerCase().includes('chirurgien-dentiste')).reduce((a,[,v])=>a+v,0);
+    const psy=Object.entries(sp).filter(([k])=>['psycho','orthophon','pédicure','sage-femme'].some(x=>k.toLowerCase().includes(x))).reduce((a,[,v])=>a+v,0);
+    document.getElementById('cnt-all').textContent=(s.total>999?Math.round(s.total/1000)+'k':s.total)||'—';
+    document.getElementById('cnt-inf').textContent=inf>999?Math.round(inf/1000)+'k':inf||'—';
+    document.getElementById('cnt-kin').textContent=kin||'—';
+    document.getElementById('cnt-med').textContent=med>999?Math.round(med/1000)+'k':med||'—';
+    document.getElementById('cnt-den').textContent=den>999?Math.round(den/1000)+'k':den||'—';
+    document.getElementById('cnt-psy').textContent=psy||'—';
+    document.getElementById('cnt-phr').textContent=p.total>999?Math.round(p.total/1000)+'k':p.total||'—';
+  }catch(e){}
+}
+
+// ── Scraping ──
+function showScraping(){document.getElementById('scrap-overlay').style.display='flex'}
+function hideScrap(){document.getElementById('scrap-overlay').style.display='none'}
+async function launchScraping(){
+  toast('⚡ Scraping lancé...','ok');
+  document.getElementById('scrap-prog').style.display='block';
+  try{
+    await fetch(API+'/scraping/launch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sources:['powerbi']})});
+    if(scrapInterval) clearInterval(scrapInterval);
+    scrapInterval=setInterval(async()=>{
+      try{
+        const r=await fetch(API+'/scraping/status');
+        const s=await r.json();
+        document.getElementById('scrap-bar').style.width=s.progress+'%';
+        document.getElementById('scrap-msg').textContent=s.message;
+        if(!s.running){clearInterval(scrapInterval);toast('✅ '+s.message,'ok');loadStats();}
+      }catch(e){clearInterval(scrapInterval);}
+    },2000);
+  }catch(e){toast('❌ Serveur hors ligne','err');}
+}
+
+// ── Export ──
+async function exportCSV(){
+  const ep=curProf==='phr'?'pharmacies':'sante';
+  const p=new URLSearchParams({per_page:9999,page:1});
+  if(SPES[curProf]) p.set('specialites',SPES[curProf].join('|'));
+  if(curSubTab==='avec') p.set('avec_direct','1');
+  const r=await fetch(`${API}/${ep}?${p}`);
+  const d=await r.json();
+  if(!d.data.length){toast('Rien à exporter','err');return;}
+  const keys=Object.keys(d.data[0]).filter(k=>k!=='id');
+  let csv='\uFEFF'+keys.join(';')+'\n';
+  d.data.forEach(row=>{csv+=keys.map(k=>JSON.stringify(row[k]??'')).join(';')+'\n';});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download=`crm-${ep}-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  toast('✅ CSV exporté','ok');
+}
+
+// ── Helpers ──
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function fmt(t){if(!t)return'—';const s=String(t).replace(/\D/g,'');if(s.length===10)return s.replace(/(\d{2})(?=\d)/g,'$1 ').trim();return t}
+function ageBadge(d){
+  if(!d)return'<span class="age age-old">—</span>';
+  const diff=(Date.now()-new Date(d).getTime())/86400000;
+  if(isNaN(diff))return'<span class="age age-old">—</span>';
+  if(diff<90)return`<span class="age age-new">🔥 ${Math.round(diff)}j</span>`;
+  if(diff<365)return`<span class="age age-mid">${Math.round(diff/30)}mois</span>`;
+  return`<span class="age age-old">${Math.round(diff/365)}an${Math.round(diff/365)>1?'s':''}</span>`;
+}
+function toast(msg,type='ok'){
+  const t=document.createElement('div');t.className='toast '+type;t.textContent=msg;
+  document.getElementById('toasts').appendChild(t);setTimeout(()=>t.remove(),3500);
+}
+
+// ── Init ──
+(async()=>{
+  renderHead();
+  await loadStats();
+  loadTable();
+  setInterval(loadStats,5*60*1000);
+})();
+</script>
+</body>
+</html>
