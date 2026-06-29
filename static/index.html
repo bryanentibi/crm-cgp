@@ -777,12 +777,6 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
           <div class="dps" data-s="rdv" onclick="setDPSA('rdv')">📅 RDV</div>
           <div class="dps" data-s="ko" onclick="setDPSA('ko')">❌ KO</div>
         </div>
-          <div class="dps" data-s="rdv" onclick="setDPSA('rdv')">RDV Pris</div>
-          <div class="dps" data-s="signe" onclick="setDPSA('signe')">Signé</div>
-          <div class="dps" data-s="ko" onclick="setDPSA('ko')">KO</div>
-          <div class="dps" data-s="rappeler" onclick="setDPSA('rappeler')">Rappeler</div>
-          <div class="dps" data-s="nrp" onclick="setDPSA('nrp')">NRP</div>
-        </div>
         <div class="dp-body">
           <div class="dp-sec">Coordonnées</div>
           <div class="dp-grid" id="dpco-art"></div>
@@ -897,6 +891,7 @@ function renderBarriere(){
         <option value="rappeler" ${c.statut==='rappeler'?'selected':''}>\uD83D\uDD04 \u00c0 Rappeler</option>
         <option value="nrp" ${c.statut==='nrp'?'selected':''}>\uD83D\uDCF5 NRP</option>
       </select>
+      <button onclick="window.openRDV({id:0,nom:e(c.nom||''),telephone_direct:'',email:'',specialite:'Client Barrière PER',ville:''},'arbitrage')" style="border:none;background:#38A169;color:white;border-radius:6px;padding:5px 8px;font-size:11px;cursor:pointer;font-family:Inter,sans-serif;margin-top:4px;width:100%">📅 RDV</button>
     </div>`;
   }).join('');
 }
@@ -943,6 +938,7 @@ function renderOptimum(){
         <option value="rappeler" ${c.statut==='rappeler'?'selected':''}>\uD83D\uDD04 \u00c0 Rappeler</option>
         <option value="nrp" ${c.statut==='nrp'?'selected':''}>\uD83D\uDCF5 NRP</option>
       </select>
+      <button onclick="window.openRDV({id:0,nom:e(c.nom||''),telephone_direct:'',email:'',specialite:'Client Optimum PER',ville:''},'arbitrage')" style="border:none;background:#38A169;color:white;border-radius:6px;padding:5px 8px;font-size:11px;cursor:pointer;font-family:Inter,sans-serif;margin-top:4px;width:100%">📅 RDV</button>
     </div>`;
   }).join('');
 }
@@ -1294,6 +1290,7 @@ function renderRO(){
           <div style="flex:1;min-width:0"><div class="ro-nm">${e(c.nom)} ${e(c.prenom)}</div><div class="ro-mt">${c.profession||c.statut_contrat||''} · ${c.ville||''}</div></div>
           ${badge}
           ${c.telephone?`<a href="tel:${c.telephone.replace(/\s/g,'')}" onclick="event.stopPropagation()" class="btn btn-green" style="padding:4px 9px;font-size:11px;text-decoration:none;margin-left:8px">📞</a>`:''}
+          <button onclick="event.stopPropagation();window.openRDV({id:0,nom:e(c.nom)+' '+e(c.prenom),telephone_direct:c.telephone||'',email:c.email||'',specialite:c.profession||'',ville:c.ville||''},'ro')" class="btn btn-blue" style="padding:4px 9px;font-size:11px;margin-left:4px">📅 RDV</button>
         </div>
         <div class="rocard-body">
           <div class="ro-grid">
