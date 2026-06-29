@@ -310,6 +310,38 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
 <body>
 
 <!-- SIDEBAR -->
+
+<!-- LOGIN PAGE -->
+<div id="login-page" style="display:none;position:fixed;inset:0;background:linear-gradient(135deg,#EBF8FF 0%,#FAF5FF 100%);z-index:9999;display:flex;align-items:center;justify-content:center">
+  <div style="background:white;border:1px solid var(--border);border-radius:20px;padding:40px;width:380px;box-shadow:0 20px 60px rgba(0,0,0,0.15)">
+    <div style="text-align:center;margin-bottom:28px">
+      <div style="width:56px;height:56px;background:linear-gradient(135deg,#3182CE,#805AD5);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;color:white;margin:0 auto 14px">B</div>
+      <div style="font-size:22px;font-weight:800;color:var(--text)">Bryan CGP</div>
+      <div style="font-size:13px;color:var(--text3);margin-top:4px">CRM Prospection — Connexion</div>
+    </div>
+    <div style="margin-bottom:14px">
+      <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);display:block;margin-bottom:6px">Identifiant</label>
+      <input type="text" id="login-user" placeholder="bryanentibi" 
+        style="width:100%;border:1px solid var(--border);border-radius:9px;padding:11px 14px;font-size:14px;font-family:Inter,sans-serif;outline:none;transition:border-color .15s;box-sizing:border-box"
+        onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'"
+        onkeydown="if(event.key==='Enter')document.getElementById('login-pwd').focus()">
+    </div>
+    <div style="margin-bottom:20px">
+      <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);display:block;margin-bottom:6px">Mot de passe</label>
+      <input type="password" id="login-pwd" placeholder="••••••••"
+        style="width:100%;border:1px solid var(--border);border-radius:9px;padding:11px 14px;font-size:14px;font-family:Inter,sans-serif;outline:none;transition:border-color .15s;box-sizing:border-box"
+        onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'"
+        onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div id="login-err" style="display:none;background:#FFF5F5;border:1px solid #FEB2B2;border-radius:8px;padding:10px 14px;font-size:13px;color:var(--red);margin-bottom:14px"></div>
+    <button onclick="doLogin()" id="login-btn"
+      style="width:100%;padding:13px;background:var(--blue);border:none;border-radius:10px;color:white;font-size:14px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;transition:all .2s;box-shadow:0 4px 12px rgba(49,130,206,.3)">
+      Se connecter
+    </button>
+    <div style="text-align:center;margin-top:14px;font-size:11px;color:var(--text3)">Evka Conseil · Vauban Associés</div>
+  </div>
+</div>
+
 <aside class="sidebar">
   <div class="sb-logo">
     <div class="sb-logo-icon">B</div>
@@ -368,6 +400,7 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
     <div class="sb-item" onclick="setF('a-rappeler')"><span class="sb-icon">🔄</span>À rappeler<span class="sb-num" id="sn-rap">—</span></div>
 
     <div class="sb-lbl" style="margin-top:6px">Outils</div>
+    <div class="sb-item" onclick="doLogout()" style="color:var(--red)"><span class="sb-icon">🚪</span>Déconnexion</div>
     <div class="sb-item" onclick="openScr()"><span class="sb-icon">⚡</span>Lancer scraping</div>
     <div class="sb-item" onclick="doExport()"><span class="sb-icon">⬇</span>Exporter CSV</div>
   </nav>
@@ -786,7 +819,7 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
 <div class="toasts" id="toasts"></div>
 
 <script>
-const API='https://web-production-66741.up.railway.app/api';
+const API='http://https://web-production-66741.up.railway.app/api';
 const PC={all:'var(--text2)',inf:'#3182CE',kin:'#805AD5',med:'#2B6CB0',den:'#DD6B20',psy:'#D53F8C'};
 const PS={inf:['Infirmier','Infirmière'],kin:['Masseur','Kinési','Ostéo'],med:['Médecin','Cardio','Radio','Chirur','Gynéco','Pédiatre','Dermato'],den:['Dentiste','Chirurgien-dentiste'],psy:['Psycho','Orthophon','Pédicure','Sage-femme']};
 const PL={all:'Toutes professions',inf:'Infirmiers',kin:'Kiné / Ostéo',med:'Médecins',den:'Dentistes',psy:'Psy / Ortho'};
@@ -1651,7 +1684,103 @@ async function saveArt(){
   }catch(ex){toast('❌ Serveur hors ligne','err');}
 }
 
-(async()=>{await loadStats();loadDash();setInterval(loadStats,5*60*1000);})();
+
+// ── LOGIN ──
+let authToken = localStorage.getItem('crm_token') || '';
+
+async function doLogin() {
+  const user = document.getElementById('login-user').value.trim();
+  const pwd = document.getElementById('login-pwd').value;
+  const btn = document.getElementById('login-btn');
+  const err = document.getElementById('login-err');
+  
+  if(!user || !pwd) { showErr('Remplis tous les champs'); return; }
+  
+  btn.textContent = 'Connexion...';
+  btn.disabled = true;
+  err.style.display = 'none';
+  
+  try {
+    const r = await fetch(`${API}/login`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({username: user, password: pwd})
+    });
+    const d = await r.json();
+    if(r.ok) {
+      authToken = d.token;
+      localStorage.setItem('crm_token', authToken);
+      document.getElementById('login-page').style.display = 'none';
+      document.querySelector('.sidebar').style.display = 'flex';
+      document.querySelector('.main').style.display = 'flex';
+      toast('✅ Bienvenue ' + d.nom, 'ok');
+      loadStats();
+      loadDash();
+    } else {
+      showErr(d.error || 'Identifiants incorrects');
+    }
+  } catch(ex) {
+    showErr('Erreur de connexion');
+  }
+  btn.textContent = 'Se connecter';
+  btn.disabled = false;
+}
+
+function showErr(msg) {
+  const err = document.getElementById('login-err');
+  err.textContent = msg;
+  err.style.display = 'block';
+}
+
+async function checkLogin() {
+  const token = localStorage.getItem('crm_token');
+  if(!token) { showLogin(); return; }
+  try {
+    const r = await fetch(`${API}/me`, {headers: {'X-Auth-Token': token}});
+    if(r.ok) {
+      authToken = token;
+      document.getElementById('login-page').style.display = 'none';
+      document.querySelector('.sidebar').style.display = 'flex';
+      document.querySelector('.main').style.display = 'flex';
+    } else {
+      localStorage.removeItem('crm_token');
+      showLogin();
+    }
+  } catch(ex) {
+    showLogin();
+  }
+}
+
+function showLogin() {
+  document.getElementById('login-page').style.display = 'flex';
+  document.querySelector('.sidebar').style.display = 'none';
+  document.querySelector('.main').style.display = 'none';
+}
+
+async function doLogout() {
+  try { await fetch(`${API}/logout`, {method:'POST', headers:{'X-Auth-Token': authToken}}); } catch(ex) {}
+  localStorage.removeItem('crm_token');
+  authToken = '';
+  showLogin();
+  toast('✅ Déconnecté', 'ok');
+}
+
+// Ajouter X-Auth-Token à tous les fetch
+const _origFetch = window.fetch;
+window.fetch = function(url, opts={}) {
+  if(authToken && typeof url === 'string' && url.includes('/api/')) {
+    opts.headers = opts.headers || {};
+    opts.headers['X-Auth-Token'] = authToken;
+  }
+  return _origFetch(url, opts);
+};
+
+(async()=>{
+  // Cacher sidebar/main au départ
+  document.querySelector(".sidebar").style.display="none";
+  document.querySelector(".main").style.display="none";
+  await checkLogin();
+  await loadStats();loadDash();setInterval(loadStats,5*60*1000);})();
 </script>
 </body>
 </html>

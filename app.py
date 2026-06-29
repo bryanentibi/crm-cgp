@@ -3,6 +3,25 @@ from flask_cors import CORS
 import json, os
 from datetime import datetime, date
 
+
+import hashlib, secrets
+from functools import wraps
+
+USERS = {
+    "bryanentibi": {
+        "password_hash": "9ed259ce4511a7a0adef99a70475d2f2e3cb90c2aa8f7f8c5d37d941849ca9ba",
+        "role": "admin",
+        "nom": "Bryan Entibi"
+    }
+}
+
+SESSIONS = {}
+
+def check_session(request):
+    token = request.headers.get('X-Auth-Token') or request.cookies.get('auth_token')
+    return SESSIONS.get(token)
+
+
 app = Flask(__name__, static_folder='static')
 CORS(app)
 
@@ -319,6 +338,65 @@ def update_artisan(id):
                 c.update(body)
                 break
         save_json('artisans.json', data)
+    return jsonify({'ok': True})
+
+
+
+@app.route('/api/login', methods=['POST'])
+def login():
+    data = request.json or {}
+    username = data.get('username', '').lower().strip()
+    password = data.get('password', '')
+    user = USERS.get(username)
+    if not user:
+        return jsonify({'error': 'Identifiants incorrects'}), 401
+    pwd_hash = hashlib.sha256(password.encode()).hexdigest()
+    if pwd_hash != user['password_hash']:
+        return jsonify({'error': 'Identifiants incorrects'}), 401
+    import secrets as sec
+    token = sec.token_hex(32)
+    SESSIONS[token] = {'username': username, 'role': user['role'], 'nom': user['nom']}
+    resp = jsonify({'ok': True, 'token': token, 'nom': user['nom'], 'role': user['role']})
+    resp.set_cookie('auth_token', token, max_age=86400*7, httponly=True, samesite='Lax')
+    return resp
+
+@app.route('/api/logout', methods=['POST'])
+def logout():
+    token = request.headers.get('X-Auth-Token') or request.cookies.get('auth_token')
+    if token and token in SESSIONS:
+        del SESSIONS[token]
+    resp = jsonify({'ok': True})
+    resp.delete_cookie('auth_token')
+    return resp
+
+@app.route('/api/me')
+def me():
+    session = check_session(request)
+    if not session:
+        return jsonify({'error': 'Non autorise'}), 401
+    return jsonify(session)
+
+@app.route('/api/users', methods=['GET'])
+def get_users():
+    session = check_session(request)
+    if not session or session.get('role') != 'admin':
+        return jsonify({'error': 'Non autorise'}), 401
+    return jsonify([{'username': k, 'nom': v['nom'], 'role': v['role']} for k, v in USERS.items()])
+
+@app.route('/api/users', methods=['POST'])
+def add_user():
+    session = check_session(request)
+    if not session or session.get('role') != 'admin':
+        return jsonify({'error': 'Non autorise'}), 401
+    data = request.json or {}
+    username = data.get('username', '').lower().strip()
+    password = data.get('password', '')
+    nom = data.get('nom', username)
+    role = data.get('role', 'user')
+    if not username or not password:
+        return jsonify({'error': 'Username et mot de passe requis'}), 400
+    pwd_hash = hashlib.sha256(password.encode()).hexdigest()
+    USERS[username] = {'password_hash': pwd_hash, 'role': role, 'nom': nom}
     return jsonify({'ok': True})
 
 
