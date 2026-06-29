@@ -500,6 +500,10 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
           <div class="dps" data-s="rdv" onclick="setDPS('rdv')">📅 RDV</div>
           <div class="dps" data-s="ko" onclick="setDPS('ko')">❌ KO</div>
         </div>
+          <div class="dps" data-s="nrp" onclick="setDPS('nrp')">📵 NRP</div>
+          <div class="dps" data-s="rdv" onclick="setDPS('rdv')">📅 RDV</div>
+          <div class="dps" data-s="ko" onclick="setDPS('ko')">❌ KO</div>
+        </div>
         <div class="dp-tabs"><div class="dptab ac" onclick="swDPT('ov-p',this)">Infos</div><div class="dptab" onclick="swDPT('nt-p',this)">Notes</div></div>
         <div class="dp-body">
           <div id="ov-p">
@@ -552,6 +556,10 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
         </div>
         <div class="dp-pipe">
           <div class="dps" data-s="" onclick="setDPS('')">⭕ Nouveau</div>
+          <div class="dps" data-s="nrp" onclick="setDPS('nrp')">📵 NRP</div>
+          <div class="dps" data-s="rdv" onclick="setDPS('rdv')">📅 RDV</div>
+          <div class="dps" data-s="ko" onclick="setDPS('ko')">❌ KO</div>
+        </div>
         <div class="dp-tabs"><div class="dptab ac" onclick="swDPT('ov-phr',this)">Infos</div><div class="dptab" onclick="swDPT('nt-phr',this)">Notes</div></div>
         <div class="dp-body">
           <div id="ov-phr"><div class="dp-grid" id="dpco-phr"></div><div class="dp-sec">📱 Numéro direct</div><input class="dp-inp" type="text" id="dptel-phr" placeholder="0612345678"></div>
@@ -1172,10 +1180,17 @@ function setDPS(s){
   document.getElementById(`dp-${k}`).querySelectorAll('.dps').forEach(p=>p.classList.remove('ac'));
   document.getElementById(`dp-${k}`).querySelector(`.dps[data-s="${s}"]`)?.classList.add('ac');
   if(s==='rdv'&&eid){
+    // Lire les infos directement depuis la fiche affichée
+    const nom = document.getElementById(`dpnm-${k}`)?.textContent||'';
+    const tel = document.getElementById(`dptel-${k}`)?.value||'';
+    const spec = document.getElementById(`dpsp-${k}`)?.textContent||'';
+    window._rdvContact = {id:eid, nom:nom, prenom:'', telephone_direct:tel, email:'', specialite:spec, ville:''};
+    window._rdvType = etype||'sante';
+    // Essayer de charger plus d'infos
     const ep=etype==='sante'?'sante':'pharmacies';
-    fetch(`${API}/${ep}/${eid}`).then(r=>r.json()).then(c=>{
-      openRDV(c&&c.id?c:{id:eid,nom:'',prenom:'',telephone_direct:'',email:'',specialite:'',ville:''},etype||'sante');
-    }).catch(()=>openRDV({id:eid,nom:'',prenom:'',telephone_direct:'',email:'',specialite:'',ville:''},etype||'sante'));
+    fetch(`${API}/${ep}/${eid}`).then(r=>r.ok?r.json():null).then(c=>{
+      openRDV(c&&c.id?c:window._rdvContact, window._rdvType);
+    }).catch(()=>openRDV(window._rdvContact, window._rdvType));
   }
 }
 function swDPT(id,el){const tabs=el.closest('.dp-tabs');tabs.querySelectorAll('.dptab').forEach(t=>t.classList.remove('ac'));el.classList.add('ac');const prefix=id.endsWith('-p')?'p':'phr';const body=el.closest('.dp').querySelector('.dp-body');body.querySelector(`#ov-${prefix}`).style.display=id.startsWith('ov')?'block':'none';body.querySelector(`#nt-${prefix}`).style.display=id.startsWith('nt')?'block':'none';}
@@ -1675,9 +1690,12 @@ function setDPSA(s){
   document.getElementById('dp-art-pipe').querySelectorAll('.dps').forEach(p=>p.classList.remove('ac'));
   document.getElementById('dp-art-pipe').querySelector(`.dps[data-s="${s}"]`)?.classList.add('ac');
   if(s==='rdv'&&artEid){
-    fetch(`${API}/artisans/${artEid}`).then(r=>r.json()).then(c=>{
-      openRDV(c&&c.id?c:{id:artEid,nom:'',telephone_direct:'',profession:'',ville:''},'artisans');
-    }).catch(()=>openRDV({id:artEid,nom:'',telephone_direct:'',profession:'',ville:''},'artisans'));
+    const nom = document.getElementById('dpnm-art')?.textContent||'';
+    const tel = document.getElementById('dptel-art')?.value||'';
+    window._rdvContact = {id:artEid, nom:nom, telephone_direct:tel, profession:'', ville:''};
+    fetch(`${API}/artisans/${artEid}`).then(r=>r.ok?r.json():null).then(c=>{
+      openRDV(c&&c.id?c:window._rdvContact,'artisans');
+    }).catch(()=>openRDV(window._rdvContact,'artisans'));
   }
 }
 async function saveArt(){
@@ -1814,9 +1832,6 @@ window.fetch = function(url, opts={}) {
   await checkLogin();
   await loadStats();loadDash();setInterval(loadStats,5*60*1000);
 // ── MODAL RDV ──
-let rdvContactId = null;
-let rdvContactType = null;
-
 function openRDV(contact, type) {
   rdvContactId = contact.id;
   rdvContactType = type;
@@ -1837,6 +1852,9 @@ function openRDV(contact, type) {
   document.getElementById('rdv-date').value = tomorrow.toISOString().slice(0,16);
   document.getElementById('modal-rdv').style.display = 'flex';
 }
+
+let rdvContactId = null;
+let rdvContactType = null;
 
 function closeRDV() {
   document.getElementById('modal-rdv').style.display = 'none';
