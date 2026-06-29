@@ -340,7 +340,8 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
     <div class="sb-item" id="nav-pros" onclick="showV('prospects')"><span class="sb-icon">👥</span>Prospects<span class="sb-num" id="sn-tot">—</span></div>
     <div class="sb-item" id="nav-phr" onclick="showV('pharmacies')"><span class="sb-icon">💊</span>Pharmacies<span class="sb-num" id="sn-phr">25k</span></div>
     <div class="sb-item" id="nav-ro" onclick="showV('ro')"><span class="sb-icon">📁</span>Ancien R&O<span class="sb-num" style="background:var(--yellow-light);color:var(--yellow)">50+</span></div>
-        <div class="sb-item" id="nav-mail" onclick="showV('mailing')"><span class="sb-icon">📧</span>Mailing</div>
+            <div class="sb-item" id="nav-art" onclick="showV('artisans')"><span class="sb-icon">🔧</span>Artisans<span class="sb-num" id="sn-art">0</span></div>
+    <div class="sb-item" id="nav-mail" onclick="showV('mailing')"><span class="sb-icon">📧</span>Mailing</div>
     <div class="sb-item" id="nav-arb" onclick="showV('arbitrage')"><span class="sb-icon">⚖️</span>Arbitrage clients<span class="sb-num" style="background:var(--purple-light);color:var(--purple)">108</span></div>
 
     <div class="sb-lbl" style="margin-top:6px">Spécialité</div>
@@ -685,6 +686,82 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
     </div>
   </div>
 
+
+  <!-- ARTISANS -->
+  <div class="view" id="view-artisans">
+    <div class="sub-bar">
+      <div class="stab on" id="sta-all" onclick="setSTA('all')">Tous</div>
+      <div class="stab" id="sta-plomb" onclick="setSTA('Plombier')">🔧 Plombiers</div>
+      <div class="stab" id="sta-ser" onclick="setSTA('Serrurier')">🔑 Serruriers</div>
+      <div class="stab" id="sta-elec" onclick="setSTA('Electricien')">⚡ Electriciens</div>
+      <div class="stab" id="sta-pein" onclick="setSTA('Peintre')">🖌️ Peintres</div>
+      <div class="stab" id="sta-mac" onclick="setSTA('Macon')">🧱 Maçons</div>
+      <div class="stab" id="sta-men" onclick="setSTA('Menuisier')">🪚 Menuisiers</div>
+      <div class="stab" id="sta-chauf" onclick="setSTA('Chauffagiste')">🌡️ Chauffagistes</div>
+    </div>
+    <div class="toolbar">
+      <div class="sw"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M11 11l3 3"/></svg><input type="text" id="srch-art" placeholder="Nom, ville..." oninput="applyFA()"></div>
+      <select class="fs" id="sel-art-st" onchange="applyFA()">
+        <option value="">Tous statuts</option>
+        <option value="rdv">📅 RDV Pris</option>
+        <option value="signe">✅ Signé</option>
+        <option value="ko">❌ KO</option>
+        <option value="rappeler">🔄 À Rappeler</option>
+        <option value="nrp">📵 NRP</option>
+      </select>
+      <select class="fs" id="sel-art-prof" onchange="applyFA()">
+        <option value="">Toutes professions</option>
+        <option value="Plombier">Plombier</option>
+        <option value="Serrurier">Serrurier</option>
+        <option value="Electricien">Electricien</option>
+        <option value="Peintre">Peintre</option>
+        <option value="Macon">Macon</option>
+        <option value="Menuisier">Menuisier</option>
+        <option value="Chauffagiste">Chauffagiste</option>
+        <option value="Carreleur">Carreleur</option>
+      </select>
+      <span class="chip" id="cnt-art">—</span>
+    </div>
+    <div style="display:flex;flex:1;min-height:0;overflow:hidden">
+      <div class="tw">
+        <table>
+          <thead><tr><th>NOM</th><th>PROFESSION</th><th>VILLE</th><th>📱 06 DIRECT</th><th>SOURCE</th><th>STATUT</th><th>NOTE</th><th></th></tr></thead>
+          <tbody id="tb-art"><tr class="empty"><td colspan="8"><span class="spin"></span></td></tr></tbody>
+        </table>
+      </div>
+      <div class="dp" id="dp-art">
+        <div class="dp-hdr" style="background:linear-gradient(135deg,#FFFAF0,#F0FFF4)">
+          <div class="dp-x" onclick="closeDp('art')">✕</div>
+          <div class="dp-ava" id="dpav-art" style="background:#FFFAF0;color:var(--orange);font-size:20px">🔧</div>
+          <div class="dp-name" id="dpnm-art">—</div>
+          <div class="dp-spec" id="dpsp-art">—</div>
+          <div class="dp-acts">
+            <a class="btn btn-green" id="dpcall-art" href="#" style="display:none;text-decoration:none">📞 Appeler</a>
+            <button class="btn btn-blue" onclick="saveArt()">💾 Sauvegarder</button>
+          </div>
+        </div>
+        <div class="dp-pipe" id="dp-art-pipe">
+          <div class="dps" data-s="" onclick="setDPSA('')">À Appeler</div>
+          <div class="dps" data-s="rdv" onclick="setDPSA('rdv')">RDV Pris</div>
+          <div class="dps" data-s="signe" onclick="setDPSA('signe')">Signé</div>
+          <div class="dps" data-s="ko" onclick="setDPSA('ko')">KO</div>
+          <div class="dps" data-s="rappeler" onclick="setDPSA('rappeler')">Rappeler</div>
+          <div class="dps" data-s="nrp" onclick="setDPSA('nrp')">NRP</div>
+        </div>
+        <div class="dp-body">
+          <div class="dp-sec">Coordonnées</div>
+          <div class="dp-grid" id="dpco-art"></div>
+          <div class="dp-sec">📱 Numéro direct</div>
+          <input class="dp-inp" type="text" id="dptel-art" placeholder="06 XX XX XX XX">
+          <div class="dp-sec">Notes</div>
+          <textarea class="dp-ta" id="dpno-art" placeholder="Notes, objections, prochaine étape..."></textarea>
+          <button class="dp-save" onclick="saveArt()">💾 Sauvegarder</button>
+        </div>
+      </div>
+    </div>
+    <div class="pag"><div class="pag-info" id="pi-art">—</div><div class="pag-btns" id="pb-art"></div></div>
+  </div>
+
 </main>
 
 <!-- SCRAPING OVERLAY -->
@@ -886,9 +963,9 @@ function showV(v){
   document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
   document.getElementById('view-'+v)?.classList.add('on');
   document.querySelectorAll('.sb-item').forEach(x=>x.classList.remove('on'));
-  const nm={dashboard:'dash',prospects:'pros',pharmacies:'phr',ro:'ro',arbitrage:'arb',mailing:'mail'};
+  const nm={dashboard:'dash',prospects:'pros',pharmacies:'phr',ro:'ro',arbitrage:'arb',mailing:'mail',artisans:'art'};
   document.getElementById('nav-'+nm[v])?.classList.add('on');
-  const T={dashboard:['Dashboard','Vue d’ensemble live'],mailing:['Mailing','Compose et envoie des emails depuis Vauban et Evka'],prospects:['Professionnels de santé','Infirmiers · Kinés · Médecins · Dentistes'],pharmacies:['Pharmacies','25 472 contacts France entière'],ro:['Ancien R&O','Anciens clients AVIVA/OPTIMUM · Team Entibi · Renonciations'],arbitrage:['Arbitrage clients','Suivi bascules Barrière PER et Optimum']};
+  const T={dashboard:['Dashboard','Vue d’ensemble live'],mailing:['Mailing','Compose et envoie des emails depuis Vauban et Evka'],artisans:['Artisans','Plombiers · Serruriers · Electriciens · Peintres · Maçons'],prospects:['Professionnels de santé','Infirmiers · Kinés · Médecins · Dentistes'],pharmacies:['Pharmacies','25 472 contacts France entière'],ro:['Ancien R&O','Anciens clients AVIVA/OPTIMUM · Team Entibi · Renonciations'],arbitrage:['Arbitrage clients','Suivi bascules Barrière PER et Optimum']};
   const t=T[v]||[v,''];
   document.getElementById('ttl').textContent=t[0];
   document.getElementById('tsub').textContent=t[1];
@@ -898,6 +975,7 @@ function showV(v){
   if(v==='ro') renderRO();
   if(v==='arbitrage'){renderBarriere();renderOptimum();}
   if(v==='mailing'){updateMailCount();}
+  if(v==='artisans'){loadArt();}
 }
 
 // Prof dropdown
@@ -1057,7 +1135,7 @@ async function openDP(id,type,tr){
   }catch(ex){toast('❌ Erreur','err');}
 }
 
-function closeDp(k){document.getElementById(`dp-${k}`).classList.remove('open');document.querySelectorAll(`#view-${k==='p'?'prospects':'pharmacies'} tbody tr`).forEach(r=>r.classList.remove('sel'));eid=null;}
+function closeDp(k){document.getElementById(`dp-${k}`).classList.remove('open');const vmap={p:'prospects',phr:'pharmacies',art:'artisans'};document.querySelectorAll(`#view-${vmap[k]||k} tbody tr`).forEach(r=>r.classList.remove('sel'));if(k==='art')artEid=null;else eid=null;}
 function setDPS(s){const k=etype==='sante'?'p':'phr';document.getElementById(`dp-${k}`).querySelectorAll('.dps').forEach(p=>p.classList.remove('ac'));document.getElementById(`dp-${k}`).querySelector(`.dps[data-s="${s}"]`)?.classList.add('ac');}
 function swDPT(id,el){const tabs=el.closest('.dp-tabs');tabs.querySelectorAll('.dptab').forEach(t=>t.classList.remove('ac'));el.classList.add('ac');const prefix=id.endsWith('-p')?'p':'phr';const body=el.closest('.dp').querySelector('.dp-body');body.querySelector(`#ov-${prefix}`).style.display=id.startsWith('ov')?'block':'none';body.querySelector(`#nt-${prefix}`).style.display=id.startsWith('nt')?'block':'none';}
 async function saveDP(type){
@@ -1210,7 +1288,7 @@ function renderPag(type,page,pages,total){
   h+=`<button class="pgb" onclick="goP('${type}',${page+1})" ${page>=pages?'disabled':''}>›</button>`;
   btns.innerHTML=h;
 }
-function goP(t,p){if(t==='p'){pg=p;loadP();}else{pgP=p;loadPhr();}}
+function goP(t,p){if(t==='p'){pg=p;loadP();}else if(t==='phr'){pgP=p;loadPhr();}else if(t==='art'){artPage=p;loadArt();}}
 
 // Scraping
 function openScr(){document.getElementById('ov-scr').classList.add('show')}
@@ -1445,6 +1523,132 @@ function sendMail() {
       toast('📋 ' + emails.length + ' emails copiés dans le presse-papier', 'ok');
     });
   }
+}
+
+
+const ARB_COLORS_ART = {
+  'rdv':      {bg:'#EBF8FF',border:'#3182CE',text:'#2C5282',label:'📅 RDV Pris'},
+  'signe':    {bg:'#F0FFF4',border:'#38A169',text:'#276749',label:'✅ Signé'},
+  'ko':       {bg:'#FFF5F5',border:'#E53E3E',text:'#C53030',label:'❌ KO'},
+  'rappeler': {bg:'#FFFAF0',border:'#DD6B20',text:'#C05621',label:'🔄 Rappeler'},
+  'nrp':      {bg:'#FFFAF0',border:'#DD6B20',text:'#C05621',label:'📵 NRP'},
+  '':         {bg:'#FFFFFF',border:'#E2E8F0',text:'#4A5568',label:'⭕ À Appeler'},
+};
+
+let artData = [];
+let artPage = 1;
+let artSub = 'all';
+let artEid = null;
+
+function setSTA(s){
+  artSub=s; artPage=1;
+  document.querySelectorAll('#view-artisans .stab').forEach(t=>t.className='stab');
+  const map={'all':'sta-all','Plombier':'sta-plomb','Serrurier':'sta-ser','Electricien':'sta-elec','Peintre':'sta-pein','Macon':'sta-mac','Menuisier':'sta-men','Chauffagiste':'sta-chauf'};
+  const el=document.getElementById(map[s]);
+  if(el)el.classList.add('on');
+  loadArt();
+}
+
+function applyFA(){artPage=1;loadArt();}
+
+async function loadArt(){
+  const tbody=document.getElementById('tb-art');
+  tbody.innerHTML='<tr class="empty"><td colspan="8"><span class="spin"></span></td></tr>';
+  
+  try{
+    const p=new URLSearchParams({page:artPage,per_page:50});
+    const q=document.getElementById('srch-art')?.value||'';
+    const st=document.getElementById('sel-art-st')?.value||'';
+    const prof=document.getElementById('sel-art-prof')?.value||'';
+    if(q)p.set('search',q);
+    if(st)p.set('statut',st);
+    if(prof)p.set('profession',prof);
+    if(artSub&&artSub!=='all')p.set('profession',artSub);
+    
+    const r=await fetch(`${API}/artisans?${p}`);
+    const d=await r.json();
+    
+    document.getElementById('cnt-art').textContent=d.total.toLocaleString('fr')+' artisans';
+    document.getElementById('sn-art').textContent=d.total>999?Math.round(d.total/1000)+'k':d.total;
+    
+    if(!d.data.length){tbody.innerHTML='<tr class="empty"><td colspan="8">Aucun résultat</td></tr>';renderPag('art',0,0,0);return;}
+    
+    tbody.innerHTML=d.data.map(row=>{
+      const col=ARB_COLORS_ART[row.statut||'']||ARB_COLORS_ART[''];
+      const sel=row.id===artEid?'sel':'';
+      return`<tr class="${sel}" style="background:${col.bg};border-left:3px solid ${col.border}" onclick="openArtDP(${row.id},this)">
+        <td><div class="cn" style="color:${col.text}">${e(row.nom||'—')}</div></td>
+        <td><span class="badge b-orange" style="font-size:10px">${e(row.profession||'—')}</span></td>
+        <td><div>${e(row.ville||'—')}</div><div class="cs">${row.cp||''}</div></td>
+        <td><span class="tok">${e(row.telephone_direct||'—')}</span></td>
+        <td><span style="font-size:10px;color:var(--text3)">${e(row.source||'')}</span></td>
+        <td><span class="badge" style="background:${col.bg};color:${col.text};border:1px solid ${col.border}">${col.label}</span></td>
+        <td><span style="font-size:11px;color:var(--text2)">${e((row.note||'').substring(0,25)||'—')}</span></td>
+        <td>${row.telephone_direct?`<a href="tel:${row.telephone_direct.replace(/\s/g,'')}" class="btn btn-green" style="padding:3px 8px;font-size:11px;text-decoration:none" onclick="event.stopPropagation()">📞</a>`:''}</td>
+      </tr>`;
+    }).join('');
+    renderPag('art',d.page,d.pages,d.total);
+  }catch(ex){
+    tbody.innerHTML='<tr class="empty"><td colspan="8">⚠️ Serveur hors ligne</td></tr>';
+  }
+}
+
+async function openArtDP(id,tr){
+  artEid=id;
+  document.querySelectorAll('#view-artisans tbody tr').forEach(r=>r.classList.remove('sel'));
+  tr?.classList.add('sel');
+  document.getElementById('dp-art').classList.add('open');
+  
+  try{
+    const r=await fetch(`${API}/artisans?per_page=9999`);
+    const d=await r.json();
+    const c=d.data.find(x=>x.id===id);
+    if(!c)return;
+    
+    const col=ARB_COLORS_ART[c.statut||'']||ARB_COLORS_ART[''];
+    const icons={'Plombier':'🔧','Serrurier':'🔑','Electricien':'⚡','Peintre':'🖌️','Macon':'🧱','Menuisier':'🪚','Chauffagiste':'🌡️','Carreleur':'🪵'};
+    
+    document.getElementById('dpav-art').textContent=icons[c.profession]||'🔧';
+    document.getElementById('dpnm-art').textContent=c.nom||'—';
+    document.getElementById('dpsp-art').textContent=`${c.profession||''} · ${c.ville||''}`;
+    
+    const tel=c.telephone_direct;
+    const cb=document.getElementById('dpcall-art');
+    if(tel){cb.style.display='flex';cb.href=`tel:${tel.replace(/\s/g,'')}`;}else cb.style.display='none';
+    
+    document.getElementById('dp-art-pipe').querySelectorAll('.dps').forEach(p=>p.classList.remove('ac'));
+    document.getElementById('dp-art-pipe').querySelector(`.dps[data-s="${c.statut||''}"]`)?.classList.add('ac');
+    
+    document.getElementById('dpco-art').innerHTML=`
+      <div><div class="dfl">Téléphone</div><div class="dfv" style="color:var(--green);font-family:monospace;font-weight:700">${c.telephone_direct||'—'}</div></div>
+      <div><div class="dfl">Ville</div><div class="dfv">${c.ville||'—'} ${c.cp||''}</div></div>
+      <div><div class="dfl">Adresse</div><div class="dfv" style="font-size:11px">${c.adresse||'—'}</div></div>
+      <div><div class="dfl">Source</div><div class="dfv">${c.source||'—'}</div></div>
+    `;
+    document.getElementById('dptel-art').value=c.telephone_direct||'';
+    document.getElementById('dpno-art').value=c.note||'';
+  }catch(ex){}
+}
+
+function setDPSA(s){
+  document.getElementById('dp-art-pipe').querySelectorAll('.dps').forEach(p=>p.classList.remove('ac'));
+  document.getElementById('dp-art-pipe').querySelector(`.dps[data-s="${s}"]`)?.classList.add('ac');
+}
+
+async function saveArt(){
+  if(!artEid)return;
+  const pipe=document.getElementById('dp-art-pipe');
+  const statut=pipe.querySelector('.dps.ac')?.dataset.s||'';
+  const body={
+    telephone_direct:document.getElementById('dptel-art').value.replace(/\s/g,''),
+    statut,
+    note:document.getElementById('dpno-art').value
+  };
+  try{
+    const r=await fetch(`${API}/artisans/${artEid}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(r.ok){toast('✅ Sauvegardé','ok');loadArt();}
+    else toast('❌ Erreur','err');
+  }catch(ex){toast('❌ Serveur hors ligne','err');}
 }
 
 (async()=>{await loadStats();loadDash();setInterval(loadStats,5*60*1000);})();
