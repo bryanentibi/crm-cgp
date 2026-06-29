@@ -217,7 +217,7 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
 .dp-pipe{display:flex;gap:3px;padding:10px 16px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg)}
 .dps{flex:1;padding:5px 3px;border-radius:6px;font-size:9px;font-weight:700;text-align:center;cursor:pointer;border:1px solid var(--border);color:var(--text3);transition:all .13s;background:var(--white)}
 .dps:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-light)}
-.dps[data-s=""].ac{background:#F7FAFC;border-color:#CBD5E0;color:#4A5568}
+.dps[data-s=""].ac,.dps[data-s=nouveau].ac{background:#F7FAFC;border-color:#CBD5E0;color:#4A5568}
 .dps[data-s=nrp].ac{background:#FFFAF0;border-color:#DD6B20;color:#C05621}
 .dps[data-s=rdv].ac{background:#F0FFF4;border-color:#38A169;color:#276749}
 .dps[data-s=ko].ac{background:#FFF5F5;border-color:#E53E3E;color:#C53030}
@@ -390,6 +390,7 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
         <div class="poption" data-p="med" onclick="selP('med',this)"><div class="pdot" style="background:#2B6CB0"></div>Médecins<span class="pcnt" id="pc-med">—</span></div>
         <div class="poption" data-p="den" onclick="selP('den',this)"><div class="pdot" style="background:#DD6B20"></div>Dentistes<span class="pcnt" id="pc-den">—</span></div>
         <div class="poption" data-p="psy" onclick="selP('psy',this)"><div class="pdot" style="background:#D53F8C"></div>Psy / Ortho<span class="pcnt" id="pc-psy">—</span></div>
+        <div class="poption" data-p="art" onclick="selP('art',this)"><div class="pdot" style="background:#DD6B20"></div>Artisans<span class="pcnt" id="pc-art">—</span></div>
       </div>
     </div>
 
@@ -472,7 +473,6 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
     <div class="sub-bar">
       <div class="stab on" id="st-all" onclick="setST('all')">Tous</div>
       <div class="stab" id="st-avec" onclick="setST('avec')">📱 Avec 06</div>
-      <div class="stab" id="st-sans" onclick="setST('sans')">— Sans numéro</div>
       <div class="stab" id="st-new" onclick="setST('new_today')">🆕 Nouveaux du jour</div>
     </div>
     <div class="toolbar">
@@ -1023,7 +1023,7 @@ function selP(p,el){
 }
 document.addEventListener('click',e=>{if(!e.target.closest('.prof-wrap')){document.getElementById('pmenu').classList.remove('show');document.getElementById('parr').textContent='▼';}});
 
-function setF(f){flt=f;pg=1;if(f==='avec_tel')setST('avec');else if(f==='sans_tel')setST('sans');else if(f==='new_today')setST('new_today');else if(f==='nrp'){document.getElementById('sel-st').value='nrp';flt='';}else if(f==='rdv'){document.getElementById('sel-st').value='rdv';flt='';}else{flt=f;document.getElementById('sel-st').value=['nouveau','nrp','rdv','ko'].includes(f)?f:'';}showV('prospects');}
+function setF(f){flt=f;pg=1;if(f==='avec_tel')setST('avec');else if(f==='new_today')setST('new_today');else if(f==='nrp'){document.getElementById('sel-st').value='nrp';flt='';}else if(f==='rdv'){document.getElementById('sel-st').value='rdv';flt='';}else{flt=f;document.getElementById('sel-st').value=['nrp','rdv','ko','nouveau'].includes(f)?f:'';}showV('prospects');}
 function applyF(){pg=1;loadP();}
 function applyFP(){pgP=1;loadPhr();}
 
@@ -1198,8 +1198,8 @@ async function loadDash(){
     const st=s.statuts||{};
     document.getElementById('pv-n').textContent=(st.nouveau||0).toLocaleString('fr');
     document.getElementById('pv-c').textContent=(st.contacte||0).toLocaleString('fr');
-    const snNrp=document.getElementById('sn-nrp');if(snNrp)snNrp.textContent=st.nrp||0;
-    const snRdv=document.getElementById('sn-rdv');if(snRdv)snRdv.textContent=st.rdv||0;
+    const snNrp=document.getElementById('sn-nrp');if(snNrp)snNrp.textContent=(st.nrp||0);
+    const snRdv=document.getElementById('sn-rdv');if(snRdv)snRdv.textContent=(st.rdv||0);
     document.getElementById('pv-i').textContent=(st.interesse||0).toLocaleString('fr');
     document.getElementById('pv-r').textContent=(st['a-rappeler']||0).toLocaleString('fr');
     document.getElementById('pv-cl').textContent=(st.client||0).toLocaleString('fr');
@@ -1713,6 +1713,7 @@ async function doLogin() {
       document.getElementById('login-page').style.display = 'none';
       document.querySelector('.sidebar').style.display = 'flex';
       document.querySelector('.main').style.display = 'flex';
+      applyRestrictions(d.restricted || []);
       toast('✅ Bienvenue ' + d.nom, 'ok');
       loadStats();
       loadDash();

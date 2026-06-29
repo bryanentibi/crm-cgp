@@ -363,7 +363,7 @@ def login():
     import secrets as sec
     token = sec.token_hex(32)
     SESSIONS[token] = {'username': username, 'role': user['role'], 'nom': user['nom'], 'restricted': user.get('restricted', [])}
-    resp = jsonify({'ok': True, 'token': token, 'nom': user['nom'], 'role': user['role']})
+    resp = jsonify({'ok': True, 'token': token, 'nom': user['nom'], 'role': user['role'], 'restricted': user.get('restricted', [])})
     resp.set_cookie('auth_token', token, max_age=86400*7, httponly=True, samesite='Lax')
     return resp
 
