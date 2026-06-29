@@ -389,7 +389,7 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
         <div class="poption" data-p="kin" onclick="selP('kin',this)"><div class="pdot" style="background:#805AD5"></div>Kiné / Ostéo<span class="pcnt" id="pc-kin">—</span></div>
         <div class="poption" data-p="med" onclick="selP('med',this)"><div class="pdot" style="background:#2B6CB0"></div>Médecins<span class="pcnt" id="pc-med">—</span></div>
         <div class="poption" data-p="den" onclick="selP('den',this)"><div class="pdot" style="background:#DD6B20"></div>Dentistes<span class="pcnt" id="pc-den">—</span></div>
-        <div class="poption" data-p="psy" onclick="selP('psy',this)"><div class="pdot" style="background:#D53F8C"></div>Psy / Ortho<span class="pcnt" id="pc-psy">—</span></div>
+        <div class="poption" data-s="psy" onclick="selP('psy',this)"><div class="pdot" style="background:#D53F8C"></div>Psy / Ortho<span class="pcnt" id="pc-psy">—</span></div>
         <div class="poption" data-p="art" onclick="selP('art',this)"><div class="pdot" style="background:#DD6B20"></div>Artisans<span class="pcnt" id="pc-art">—</span></div>
       </div>
     </div>
@@ -496,6 +496,10 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
         </div>
         <div class="dp-pipe">
           <div class="dps" data-s="" onclick="setDPS('')">⭕ Nouveau</div>
+          <div class="dps" data-s="nrp" onclick="setDPS('nrp')">📵 NRP</div>
+          <div class="dps" data-s="rdv" onclick="setDPS('rdv')">📅 RDV</div>
+          <div class="dps" data-s="ko" onclick="setDPS('ko')">❌ KO</div>
+        </div>
           <div class="dps" data-s="nrp" onclick="setDPS('nrp')">📵 NRP</div>
           <div class="dps" data-s="rdv" onclick="setDPS('rdv')">📅 RDV</div>
           <div class="dps" data-s="ko" onclick="setDPS('ko')">❌ KO</div>
@@ -772,7 +776,11 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
           </div>
         </div>
         <div class="dp-pipe" id="dp-art-pipe">
-          <div class="dps" data-s="" onclick="setDPSA('')">À Appeler</div>
+          <div class="dps" data-s="" onclick="setDPSA('')">⭕ Nouveau</div>
+          <div class="dps" data-s="nrp" onclick="setDPSA('nrp')">📵 NRP</div>
+          <div class="dps" data-s="rdv" onclick="setDPSA('rdv')">📅 RDV</div>
+          <div class="dps" data-s="ko" onclick="setDPSA('ko')">❌ KO</div>
+        </div>
           <div class="dps" data-s="rdv" onclick="setDPSA('rdv')">RDV Pris</div>
           <div class="dps" data-s="signe" onclick="setDPSA('signe')">Signé</div>
           <div class="dps" data-s="ko" onclick="setDPSA('ko')">KO</div>
@@ -1171,12 +1179,11 @@ function setDPS(s){
   const k=etype==='sante'?'p':'phr';
   document.getElementById(`dp-${k}`).querySelectorAll('.dps').forEach(p=>p.classList.remove('ac'));
   document.getElementById(`dp-${k}`).querySelector(`.dps[data-s="${s}"]`)?.classList.add('ac');
-  // Ouvrir modal RDV si statut = rdv
-  if(s==='rdv' && eid){
-    const ep=etype==='sante'?'sante':etype==='artisans'?'artisans':'pharmacies';
+  if(s==='rdv'&&eid){
+    const ep=etype==='sante'?'sante':'pharmacies';
     fetch(`${API}/${ep}?per_page=9999`).then(r=>r.json()).then(d=>{
       const c=d.data.find(x=>x.id===eid);
-      if(c) openRDV(c, etype||'sante');
+      if(c)openRDV(c,etype||'sante');
     });
   }
 }
@@ -1210,8 +1217,6 @@ async function loadDash(){
     const st=s.statuts||{};
     document.getElementById('pv-n').textContent=(st.nouveau||0).toLocaleString('fr');
     document.getElementById('pv-c').textContent=(st.contacte||0).toLocaleString('fr');
-    const snNrp=document.getElementById('sn-nrp');if(snNrp)snNrp.textContent=(st.nrp||0);
-    const snRdv=document.getElementById('sn-rdv');if(snRdv)snRdv.textContent=(st.rdv||0);
     document.getElementById('pv-i').textContent=(st.interesse||0).toLocaleString('fr');
     document.getElementById('pv-r').textContent=(st['a-rappeler']||0).toLocaleString('fr');
     document.getElementById('pv-cl').textContent=(st.client||0).toLocaleString('fr');
@@ -1678,10 +1683,10 @@ async function openArtDP(id,tr){
 function setDPSA(s){
   document.getElementById('dp-art-pipe').querySelectorAll('.dps').forEach(p=>p.classList.remove('ac'));
   document.getElementById('dp-art-pipe').querySelector(`.dps[data-s="${s}"]`)?.classList.add('ac');
-  if(s==='rdv' && artEid){
+  if(s==='rdv'&&artEid){
     fetch(`${API}/artisans?per_page=9999`).then(r=>r.json()).then(d=>{
       const c=d.data.find(x=>x.id===artEid);
-      if(c) openRDV(c, 'artisans');
+      if(c)openRDV(c,'artisans');
     });
   }
 }
@@ -1820,34 +1825,27 @@ window.fetch = function(url, opts={}) {
   await checkLogin();
   await loadStats();loadDash();setInterval(loadStats,5*60*1000);
 // ── MODAL RDV ──
-const GCAL_API_KEY = 'AIzaSyCDvhSqEYjeGhGDiTgc3DNW6Ns4kYMqczY';
-const GCAL_ID = 'bryan.entibi@evka-conseil.fr';
 let rdvContactId = null;
 let rdvContactType = null;
 
 function openRDV(contact, type) {
   rdvContactId = contact.id;
   rdvContactType = type;
-  
-  // Pré-remplir avec les infos du contact
-  const nom = type === 'sante' ? `${contact.nom||''} ${contact.prenom||''}`.trim() : (contact.nom||'');
+  const nom = type === 'sante' ? ((contact.nom||'')+' '+(contact.prenom||'')).trim() : (contact.nom||'');
   document.getElementById('rdv-nom').value = nom;
   document.getElementById('rdv-tel').value = contact.telephone_direct || contact.telephone || '';
   document.getElementById('rdv-email').value = contact.email || '';
-  document.getElementById('rdv-subtitle').textContent = `${nom} · ${contact.specialite||contact.profession||''} · ${contact.ville||''}`;
+  document.getElementById('rdv-subtitle').textContent = nom + ' · ' + (contact.specialite||contact.profession||'') + ' · ' + (contact.ville||'');
   document.getElementById('rdv-assurance').value = '';
   document.getElementById('rdv-rcp').value = '';
   document.getElementById('rdv-mutuelle').value = '';
   document.getElementById('rdv-per').value = '';
   document.getElementById('rdv-notes').value = '';
   document.getElementById('rdv-err').style.display = 'none';
-  
-  // Date par défaut = demain 10h
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
-  tomorrow.setHours(10, 0, 0, 0);
+  tomorrow.setHours(10,0,0,0);
   document.getElementById('rdv-date').value = tomorrow.toISOString().slice(0,16);
-  
   document.getElementById('modal-rdv').style.display = 'flex';
 }
 
@@ -1866,200 +1864,104 @@ async function saveRDV() {
   const per = document.getElementById('rdv-per').value;
   const notes = document.getElementById('rdv-notes').value.trim();
   
-  if(!nom || !date) {
-    const err = document.getElementById('rdv-err');
-    err.textContent = 'Nom et date obligatoires';
-    err.style.display = 'block';
-    return;
-  }
+  if(!nom||!date){document.getElementById('rdv-err').textContent='Nom et date obligatoires';document.getElementById('rdv-err').style.display='block';return;}
   
   const btn = document.getElementById('rdv-btn');
-  btn.textContent = '⏳ Création en cours...';
-  btn.disabled = true;
+  btn.textContent = '⏳ Création...'; btn.disabled = true;
   
-  // Description de l'événement
-  const desc = `👤 Nom Prénom : ${nom}
-📱 Numéro de tél : ${tel||'—'}
-📧 Adresse mail : ${email||'—'}
-📅 Date RDV : ${new Date(date).toLocaleDateString('fr-FR', {weekday:'long',day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'})}
-
-🏥 Assurance en place : ${assurance||'—'}
-⚕️ RCP : ${rcp||'—'}
-💊 Mutuelle : ${mutuelle||'—'}
-💰 PER : ${per||'—'}
-
-📝 Notes : ${notes||'—'}
-
----
-Créé depuis Bryan CGP CRM`;
-
+  const desc = `Nom Prénom : ${nom}\nNuméro de tél : ${tel||'—'}\nAdresse mail : ${email||'—'}\n\nAssurance en place : ${assurance||'—'}\nRCP : ${rcp||'—'}\nMutuelle : ${mutuelle||'—'}\nPER : ${per||'—'}\n\nNotes : ${notes||'—'}\n\n— Bryan CGP CRM`;
+  
   const startDate = new Date(date);
-  const endDate = new Date(startDate.getTime() + 60*60*1000); // +1h
+  const endDate = new Date(startDate.getTime() + 60*60*1000);
   
-  const event = {
-    summary: `📅 RDV - ${nom}`,
-    description: desc,
-    start: { dateTime: startDate.toISOString(), timeZone: 'Europe/Paris' },
-    end: { dateTime: endDate.toISOString(), timeZone: 'Europe/Paris' },
-    colorId: '2', // Vert
-  };
+  // Ouvrir Google Calendar avec tout pré-rempli
+  const title = encodeURIComponent('RDV - ' + nom);
+  const details = encodeURIComponent(desc);
+  const start = startDate.toISOString().replace(/[-:.]/g,'').slice(0,15)+'Z';
+  const end = endDate.toISOString().replace(/[-:.]/g,'').slice(0,15)+'Z';
+  const calUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${details}&dates=${start}/${end}`;
+  window.open(calUrl, '_blank');
   
-  try {
-    // Créer l'événement via Google Calendar API
-    const r = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(GCAL_ID)}/events?key=${GCAL_API_KEY}`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${await getGoogleToken()}`},
-      body: JSON.stringify(event)
-    });
-    
-    if(r.ok) {
-      const ev = await r.json();
-      toast('✅ RDV créé dans Google Calendar !', 'ok');
-      
-      // Sauvegarder les notes dans le CRM
-      const noteRDV = `[RDV ${new Date(date).toLocaleDateString('fr-FR')}] ${notes||''} | Assurance: ${assurance||'—'} | RCP: ${rcp||'—'} | Mutuelle: ${mutuelle||'—'} | PER: ${per||'—'}`;
-      
-      if(rdvContactId) {
-        const ep = rdvContactType === 'sante' ? 'sante' : rdvContactType === 'artisans' ? 'artisans' : 'pharmacies';
-        await fetch(`${API}/${ep}/${rdvContactId}`, {
-          method: 'PATCH',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({statut: 'rdv', note: noteRDV})
-        });
-      }
-      
-      closeRDV();
-      if(rdvContactType === 'sante') loadP();
-      else if(rdvContactType === 'artisans') loadArt();
-      else loadPhr();
-    } else {
-      const err = await r.json();
-      throw new Error(err.error?.message || 'Erreur Calendar');
-    }
-  } catch(ex) {
-    // Fallback: ouvrir Google Calendar avec les infos pré-remplies
-    const title = encodeURIComponent(`RDV - ${nom}`);
-    const details = encodeURIComponent(desc);
-    const start = startDate.toISOString().replace(/[-:]/g,'').slice(0,15) + 'Z';
-    const end = endDate.toISOString().replace(/[-:]/g,'').slice(0,15) + 'Z';
-    const calUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${details}&dates=${start}/${end}`;
-    window.open(calUrl, '_blank');
-    
-    // Sauvegarder quand même dans le CRM
-    if(rdvContactId) {
-      const ep = rdvContactType === 'sante' ? 'sante' : rdvContactType === 'artisans' ? 'artisans' : 'pharmacies';
-      const noteRDV = `[RDV ${new Date(date).toLocaleDateString('fr-FR')}] ${notes||''} | Assurance: ${assurance||'—'} | RCP: ${rcp||'—'} | Mutuelle: ${mutuelle||'—'} | PER: ${per||'—'}`;
-      await fetch(`${API}/${ep}/${rdvContactId}`, {
-        method: 'PATCH',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({statut: 'rdv', note: noteRDV})
-      });
-    }
-    
-    toast('📅 Google Calendar ouvert !', 'ok');
-    closeRDV();
-    if(rdvContactType === 'sante') loadP();
+  // Sauvegarder dans le CRM
+  if(rdvContactId) {
+    const ep = rdvContactType==='sante'?'sante':rdvContactType==='artisans'?'artisans':'pharmacies';
+    const noteRDV = `[RDV ${new Date(date).toLocaleDateString('fr-FR')}] Assurance: ${assurance||'—'} | RCP: ${rcp||'—'} | Mutuelle: ${mutuelle||'—'} | PER: ${per||'—'}${notes?' | '+notes:''}`;
+    await fetch(`${API}/${ep}/${rdvContactId}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({statut:'rdv',note:noteRDV})});
   }
   
-  btn.textContent = '📅 Créer le RDV dans Google Calendar';
-  btn.disabled = false;
+  toast('📅 RDV ajouté à Google Calendar !', 'ok');
+  closeRDV();
+  if(rdvContactType==='sante') loadP();
+  else if(rdvContactType==='artisans') loadArt();
+  else loadPhr();
+  
+  btn.textContent = '📅 Ajouter à Google Calendar'; btn.disabled = false;
 }
 
-async function getGoogleToken() {
-  // Utiliser gapi si disponible
-  if(window.gapi && gapi.auth2) {
-    const auth = gapi.auth2.getAuthInstance();
-    if(auth.isSignedIn.get()) {
-      return auth.currentUser.get().getAuthResponse().access_token;
-    }
-  }
-  throw new Error('Non connecté');
-}
-
-// Fermer modal au clic extérieur
-document.getElementById('modal-rdv').addEventListener('click', function(e) {
-  if(e.target === this) closeRDV();
-});
+document.addEventListener('click', function(e){if(e.target.id==='modal-rdv')closeRDV();});
 
 })();
 </script>
 
 <!-- MODAL RDV -->
-<div id="modal-rdv" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:10000;align-items:center;justify-content:center">
+<div id="modal-rdv" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:10000;align-items:center;justify-content:center">
   <div style="background:white;border-radius:20px;padding:32px;width:520px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 25px 80px rgba(0,0,0,0.3)">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
       <div>
-        <div style="font-size:20px;font-weight:800;color:var(--text)">📅 Nouveau RDV</div>
-        <div style="font-size:13px;color:var(--text3);margin-top:2px" id="rdv-subtitle">—</div>
+        <div style="font-size:20px;font-weight:800;color:#1A202C">📅 Nouveau RDV</div>
+        <div style="font-size:13px;color:#718096;margin-top:2px" id="rdv-subtitle">—</div>
       </div>
-      <button onclick="closeRDV()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text3)">✕</button>
+      <button onclick="closeRDV()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#718096;line-height:1">✕</button>
     </div>
-    
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
       <div style="grid-column:1/-1">
-        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);display:block;margin-bottom:5px">Nom Prénom</label>
-        <input id="rdv-nom" type="text" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;font-family:Inter,sans-serif;box-sizing:border-box" placeholder="Nom Prénom">
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#718096;display:block;margin-bottom:5px">👤 Nom Prénom</label>
+        <input id="rdv-nom" type="text" style="width:100%;border:1.5px solid #E2E8F0;border-radius:8px;padding:10px 12px;font-size:14px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none" placeholder="Nom Prénom">
       </div>
-      
       <div>
-        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);display:block;margin-bottom:5px">📱 Numéro de tél</label>
-        <input id="rdv-tel" type="text" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;font-family:monospace;box-sizing:border-box" placeholder="06 XX XX XX XX">
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#718096;display:block;margin-bottom:5px">📱 Numéro de tél</label>
+        <input id="rdv-tel" type="text" style="width:100%;border:1.5px solid #E2E8F0;border-radius:8px;padding:10px 12px;font-size:14px;font-family:monospace;box-sizing:border-box;outline:none" placeholder="06 XX XX XX XX">
       </div>
-      
       <div>
-        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);display:block;margin-bottom:5px">📧 Adresse mail</label>
-        <input id="rdv-email" type="email" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;font-family:Inter,sans-serif;box-sizing:border-box" placeholder="email@exemple.fr">
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#718096;display:block;margin-bottom:5px">📧 Adresse mail</label>
+        <input id="rdv-email" type="email" style="width:100%;border:1.5px solid #E2E8F0;border-radius:8px;padding:10px 12px;font-size:14px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none" placeholder="email@exemple.fr">
       </div>
-      
-      <div>
-        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);display:block;margin-bottom:5px">📅 Date du RDV</label>
-        <input id="rdv-date" type="datetime-local" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;font-family:Inter,sans-serif;box-sizing:border-box">
-      </div>
-      
-      <div>
-        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);display:block;margin-bottom:5px">🏥 Assurance en place</label>
-        <input id="rdv-assurance" type="text" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;font-family:Inter,sans-serif;box-sizing:border-box" placeholder="Ex: AXA, MAIF...">
-      </div>
-      
-      <div>
-        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);display:block;margin-bottom:5px">⚕️ RCP</label>
-        <select id="rdv-rcp" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;font-family:Inter,sans-serif;box-sizing:border-box;background:white">
-          <option value="">— Non renseigné</option>
-          <option value="Oui">✅ Oui</option>
-          <option value="Non">❌ Non</option>
-        </select>
-      </div>
-      
-      <div>
-        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);display:block;margin-bottom:5px">💊 Mutuelle</label>
-        <select id="rdv-mutuelle" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;font-family:Inter,sans-serif;box-sizing:border-box;background:white">
-          <option value="">— Non renseigné</option>
-          <option value="Oui">✅ Oui</option>
-          <option value="Non">❌ Non</option>
-        </select>
-      </div>
-      
-      <div>
-        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);display:block;margin-bottom:5px">💰 PER</label>
-        <select id="rdv-per" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;font-family:Inter,sans-serif;box-sizing:border-box;background:white">
-          <option value="">— Non renseigné</option>
-          <option value="Oui">✅ Oui</option>
-          <option value="Non">❌ Non</option>
-        </select>
-      </div>
-      
       <div style="grid-column:1/-1">
-        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);display:block;margin-bottom:5px">📝 Notes</label>
-        <textarea id="rdv-notes" rows="3" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;font-family:Inter,sans-serif;box-sizing:border-box;resize:vertical" placeholder="Informations complémentaires..."></textarea>
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#718096;display:block;margin-bottom:5px">📅 Date &amp; heure du RDV</label>
+        <input id="rdv-date" type="datetime-local" style="width:100%;border:1.5px solid #E2E8F0;border-radius:8px;padding:10px 12px;font-size:14px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none">
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#718096;display:block;margin-bottom:5px">🏥 Assurance en place</label>
+        <input id="rdv-assurance" type="text" style="width:100%;border:1.5px solid #E2E8F0;border-radius:8px;padding:10px 12px;font-size:14px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none" placeholder="AXA, MAIF...">
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#718096;display:block;margin-bottom:5px">⚕️ RCP</label>
+        <select id="rdv-rcp" style="width:100%;border:1.5px solid #E2E8F0;border-radius:8px;padding:10px 12px;font-size:14px;font-family:Inter,sans-serif;box-sizing:border-box;background:white;outline:none">
+          <option value="">— Non renseigné</option><option value="Oui">✅ Oui</option><option value="Non">❌ Non</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#718096;display:block;margin-bottom:5px">💊 Mutuelle</label>
+        <select id="rdv-mutuelle" style="width:100%;border:1.5px solid #E2E8F0;border-radius:8px;padding:10px 12px;font-size:14px;font-family:Inter,sans-serif;box-sizing:border-box;background:white;outline:none">
+          <option value="">— Non renseigné</option><option value="Oui">✅ Oui</option><option value="Non">❌ Non</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#718096;display:block;margin-bottom:5px">💰 PER</label>
+        <select id="rdv-per" style="width:100%;border:1.5px solid #E2E8F0;border-radius:8px;padding:10px 12px;font-size:14px;font-family:Inter,sans-serif;box-sizing:border-box;background:white;outline:none">
+          <option value="">— Non renseigné</option><option value="Oui">✅ Oui</option><option value="Non">❌ Non</option>
+        </select>
+      </div>
+      <div style="grid-column:1/-1">
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#718096;display:block;margin-bottom:5px">📝 Notes</label>
+        <textarea id="rdv-notes" rows="3" style="width:100%;border:1.5px solid #E2E8F0;border-radius:8px;padding:10px 12px;font-size:13px;font-family:Inter,sans-serif;box-sizing:border-box;resize:vertical;outline:none" placeholder="Informations complémentaires..."></textarea>
       </div>
     </div>
-    
-    <div id="rdv-err" style="display:none;background:#FFF5F5;border:1px solid #FEB2B2;border-radius:8px;padding:10px;font-size:13px;color:var(--red);margin-top:14px"></div>
-    
+    <div id="rdv-err" style="display:none;background:#FFF5F5;border:1px solid #FEB2B2;border-radius:8px;padding:10px;font-size:13px;color:#C53030;margin-top:14px"></div>
     <div style="display:flex;gap:10px;margin-top:20px">
-      <button onclick="closeRDV()" style="flex:1;padding:12px;border:1px solid var(--border);border-radius:10px;background:white;font-size:13px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif">Annuler</button>
-      <button onclick="saveRDV()" id="rdv-btn" style="flex:2;padding:12px;background:var(--green);border:none;border-radius:10px;color:white;font-size:13px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif">
-        📅 Créer le RDV dans Google Calendar
+      <button onclick="closeRDV()" style="flex:1;padding:12px;border:1.5px solid #E2E8F0;border-radius:10px;background:white;font-size:13px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif">Annuler</button>
+      <button onclick="saveRDV()" id="rdv-btn" style="flex:2;padding:12px;background:#38A169;border:none;border-radius:10px;color:white;font-size:14px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif">
+        📅 Ajouter à Google Calendar
       </button>
     </div>
   </div>
