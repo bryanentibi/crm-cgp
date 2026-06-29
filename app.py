@@ -11,7 +11,14 @@ USERS = {
     "bryanentibi": {
         "password_hash": "9ed259ce4511a7a0adef99a70475d2f2e3cb90c2aa8f7f8c5d37d941849ca9ba",
         "role": "admin",
-        "nom": "Bryan Entibi"
+        "nom": "Bryan Entibi",
+        "restricted": []
+    },
+    "stagiaire": {
+        "password_hash": "a936b535b48aa89df65d8b6973a37f1130a6d083214fa37e4485aad56bbd69bf",
+        "role": "user",
+        "nom": "Stagiaire",
+        "restricted": ["arbitrage", "ro"]
     }
 }
 
@@ -355,7 +362,7 @@ def login():
         return jsonify({'error': 'Identifiants incorrects'}), 401
     import secrets as sec
     token = sec.token_hex(32)
-    SESSIONS[token] = {'username': username, 'role': user['role'], 'nom': user['nom']}
+    SESSIONS[token] = {'username': username, 'role': user['role'], 'nom': user['nom'], 'restricted': user.get('restricted', [])}
     resp = jsonify({'ok': True, 'token': token, 'nom': user['nom'], 'role': user['role']})
     resp.set_cookie('auth_token', token, max_age=86400*7, httponly=True, samesite='Lax')
     return resp
@@ -374,7 +381,8 @@ def me():
     session = check_session(request)
     if not session:
         return jsonify({'error': 'Non autorise'}), 401
-    return jsonify(session)
+    user = USERS.get(session.get('username'), {})
+    return jsonify({**session, 'restricted': user.get('restricted', [])})
 
 @app.route('/api/users', methods=['GET'])
 def get_users():

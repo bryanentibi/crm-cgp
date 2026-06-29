@@ -819,7 +819,7 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
 <div class="toasts" id="toasts"></div>
 
 <script>
-const API='https://web-production-66741.up.railway.app/api';
+const API='http://https://web-production-66741.up.railway.app/api';
 const PC={all:'var(--text2)',inf:'#3182CE',kin:'#805AD5',med:'#2B6CB0',den:'#DD6B20',psy:'#D53F8C'};
 const PS={inf:['Infirmier','Infirmière'],kin:['Masseur','Kinési','Ostéo'],med:['Médecin','Cardio','Radio','Chirur','Gynéco','Pédiatre','Dermato'],den:['Dentiste','Chirurgien-dentiste'],psy:['Psycho','Orthophon','Pédicure','Sage-femme']};
 const PL={all:'Toutes professions',inf:'Infirmiers',kin:'Kiné / Ostéo',med:'Médecins',den:'Dentistes',psy:'Psy / Ortho'};
@@ -1738,16 +1738,35 @@ async function checkLogin() {
   try {
     const r = await fetch(`${API}/me`, {headers: {'X-Auth-Token': token}});
     if(r.ok) {
+      const user = await r.json();
       authToken = token;
       document.getElementById('login-page').style.display = 'none';
       document.querySelector('.sidebar').style.display = 'flex';
       document.querySelector('.main').style.display = 'flex';
+      // Appliquer restrictions
+      applyRestrictions(user.restricted || []);
     } else {
       localStorage.removeItem('crm_token');
       showLogin();
     }
   } catch(ex) {
     showLogin();
+  }
+}
+
+function applyRestrictions(restricted) {
+  // Cacher les onglets restreints
+  const map = {
+    'arbitrage': 'nav-arb',
+    'ro': 'nav-ro',
+    'mailing': 'nav-mail',
+    'artisans': 'nav-art',
+  };
+  for(const [key, navId] of Object.entries(map)) {
+    const el = document.getElementById(navId);
+    if(el) {
+      el.style.display = restricted.includes(key) ? 'none' : 'flex';
+    }
   }
 }
 
