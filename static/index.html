@@ -217,10 +217,10 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
 .dp-pipe{display:flex;gap:3px;padding:10px 16px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg)}
 .dps{flex:1;padding:5px 3px;border-radius:6px;font-size:9px;font-weight:700;text-align:center;cursor:pointer;border:1px solid var(--border);color:var(--text3);transition:all .13s;background:var(--white)}
 .dps:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-light)}
-.dps[data-s=nouveau].ac{background:var(--blue-light);border-color:var(--blue);color:var(--blue)}
-.dps[data-s=contacte].ac{background:var(--yellow-light);border-color:var(--yellow);color:var(--yellow)}
-.dps[data-s=interesse].ac{background:var(--purple-light);border-color:var(--purple);color:var(--purple)}
-.dps[data-s=a-rappeler].ac{background:#EBF8FF;border-color:#63B3ED;color:#2B6CB0}
+.dps[data-s=""].ac{background:#F7FAFC;border-color:#CBD5E0;color:#4A5568}
+.dps[data-s=nrp].ac{background:#FFFAF0;border-color:#DD6B20;color:#C05621}
+.dps[data-s=rdv].ac{background:#F0FFF4;border-color:#38A169;color:#276749}
+.dps[data-s=ko].ac{background:#FFF5F5;border-color:#E53E3E;color:#C53030}
 .dps[data-s=client].ac{background:var(--green-light);border-color:var(--green);color:var(--green)}
 .dp-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--white)}
 .dptab{padding:9px 14px;font-size:12px;font-weight:600;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;transition:all .12s}
@@ -396,8 +396,8 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
     <div class="sb-lbl" style="margin-top:6px">Filtres rapides</div>
     <div class="sb-item" onclick="setF('new_today')"><span class="sb-icon">🆕</span>Nouveaux du jour<span class="sb-num" id="sn-new">0</span></div>
     <div class="sb-item" onclick="setF('avec_tel')"><span class="sb-icon">📱</span>Avec 06 direct</div>
-    <div class="sb-item" onclick="setF('sans_tel')"><span class="sb-icon">—</span>Sans numéro</div>
-    <div class="sb-item" onclick="setF('a-rappeler')"><span class="sb-icon">🔄</span>À rappeler<span class="sb-num" id="sn-rap">—</span></div>
+    <div class="sb-item" onclick="setF('nrp')"><span class="sb-icon">📵</span>NRP<span class="sb-num" id="sn-nrp">0</span></div>
+    <div class="sb-item" onclick="setF('rdv')"><span class="sb-icon">📅</span>RDV<span class="sb-num" id="sn-rdv">0</span></div>
 
     <div class="sb-lbl" style="margin-top:6px">Outils</div>
     <div class="sb-item" onclick="doLogout()" style="color:var(--red)"><span class="sb-icon">🚪</span>Déconnexion</div>
@@ -477,7 +477,7 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
     </div>
     <div class="toolbar">
       <div class="sw"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M11 11l3 3"/></svg><input type="text" id="search" placeholder="Nom, ville..." oninput="applyF()"></div>
-      <select class="fs" id="sel-st" onchange="applyF()"><option value="">Tous statuts</option><option value="nouveau">Nouveaux</option><option value="contacte">Contactés</option><option value="interesse">Intéressés</option><option value="a-rappeler">À rappeler</option><option value="client">Clients</option></select>
+      <select class="fs" id="sel-st" onchange="applyF()"><option value="">Tous statuts</option><option value="nrp">📵 NRP</option><option value="rdv">📅 RDV</option><option value="ko">❌ KO</option><option value="nouveau">Nouveau</option></select>
       <select class="fs" id="sel-dept" onchange="applyF()"><option value="">Tous dép.</option></select>
       <span class="chip" id="cnt-p">—</span>
     </div>
@@ -495,11 +495,10 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
           </div>
         </div>
         <div class="dp-pipe">
-          <div class="dps" data-s="nouveau" onclick="setDPS('nouveau')">Nouveau</div>
-          <div class="dps" data-s="contacte" onclick="setDPS('contacte')">Contacté</div>
-          <div class="dps" data-s="interesse" onclick="setDPS('interesse')">Intéressé</div>
-          <div class="dps" data-s="a-rappeler" onclick="setDPS('a-rappeler')">Rappeler</div>
-          <div class="dps" data-s="client" onclick="setDPS('client')">Client ✓</div>
+          <div class="dps" data-s="" onclick="setDPS('')">⭕ Nouveau</div>
+          <div class="dps" data-s="nrp" onclick="setDPS('nrp')">📵 NRP</div>
+          <div class="dps" data-s="rdv" onclick="setDPS('rdv')">📅 RDV</div>
+          <div class="dps" data-s="ko" onclick="setDPS('ko')">❌ KO</div>
         </div>
         <div class="dp-tabs"><div class="dptab ac" onclick="swDPT('ov-p',this)">Infos</div><div class="dptab" onclick="swDPT('nt-p',this)">Notes</div></div>
         <div class="dp-body">
@@ -552,11 +551,10 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
           </div>
         </div>
         <div class="dp-pipe">
-          <div class="dps" data-s="nouveau" onclick="setDPS('nouveau')">Nouveau</div>
-          <div class="dps" data-s="contacte" onclick="setDPS('contacte')">Contacté</div>
-          <div class="dps" data-s="interesse" onclick="setDPS('interesse')">Intéressé</div>
-          <div class="dps" data-s="a-rappeler" onclick="setDPS('a-rappeler')">Rappeler</div>
-          <div class="dps" data-s="client" onclick="setDPS('client')">Client ✓</div>
+          <div class="dps" data-s="" onclick="setDPS('')">⭕ Nouveau</div>
+          <div class="dps" data-s="nrp" onclick="setDPS('nrp')">📵 NRP</div>
+          <div class="dps" data-s="rdv" onclick="setDPS('rdv')">📅 RDV</div>
+          <div class="dps" data-s="ko" onclick="setDPS('ko')">❌ KO</div>
         </div>
         <div class="dp-tabs"><div class="dptab ac" onclick="swDPT('ov-phr',this)">Infos</div><div class="dptab" onclick="swDPT('nt-phr',this)">Notes</div></div>
         <div class="dp-body">
@@ -823,8 +821,8 @@ const API='https://web-production-66741.up.railway.app/api';
 const PC={all:'var(--text2)',inf:'#3182CE',kin:'#805AD5',med:'#2B6CB0',den:'#DD6B20',psy:'#D53F8C'};
 const PS={inf:['Infirmier','Infirmière'],kin:['Masseur','Kinési','Ostéo'],med:['Médecin','Cardio','Radio','Chirur','Gynéco','Pédiatre','Dermato'],den:['Dentiste','Chirurgien-dentiste'],psy:['Psycho','Orthophon','Pédicure','Sage-femme']};
 const PL={all:'Toutes professions',inf:'Infirmiers',kin:'Kiné / Ostéo',med:'Médecins',den:'Dentistes',psy:'Psy / Ortho'};
-const SL={nouveau:'b-blue',contacte:'b-yellow',interesse:'b-purple','a-rappeler':'b-blue',client:'b-green','sans-suite':'b-gray'};
-const SN={nouveau:'Nouveau',contacte:'Contacté',interesse:'Intéressé','a-rappeler':'À rappeler',client:'Client','sans-suite':'Sans suite'};
+const SL={'':'b-gray',nouveau:'b-gray',nrp:'b-orange',rdv:'b-green',ko:'b-red','contacte':'b-blue','interesse':'b-purple','a-rappeler':'b-orange','client':'b-green','sans-suite':'b-gray'};
+const SN={'':'Nouveau',nouveau:'Nouveau',nrp:'📵 NRP',rdv:'📅 RDV',ko:'❌ KO','contacte':'Contacté','interesse':'Intéressé','a-rappeler':'À rappeler','client':'Client','sans-suite':'Sans suite'};
 
 let prof='all',pg=1,pgP=1,sub='all',subP='all',flt='',eid=null,etype=null,scrInt=null;
 
@@ -1025,7 +1023,7 @@ function selP(p,el){
 }
 document.addEventListener('click',e=>{if(!e.target.closest('.prof-wrap')){document.getElementById('pmenu').classList.remove('show');document.getElementById('parr').textContent='▼';}});
 
-function setF(f){flt=f;pg=1;if(f==='avec_tel')setST('avec');else if(f==='sans_tel')setST('sans');else if(f==='new_today')setST('new_today');else{flt=f;document.getElementById('sel-st').value=['nouveau','contacte','interesse','a-rappeler','client'].includes(f)?f:'';}showV('prospects');}
+function setF(f){flt=f;pg=1;if(f==='avec_tel')setST('avec');else if(f==='sans_tel')setST('sans');else if(f==='new_today')setST('new_today');else if(f==='nrp'){document.getElementById('sel-st').value='nrp';flt='';}else if(f==='rdv'){document.getElementById('sel-st').value='rdv';flt='';}else{flt=f;document.getElementById('sel-st').value=['nouveau','nrp','rdv','ko'].includes(f)?f:'';}showV('prospects');}
 function applyF(){pg=1;loadP();}
 function applyFP(){pgP=1;loadPhr();}
 
@@ -1136,7 +1134,7 @@ async function openDP(id,type,tr){
     if(tel){cb.style.display='flex';cb.href=`tel:${tel.replace(/\s/g,'')}`;}else cb.style.display='none';
     const dpEl=document.getElementById(`dp-${key}`);
     dpEl.querySelectorAll('.dps').forEach(p=>p.classList.remove('ac'));
-    dpEl.querySelector(`.dps[data-s="${c.statut||'nouveau'}"]`)?.classList.add('ac');
+    dpEl.querySelector(`.dps[data-s="${c.statut||''}"]`)?.classList.add('ac');
     if(!isPhr){
       const days=c.date_debut||c.date_ajout?Math.round((Date.now()-new Date(c.date_debut||c.date_ajout).getTime())/86400000):null;
       document.getElementById('dpst-p').innerHTML=`
@@ -1175,7 +1173,7 @@ async function saveDP(type){
   if(!eid)return;
   const k=type==='sante'?'p':'phr';
   const dpEl=document.getElementById(`dp-${k}`);
-  const statut=dpEl.querySelector('.dps.ac')?.dataset.s||'nouveau';
+  const statut=dpEl.querySelector('.dps.ac')?.dataset.s||'';
   const body={telephone_direct:document.getElementById(`dptel-${k}`).value.replace(/\s/g,''),statut,note:document.getElementById(`dpno-${k}`).value};
   try{
     const r=await fetch(`${API}/${type==='sante'?'sante':'pharmacies'}/${eid}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
@@ -1200,6 +1198,8 @@ async function loadDash(){
     const st=s.statuts||{};
     document.getElementById('pv-n').textContent=(st.nouveau||0).toLocaleString('fr');
     document.getElementById('pv-c').textContent=(st.contacte||0).toLocaleString('fr');
+    const snNrp=document.getElementById('sn-nrp');if(snNrp)snNrp.textContent=st.nrp||0;
+    const snRdv=document.getElementById('sn-rdv');if(snRdv)snRdv.textContent=st.rdv||0;
     document.getElementById('pv-i').textContent=(st.interesse||0).toLocaleString('fr');
     document.getElementById('pv-r').textContent=(st['a-rappeler']||0).toLocaleString('fr');
     document.getElementById('pv-cl').textContent=(st.client||0).toLocaleString('fr');
