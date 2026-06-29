@@ -408,6 +408,56 @@ def add_user():
     return jsonify({'ok': True})
 
 
+
+@app.route('/api/sante/<int:id>', methods=['GET'])
+def get_sante_one(id):
+    if USE_DB:
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM sante WHERE id = %s", [id])
+        row = cur.fetchone()
+        conn.close()
+        return jsonify(dict(row)) if row else jsonify({'error': 'Not found'}), 404
+    else:
+        data = load_json('professionnels_sante.json')
+        for i,c in enumerate(data):
+            if c.get('id') == id or i+1 == id:
+                return jsonify(c)
+        return jsonify({'error': 'Not found'}), 404
+
+@app.route('/api/pharmacies/<int:id>', methods=['GET'])
+def get_pharmacie_one(id):
+    if USE_DB:
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM pharmacies WHERE id = %s", [id])
+        row = cur.fetchone()
+        conn.close()
+        return jsonify(dict(row)) if row else jsonify({'error': 'Not found'}), 404
+    else:
+        data = load_json('pharmacies.json')
+        for i,c in enumerate(data):
+            if c.get('id') == id or i+1 == id:
+                return jsonify(c)
+        return jsonify({'error': 'Not found'}), 404
+
+@app.route('/api/artisans/<int:id>', methods=['GET'])
+def get_artisan_one(id):
+    if USE_DB:
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM artisans WHERE id = %s", [id])
+        row = cur.fetchone()
+        conn.close()
+        return jsonify(dict(row)) if row else jsonify({'error': 'Not found'}), 404
+    else:
+        data = load_json('artisans.json')
+        for i,c in enumerate(data):
+            if c.get('id') == id or i+1 == id:
+                return jsonify(c)
+        return jsonify({'error': 'Not found'}), 404
+
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8181))
     app.run(debug=True, host='0.0.0.0', port=port)
