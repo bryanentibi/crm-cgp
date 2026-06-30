@@ -1600,35 +1600,7 @@ async function launchScr(){
   try{
     await fetch(API+'/scraping/launch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sources})});
     if(scrInt)clearInterval(scrInt);
-    scrInt=setInterval
-// ── EDITION NOM/PRENOM MANUELLE ──
-window.toggleNameEdit = function(key){
-  const viewEl=document.getElementById(`dpnm-${key}-view`);
-  const editEl=document.getElementById(`dpnm-${key}-edit`);
-  if(!viewEl||!editEl)return;
-  viewEl.style.display='none';
-  editEl.style.display='flex';
-  document.getElementById(`dpnm-${key}-prenom`)?.focus();
-};
-
-window.saveNomPrenom = async function(key){
-  if(!eid)return;
-  const prenom=document.getElementById(`dpnm-${key}-prenom`).value.trim();
-  const nom=document.getElementById(`dpnm-${key}-nom`).value.trim();
-  if(!nom&&!prenom){toast('❌ Renseigne au moins un nom','err');return;}
-  try{
-    const r=await fetch(`${API}/sante/${eid}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({nom,prenom})});
-    if(r.ok){
-      toast('✅ Nom enregistré','ok');
-      document.getElementById(`dpnm-${key}-view`).textContent=`${prenom} ${nom}`.trim();
-      document.getElementById(`dpnm-${key}-view`).style.display='block';
-      document.getElementById(`dpnm-${key}-edit`).style.display='none';
-      loadP();
-    } else toast('❌ Erreur sauvegarde','err');
-  }catch(ex){toast('❌ Serveur hors ligne','err');}
-};
-
-(async()=>{
+    scrInt=setInterval(async()=>{
       try{const r=await fetch(API+'/scraping/status');const s=await r.json();document.getElementById('scr-bar').style.width=s.progress+'%';document.getElementById('scr-msg').textContent=s.message;if(!s.running){clearInterval(scrInt);toast('✅ '+s.message,'ok');loadStats();loadDash();}}catch(ex){clearInterval(scrInt);}
     },2000);
   }catch(ex){toast('❌ Serveur hors ligne','err');}
@@ -2111,6 +2083,34 @@ window.fetch = function(url, opts={}) {
     opts.headers['X-Auth-Token'] = authToken;
   }
   return _origFetch(url, opts);
+};
+
+
+// ── EDITION NOM/PRENOM MANUELLE ──
+window.toggleNameEdit = function(key){
+  const viewEl=document.getElementById(`dpnm-${key}-view`);
+  const editEl=document.getElementById(`dpnm-${key}-edit`);
+  if(!viewEl||!editEl)return;
+  viewEl.style.display='none';
+  editEl.style.display='flex';
+  document.getElementById(`dpnm-${key}-prenom`)?.focus();
+};
+
+window.saveNomPrenom = async function(key){
+  if(!eid)return;
+  const prenom=document.getElementById(`dpnm-${key}-prenom`).value.trim();
+  const nom=document.getElementById(`dpnm-${key}-nom`).value.trim();
+  if(!nom&&!prenom){toast('❌ Renseigne au moins un nom','err');return;}
+  try{
+    const r=await fetch(`${API}/sante/${eid}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({nom,prenom})});
+    if(r.ok){
+      toast('✅ Nom enregistré','ok');
+      document.getElementById(`dpnm-${key}-view`).textContent=`${prenom} ${nom}`.trim();
+      document.getElementById(`dpnm-${key}-view`).style.display='block';
+      document.getElementById(`dpnm-${key}-edit`).style.display='none';
+      loadP();
+    } else toast('❌ Erreur sauvegarde','err');
+  }catch(ex){toast('❌ Serveur hors ligne','err');}
 };
 
 (async()=>{
