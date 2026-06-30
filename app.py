@@ -74,19 +74,21 @@ def stats():
         avec_tel = cur.fetchone()['total']
         cur.execute("SELECT COUNT(*) as total FROM sante WHERE date_ajout = CURRENT_DATE::text")
         nouveaux = cur.fetchone()['total']
-        cur.execute("SELECT specialite, COUNT(*) as cnt FROM sante GROUP BY specialite ORDER BY cnt DESC LIMIT 10")
+        cur.execute("SELECT specialite, COUNT(*) as cnt FROM sante GROUP BY specialite ORDER BY cnt DESC")
         par_spe = {r['specialite']: r['cnt'] for r in cur.fetchall() if r['specialite']}
         cur.execute("SELECT statut, COUNT(*) as cnt FROM sante GROUP BY statut")
-        statuts_s = {r['statut']: r['cnt'] for r in cur.fetchall()}
+        statuts_s = {(r['statut'] or ''): r['cnt'] for r in cur.fetchall()}
+        cur.execute("SELECT COUNT(*) as total FROM sante WHERE date_creation IS NOT NULL AND date_creation != ''")
+        avec_creation = cur.fetchone()['total']
         cur.execute("SELECT COUNT(*) as total FROM pharmacies")
         total_phr = cur.fetchone()['total']
         cur.execute("SELECT COUNT(*) as total FROM pharmacies WHERE dirigeant IS NOT NULL AND dirigeant != ''")
         avec_dir = cur.fetchone()['total']
         cur.execute("SELECT statut, COUNT(*) as cnt FROM pharmacies GROUP BY statut")
-        statuts_p = {r['statut']: r['cnt'] for r in cur.fetchall()}
+        statuts_p = {(r['statut'] or ''): r['cnt'] for r in cur.fetchall()}
         conn.close()
         return jsonify({
-            'sante': {'total': total_sante, 'avec_tel': avec_tel, 'nouveaux_jour': nouveaux, 'par_specialite': par_spe, 'statuts': statuts_s},
+            'sante': {'total': total_sante, 'avec_tel': avec_tel, 'nouveaux_jour': nouveaux, 'avec_date_creation': avec_creation, 'par_specialite': par_spe, 'statuts': statuts_s},
             'pharmacies': {'total': total_phr, 'avec_dirigeant': avec_dir, 'avec_tel': 0, 'statuts': statuts_p},
             'mise_a_jour': datetime.now().isoformat()
         })

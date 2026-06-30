@@ -458,12 +458,12 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
         </div>
         <div class="chart-box">
           <div class="chart-ttl">Pipeline de prospection</div>
-          <div class="pipe-row">
-            <div class="pipe-box" style="background:var(--blue-light);border-color:#BEE3F8" onclick="setF('nouveau');showV('prospects')"><div class="pipe-v" style="color:var(--blue)" id="pv-n">—</div><div class="pipe-lbl" style="color:var(--blue)">Nouveaux</div></div>
-            <div class="pipe-box" style="background:var(--yellow-light);border-color:#FAF089" onclick="setF('contacte');showV('prospects')"><div class="pipe-v" style="color:var(--yellow)" id="pv-c">—</div><div class="pipe-lbl" style="color:var(--yellow)">Contactés</div></div>
-            <div class="pipe-box" style="background:var(--purple-light);border-color:#D6BCFA" onclick="setF('interesse');showV('prospects')"><div class="pipe-v" style="color:var(--purple)" id="pv-i">—</div><div class="pipe-lbl" style="color:var(--purple)">Intéressés</div></div>
-            <div class="pipe-box" style="background:#EBF8FF;border-color:#BEE3F8" onclick="setF('a-rappeler');showV('prospects')"><div class="pipe-v" style="color:#2B6CB0" id="pv-r">—</div><div class="pipe-lbl" style="color:#2B6CB0">À rappeler</div></div>
-            <div class="pipe-box" style="background:var(--green-light);border-color:#C6F6D5" onclick="setF('client');showV('prospects')"><div class="pipe-v" style="color:var(--green)" id="pv-cl">—</div><div class="pipe-lbl" style="color:var(--green)">Clients ✓</div></div>
+          <div class="pipe-row" style="grid-template-columns:repeat(5,1fr)">
+            <div class="pipe-box" style="background:var(--blue-light);border-color:#BEE3F8" onclick="setF('new_today')"><div class="pipe-v" style="color:var(--blue)" id="pv-n">—</div><div class="pipe-lbl" style="color:var(--blue)">🆕 Nouveaux scrappés</div></div>
+            <div class="pipe-box" style="background:var(--green-light);border-color:#C6F6D5" onclick="setF('rdv')"><div class="pipe-v" style="color:var(--green)" id="pv-rdv">—</div><div class="pipe-lbl" style="color:var(--green)">📅 RDV pris</div></div>
+            <div class="pipe-box" style="background:#FFFAF0;border-color:#FBD38D" onclick="setF('nrp')"><div class="pipe-v" style="color:#DD6B20" id="pv-r">—</div><div class="pipe-lbl" style="color:#DD6B20">📵 À rappeler</div></div>
+            <div class="pipe-box" style="background:#FFF5F5;border-color:#FEB2B2" onclick="setF('ko')"><div class="pipe-v" style="color:#E53E3E" id="pv-ko">—</div><div class="pipe-lbl" style="color:#E53E3E">❌ KO</div></div>
+            <div class="pipe-box" style="background:var(--purple-light);border-color:#D6BCFA" onclick="setF('avec_creation')"><div class="pipe-v" style="color:var(--purple)" id="pv-creation">—</div><div class="pipe-lbl" style="color:var(--purple)">📅 Avec date création</div></div>
           </div>
         </div>
       </div>
@@ -1087,7 +1087,7 @@ function showV(v){
   
   if(v==='prospects'){
     const profNav={inf:'nav-inf',kin:'nav-kin',med:'nav-med',den:'nav-den',psy:'nav-psy'};
-    document.getElementById(profNav[prof]||'nav-inf')?.classList.add('on');
+    if(profNav[prof])document.getElementById(profNav[prof])?.classList.add('on');
   } else {
     const nm={dashboard:'dash',pharmacies:'phr',ro:'ro',arbitrage:'arb',mailing:'mail',artisans:'art'};
     document.getElementById('nav-'+nm[v])?.classList.add('on');
@@ -1099,6 +1099,7 @@ function showV(v){
     med:['Médecins','Médecins généralistes et spécialistes'],
     den:['Dentistes','Chirurgiens-dentistes'],
     psy:['Psy / Orthophonistes','Psychologues, orthophonistes, sages-femmes'],
+    all:['Professionnels de santé','Toutes professions confondues'],
   };
   
   const T={
@@ -1136,7 +1137,17 @@ function selP(p,el){
 }
 document.addEventListener('click',e=>{if(!e.target.closest('.prof-wrap')){document.getElementById('pmenu').classList.remove('show');document.getElementById('parr').textContent='▼';}});
 
-function setF(f){flt=f;pg=1;if(f==='avec_tel')setST('avec');else if(f==='new_today')setST('new_today');else if(f==='nrp'){document.getElementById('sel-st').value='nrp';flt='';}else if(f==='rdv'){document.getElementById('sel-st').value='rdv';flt='';}else{flt=f;document.getElementById('sel-st').value=['nrp','rdv','ko','nouveau'].includes(f)?f:'';}showV('prospects');}
+function setF(f){
+  flt=f;pg=1;
+  if(f==='avec_tel'){prof='all';setST('avec');}
+  else if(f==='new_today'){prof='all';setST('new_today');}
+  else if(f==='nrp'){prof='all';document.getElementById('sel-st').value='nrp';flt='';}
+  else if(f==='rdv'){prof='all';document.getElementById('sel-st').value='rdv';flt='';}
+  else if(f==='ko'){prof='all';document.getElementById('sel-st').value='ko';flt='';}
+  else if(f==='avec_creation'){prof='all';document.getElementById('sel-annee').value='recent3';flt='';}
+  else{prof='all';flt=f;document.getElementById('sel-st').value=['nrp','rdv','ko','nouveau'].includes(f)?f:'';}
+  showV('prospects');
+}
 function applyF(){pg=1;loadP();}
 function applyFP(){pgP=1;loadPhr();}
 
@@ -1361,11 +1372,11 @@ async function loadDash(){
     document.getElementById('d-cli').textContent=((s.statuts?.client||0)+(p.statuts?.client||0));
     document.getElementById('d-new').textContent=`${s.nouveaux_jour||0} aujourd'hui`;
     const st=s.statuts||{};
-    document.getElementById('pv-n').textContent=(st.nouveau||0).toLocaleString('fr');
-    document.getElementById('pv-c').textContent=(st.contacte||0).toLocaleString('fr');
-    document.getElementById('pv-i').textContent=(st.interesse||0).toLocaleString('fr');
-    document.getElementById('pv-r').textContent=(st['a-rappeler']||0).toLocaleString('fr');
-    document.getElementById('pv-cl').textContent=(st.client||0).toLocaleString('fr');
+    document.getElementById('pv-n').textContent=(s.nouveaux_jour||0).toLocaleString('fr');
+    document.getElementById('pv-rdv').textContent=(st.rdv||0).toLocaleString('fr');
+    document.getElementById('pv-r').textContent=(st.nrp||0).toLocaleString('fr');
+    document.getElementById('pv-ko').textContent=(st.ko||0).toLocaleString('fr');
+    document.getElementById('pv-creation').textContent=(s.avec_date_creation||0).toLocaleString('fr');
     renderBarChart('ch-spe',s.par_specialite||{},{
       'Infirmier':'#3182CE','Masseur-kinésithérapeute':'#805AD5','Médecin':'#2B6CB0',
       'Chirurgien-dentiste':'#DD6B20','Dentiste':'#DD6B20','Psychologue':'#D53F8C',
@@ -1377,13 +1388,15 @@ async function loadDash(){
 function renderBarChart(id,data,colors){
   const el=document.getElementById(id);
   if(!data||!Object.keys(data).length){el.innerHTML='<div style="color:var(--text3);text-align:center;padding:16px;font-size:12px">Lance le scraping pour voir les données</div>';return;}
-  const max=Math.max(...Object.values(data));
-  el.innerHTML=Object.entries(data).slice(0,7).map(([k,v])=>`
+  const entries=Object.entries(data).filter(([k,v])=>k&&v>0).sort((a,b)=>b[1]-a[1]);
+  const max=Math.max(...entries.map(([,v])=>v));
+  el.innerHTML=entries.map(([k,v])=>`
     <div class="bar-row">
       <div class="bar-lbl">${e(k)}</div>
       <div class="bar-track"><div class="bar-fill" style="width:${Math.round(v/max*100)}%;background:${colors?.[k]||'var(--blue)'}"></div></div>
       <div class="bar-v">${v.toLocaleString('fr')}</div>
     </div>`).join('');
+  if(entries.length>7){ el.style.maxHeight='280px'; el.style.overflowY='auto'; }
 }
 
 async function loadStats(){
