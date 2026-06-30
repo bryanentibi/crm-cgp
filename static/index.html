@@ -500,7 +500,12 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
         <div class="dp-hdr">
           <div class="dp-x" onclick="closeDp('p')">✕</div>
           <div class="dp-ava" id="dpav-p"></div>
-          <div class="dp-name" id="dpnm-p">—</div>
+          <div id="dpnm-p-view" class="dp-name" onclick="window.toggleNameEdit('p')" style="cursor:pointer" title="Cliquer pour modifier">—</div>
+          <div id="dpnm-p-edit" style="display:none;gap:6px;margin-bottom:4px">
+            <input type="text" id="dpnm-p-prenom" placeholder="Prénom" style="width:48%;border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:13px;font-family:Inter,sans-serif">
+            <input type="text" id="dpnm-p-nom" placeholder="Nom" style="width:48%;border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:13px;font-family:Inter,sans-serif">
+            <button onclick="window.saveNomPrenom('p')" class="btn btn-blue" style="padding:5px 10px;font-size:12px">✓</button>
+          </div>
           <div class="dp-spec" id="dpsp-p">—</div>
           <div class="dp-acts">
             <a class="btn btn-green" id="dpcall-p" href="#" style="display:none;text-decoration:none">📞 Appeler</a>
@@ -1349,7 +1354,18 @@ async function openDP(id,type,tr){
       av.textContent=(c.nom[0]||'')+(c.prenom?.[0]||'');
       av.style.background=`${PC[prof]||'#3182CE'}20`;av.style.color=PC[prof]||'var(--blue)';
     }
-    document.getElementById(`dpnm-${key}`).textContent=isPhr?c.nom:`${c.nom} ${c.prenom||''}`;
+    if(isPhr){
+      document.getElementById(`dpnm-${key}`).textContent=c.nom;
+    } else {
+      const nomView=document.getElementById('dpnm-p-view');
+      if(nomView){
+        nomView.textContent=(c.nom||c.prenom)?`${c.prenom||''} ${c.nom||''}`.trim():'⚠️ Nom inconnu — cliquer pour ajouter';
+        document.getElementById('dpnm-p-prenom').value=c.prenom||'';
+        document.getElementById('dpnm-p-nom').value=c.nom||'';
+        document.getElementById('dpnm-p-view').style.display='block';
+        document.getElementById('dpnm-p-edit').style.display='none';
+      }
+    }
     document.getElementById(`dpsp-${key}`).textContent=isPhr?`${c.ville||''} · ${c.forme_juridique||''}`:`${c.specialite||''} · ${c.ville||''}`;
     const tel=c.telephone_direct||c.telephone;
     const cb=document.getElementById(`dpcall-${key}`);
@@ -1584,7 +1600,35 @@ async function launchScr(){
   try{
     await fetch(API+'/scraping/launch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sources})});
     if(scrInt)clearInterval(scrInt);
-    scrInt=setInterval(async()=>{
+    scrInt=setInterval
+// ── EDITION NOM/PRENOM MANUELLE ──
+window.toggleNameEdit = function(key){
+  const viewEl=document.getElementById(`dpnm-${key}-view`);
+  const editEl=document.getElementById(`dpnm-${key}-edit`);
+  if(!viewEl||!editEl)return;
+  viewEl.style.display='none';
+  editEl.style.display='flex';
+  document.getElementById(`dpnm-${key}-prenom`)?.focus();
+};
+
+window.saveNomPrenom = async function(key){
+  if(!eid)return;
+  const prenom=document.getElementById(`dpnm-${key}-prenom`).value.trim();
+  const nom=document.getElementById(`dpnm-${key}-nom`).value.trim();
+  if(!nom&&!prenom){toast('❌ Renseigne au moins un nom','err');return;}
+  try{
+    const r=await fetch(`${API}/sante/${eid}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({nom,prenom})});
+    if(r.ok){
+      toast('✅ Nom enregistré','ok');
+      document.getElementById(`dpnm-${key}-view`).textContent=`${prenom} ${nom}`.trim();
+      document.getElementById(`dpnm-${key}-view`).style.display='block';
+      document.getElementById(`dpnm-${key}-edit`).style.display='none';
+      loadP();
+    } else toast('❌ Erreur sauvegarde','err');
+  }catch(ex){toast('❌ Serveur hors ligne','err');}
+};
+
+(async()=>{
       try{const r=await fetch(API+'/scraping/status');const s=await r.json();document.getElementById('scr-bar').style.width=s.progress+'%';document.getElementById('scr-msg').textContent=s.message;if(!s.running){clearInterval(scrInt);toast('✅ '+s.message,'ok');loadStats();loadDash();}}catch(ex){clearInterval(scrInt);}
     },2000);
   }catch(ex){toast('❌ Serveur hors ligne','err');}
