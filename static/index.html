@@ -1186,18 +1186,18 @@ function showV(v){
 }
 
 // Prof dropdown
-function toggleP(){const m=document.getElementById('pmenu'),a=document.getElementById('parr');m.classList.toggle('show');a.textContent=m.classList.contains('show')?'▲':'▼';}
+function toggleP(){const m=document.getElementById('pmenu'),a=document.getElementById('parr');if(m&&a){m.classList.toggle('show');a.textContent=m.classList.contains('show')?'▲':'▼';}}
 function selP(p,el){
   prof=p;pg=1;
   document.querySelectorAll('.poption').forEach(x=>x.classList.remove('sel'));
-  el.classList.add('sel');
-  document.getElementById('plbl').textContent=PL[p];
-  document.getElementById('pdot').style.background=PC[p];
-  document.getElementById('pmenu').classList.remove('show');
-  document.getElementById('parr').textContent='▼';
+  el?.classList.add('sel');
+  const plbl=document.getElementById('plbl');if(plbl)plbl.textContent=PL[p];
+  const pdot=document.getElementById('pdot');if(pdot)pdot.style.background=PC[p];
+  const pmenu=document.getElementById('pmenu');if(pmenu)pmenu.classList.remove('show');
+  const parr=document.getElementById('parr');if(parr)parr.textContent='▼';
   renderHead();loadP();
 }
-document.addEventListener('click',e=>{if(!e.target.closest('.prof-wrap')){document.getElementById('pmenu').classList.remove('show');document.getElementById('parr').textContent='▼';}});
+document.addEventListener('click',e=>{if(!e.target.closest('.prof-wrap')){const pm=document.getElementById('pmenu');if(pm)pm.classList.remove('show');const pa=document.getElementById('parr');if(pa)pa.textContent='▼';}});
 
 function setF(f){
   flt=f;pg=1;
