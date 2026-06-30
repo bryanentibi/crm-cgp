@@ -405,7 +405,7 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
     <div class="sb-section" id="sec-out">
       <div class="sb-item" onclick="doLogout()" style="color:var(--red)"><span class="sb-icon">🚪</span>Déconnexion</div>
       <div class="sb-item" onclick="openScr()"><span class="sb-icon">⚡</span>Lancer scraping</div>
-      <div class="sb-item" onclick="doExport()"><span class="sb-icon">⬇</span>Exporter CSV</div>
+      <div class="sb-item" id="nav-export" onclick="doExport()"><span class="sb-icon">⬇</span>Exporter CSV</div>
     </div>
   </nav>
 </aside>
@@ -2035,6 +2035,7 @@ function applyRestrictions(restricted) {
     'ro': 'nav-ro',
     'mailing': 'nav-mail',
     'artisans': 'nav-art',
+    'export': 'nav-export',
   };
   for(const [key, navId] of Object.entries(map)) {
     const el = document.getElementById(navId);
