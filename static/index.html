@@ -821,6 +821,22 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
     <div class="pag"><div class="pag-info" id="pi-art">—</div><div class="pag-btns" id="pb-art"></div></div>
   </div>
 
+
+  <!-- FILTRE GLOBAL (RDV/NRP/KO tous types) -->
+  <div class="view" id="view-global">
+    <div class="toolbar">
+      <div class="sw"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M11 11l3 3"/></svg><input type="text" id="srch-glob" placeholder="Nom, ville..." oninput="loadGlobal()"></div>
+      <span class="chip" id="cnt-glob">—</span>
+    </div>
+    <div class="tw" style="flex:1">
+      <table>
+        <thead><tr><th>NOM</th><th>TYPE</th><th>VILLE</th><th>📱 TÉLÉPHONE</th><th>NOTE</th><th></th></tr></thead>
+        <tbody id="tb-glob"><tr class="empty"><td colspan="6"><span class="spin"></span></td></tr></tbody>
+      </table>
+    </div>
+    <div class="pag"><div class="pag-info" id="pi-glob">—</div><div class="pag-btns" id="pb-glob"></div></div>
+  </div>
+
 </main>
 
 <!-- SCRAPING OVERLAY -->
@@ -1080,6 +1096,48 @@ function goProf(p){
   loadP();
 }
 
+
+// ── FILTRE GLOBAL (RDV/NRP/KO tous types) ──
+let globalStatut = '', globalPage = 1;
+
+async function loadGlobal(){
+  const tbody = document.getElementById('tb-glob');
+  tbody.innerHTML = '<tr class="empty"><td colspan="6"><span class="spin"></span></td></tr>';
+  try{
+    const q = document.getElementById('srch-glob')?.value.toLowerCase() || '';
+    const p = new URLSearchParams({statut: globalStatut, page: globalPage, per_page: 50});
+    const r = await fetch(`${API}/filtre-global?${p}`);
+    const d = await r.json();
+    let items = d.data;
+    if(q) items = items.filter(c => (c.nom||'').toLowerCase().includes(q) || (c.ville||'').toLowerCase().includes(q));
+
+    document.getElementById('cnt-glob').textContent = d.total.toLocaleString('fr') + ' résultats';
+
+    if(!items.length){ tbody.innerHTML = '<tr class="empty"><td colspan="6">Aucun résultat</td></tr>'; renderPag('glob',0,0,0); return; }
+
+    const ICONS = {sante:'💉', artisans:'🔧', pharmacies:'💊'};
+    tbody.innerHTML = items.map(c => `
+      <tr onclick="openGlobalItem('${c.source_table}',${c.id})">
+        <td><div class="cn">${e(c.nom||'—')}</div></td>
+        <td><span class="badge b-blue">${ICONS[c.source_table]||''} ${e(c.categorie||'—')}</span></td>
+        <td><div>${e(c.ville||'—')}</div><div class="cs">${c.cp||''}</div></td>
+        <td>${c.telephone_direct?`<span class="tok">${e(c.telephone_direct)}</span>`:'<span class="tno">—</span>'}</td>
+        <td><span style="font-size:11px;color:var(--text2)">${e((c.note||'').substring(0,40)||'—')}</span></td>
+        <td>${c.telephone_direct?`<a href="tel:${c.telephone_direct.replace(/\s/g,'')}" class="btn btn-green" style="padding:3px 8px;font-size:11px;text-decoration:none" onclick="event.stopPropagation()">📞</a>`:''}</td>
+      </tr>`).join('');
+
+    renderPag('glob', d.page, d.pages, d.total);
+  }catch(ex){
+    tbody.innerHTML = '<tr class="empty"><td colspan="6">⚠️ Erreur de chargement</td></tr>';
+  }
+}
+
+function openGlobalItem(sourceTable, id){
+  if(sourceTable === 'sante'){ prof='all'; showV('prospects'); setTimeout(()=>openDP(id,'sante'),300); }
+  else if(sourceTable === 'artisans'){ showV('artisans'); setTimeout(()=>openArtDP(id),300); }
+  else if(sourceTable === 'pharmacies'){ showV('pharmacies'); setTimeout(()=>openDP(id,'pharmacies'),300); }
+}
+
 function showV(v){
   document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
   document.getElementById('view-'+v)?.classList.add('on');
@@ -1102,6 +1160,7 @@ function showV(v){
     all:['Professionnels de santé','Toutes professions confondues'],
   };
   
+  const GLOB_TITLES={nrp:['📵 Tous les NRP','Infirmiers, artisans et pharmacies en NRP'],rdv:['📅 Tous les RDV','Infirmiers, artisans et pharmacies avec RDV pris'],ko:['❌ Tous les KO','Infirmiers, artisans et pharmacies en KO']};
   const T={
     dashboard:['Dashboard','Vue d\u2019ensemble live'],
     mailing:['Mailing','Compose et envoie des emails depuis Vauban et Evka'],
@@ -1109,7 +1168,8 @@ function showV(v){
     prospects: PROF_TITLES[prof] || ['Infirmiers','Professionnels infirmiers libéraux'],
     pharmacies:['Pharmacies','25 472 contacts France entière'],
     ro:['Ancien R&O','Anciens clients AVIVA/OPTIMUM · Team Entibi · Renonciations'],
-    arbitrage:['Arbitrage clients','Suivi bascules Barrière PER et Optimum']
+    arbitrage:['Arbitrage clients','Suivi bascules Barrière PER et Optimum'],
+    global: GLOB_TITLES[globalStatut] || ['Filtre','Résultats']
   };
   const t=T[v]||[v,''];
   document.getElementById('ttl').textContent=t[0];
@@ -1121,6 +1181,7 @@ function showV(v){
   if(v==='arbitrage'){renderBarriere();renderOptimum();}
   if(v==='mailing'){updateMailCount();}
   if(v==='artisans'){loadArt();}
+  if(v==='global'){loadGlobal();}
 }
 
 // Prof dropdown
@@ -1139,14 +1200,13 @@ document.addEventListener('click',e=>{if(!e.target.closest('.prof-wrap')){docume
 
 function setF(f){
   flt=f;pg=1;
-  if(f==='avec_tel'){prof='all';setST('avec');}
-  else if(f==='new_today'){prof='all';setST('new_today');}
-  else if(f==='nrp'){prof='all';document.getElementById('sel-st').value='nrp';flt='';}
-  else if(f==='rdv'){prof='all';document.getElementById('sel-st').value='rdv';flt='';}
-  else if(f==='ko'){prof='all';document.getElementById('sel-st').value='ko';flt='';}
-  else if(f==='avec_creation'){prof='all';document.getElementById('sel-annee').value='recent3';flt='';}
-  else{prof='all';flt=f;document.getElementById('sel-st').value=['nrp','rdv','ko','nouveau'].includes(f)?f:'';}
-  showV('prospects');
+  if(f==='avec_tel'){prof='all';setST('avec');showV('prospects');}
+  else if(f==='new_today'){prof='all';setST('new_today');showV('prospects');}
+  else if(f==='nrp'){globalStatut='nrp';globalPage=1;showV('global');}
+  else if(f==='rdv'){globalStatut='rdv';globalPage=1;showV('global');}
+  else if(f==='ko'){globalStatut='ko';globalPage=1;showV('global');}
+  else if(f==='avec_creation'){prof='all';document.getElementById('sel-annee').value='recent3';flt='';showV('prospects');}
+  else{prof='all';flt=f;document.getElementById('sel-st').value=['nouveau'].includes(f)?f:'';showV('prospects');}
 }
 function applyF(){pg=1;loadP();}
 function applyFP(){pgP=1;loadPhr();}
@@ -1410,8 +1470,9 @@ async function loadStats(){
     document.getElementById('kpi-cli').textContent=((s.statuts?.client||0)+(p.statuts?.client||0));
     document.getElementById('sn-tot').textContent=s.total>999?Math.round(s.total/1000)+'k':s.total||0;
     document.getElementById('sn-phr').textContent=p.total>999?Math.round(p.total/1000)+'k':p.total||0;
-    document.getElementById('sn-new').textContent=s.nouveaux_jour||0;
-    document.getElementById('sn-rap').textContent=s.statuts?.['a-rappeler']||0;
+    document.getElementById('sn-new').textContent=g.nouveaux_jour||0;
+    const snNrpEl=document.getElementById('sn-nrp');if(snNrpEl)snNrpEl.textContent=g.nrp||0;
+    const snRdvEl=document.getElementById('sn-rdv');if(snRdvEl)snRdvEl.textContent=g.rdv||0;
     const sp=s.par_specialite||{};
     const cnt=keys=>Object.entries(sp).filter(([k])=>keys.some(x=>k.toLowerCase().includes(x.toLowerCase()))).reduce((a,[,v])=>a+v,0);
     document.getElementById('pc-all').textContent=s.total||0;
@@ -1498,7 +1559,7 @@ function renderPag(type,page,pages,total){
   h+=`<button class="pgb" onclick="goP('${type}',${page+1})" ${page>=pages?'disabled':''}>›</button>`;
   btns.innerHTML=h;
 }
-function goP(t,p){if(t==='p'){pg=p;loadP();}else if(t==='phr'){pgP=p;loadPhr();}else if(t==='art'){artPage=p;loadArt();}}
+function goP(t,p){if(t==='p'){pg=p;loadP();}else if(t==='phr'){pgP=p;loadPhr();}else if(t==='art'){artPage=p;loadArt();}else if(t==='glob'){globalPage=p;loadGlobal();}}
 
 // Scraping
 function openScr(){document.getElementById('ov-scr').classList.add('show')}

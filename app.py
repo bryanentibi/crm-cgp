@@ -86,10 +86,30 @@ def stats():
         avec_dir = cur.fetchone()['total']
         cur.execute("SELECT statut, COUNT(*) as cnt FROM pharmacies GROUP BY statut")
         statuts_p = {(r['statut'] or ''): r['cnt'] for r in cur.fetchall()}
+
+        # Compteurs globaux NRP/RDV/KO sur les 3 tables (sante + artisans + pharmacies)
+        global_counts = {'nrp': 0, 'rdv': 0, 'ko': 0}
+        for table in ['sante', 'artisans', 'pharmacies']:
+            try:
+                cur.execute(f"SELECT statut, COUNT(*) as cnt FROM {table} WHERE statut IN ('nrp','rdv','ko') GROUP BY statut")
+                for r in cur.fetchall():
+                    global_counts[r['statut']] = global_counts.get(r['statut'], 0) + r['cnt']
+            except:
+                conn.rollback()
+
+        # Nouveaux du jour tous types confondus (sante + artisans)
+        global_nouveaux_jour = nouveaux
+        try:
+            cur.execute("SELECT COUNT(*) as total FROM artisans WHERE date_ajout = CURRENT_DATE::text")
+            global_nouveaux_jour += cur.fetchone()['total']
+        except:
+            conn.rollback()
+
         conn.close()
         return jsonify({
             'sante': {'total': total_sante, 'avec_tel': avec_tel, 'nouveaux_jour': nouveaux, 'avec_date_creation': avec_creation, 'par_specialite': par_spe, 'statuts': statuts_s},
             'pharmacies': {'total': total_phr, 'avec_dirigeant': avec_dir, 'avec_tel': 0, 'statuts': statuts_p},
+            'global': {'nrp': global_counts['nrp'], 'rdv': global_counts['rdv'], 'ko': global_counts['ko'], 'nouveaux_jour': global_nouveaux_jour},
             'mise_a_jour': datetime.now().isoformat()
         })
     else:
@@ -513,6 +533,69 @@ def get_artisan_one(id):
             if c.get('id') == id or i+1 == id:
                 return jsonify(c)
         return jsonify({'error': 'Not found'}), 404
+
+
+
+@app.route('/api/filtre-global')
+def filtre_global():
+    """Recherche un statut (rdv, nrp, ko) sur TOUTES les tables: sante, artisans, pharmacies"""
+    statut = request.args.get('statut', '')
+    page = int(request.args.get('page', 1))
+    per_page = int(request.args.get('per_page', 50))
+
+    if not USE_DB:
+        return jsonify({'data': [], 'total': 0, 'page': 1, 'pages': 0})
+
+    conn = get_db()
+    cur = conn.cursor()
+    results = []
+
+    # Infirmiers / sante
+    cur.execute("SELECT id, nom, prenom, specialite, telephone_direct, telephone, ville, cp, statut, note, date_creation FROM sante WHERE statut = %s", [statut])
+    for r in cur.fetchall():
+        results.append({
+            'source_table': 'sante', 'id': r['id'],
+            'nom': f"{r['nom'] or ''} {r['prenom'] or ''}".strip(),
+            'categorie': r['specialite'] or 'Professionnel de santé',
+            'telephone_direct': r['telephone_direct'] or r['telephone'] or '',
+            'ville': r['ville'] or '', 'cp': r['cp'] or '',
+            'statut': r['statut'], 'note': r['note'] or '',
+            'date_creation': r['date_creation'] or ''
+        })
+
+    # Artisans
+    cur.execute("SELECT id, nom, profession, telephone_direct, ville, cp, statut, note, date_creation FROM artisans WHERE statut = %s", [statut])
+    for r in cur.fetchall():
+        results.append({
+            'source_table': 'artisans', 'id': r['id'],
+            'nom': r['nom'] or '',
+            'categorie': r['profession'] or 'Artisan',
+            'telephone_direct': r['telephone_direct'] or '',
+            'ville': r['ville'] or '', 'cp': r['cp'] or '',
+            'statut': r['statut'], 'note': r['note'] or '',
+            'date_creation': r['date_creation'] or ''
+        })
+
+    # Pharmacies
+    cur.execute("SELECT id, nom, dirigeant, telephone_direct, telephone, ville, cp, statut, note FROM pharmacies WHERE statut = %s", [statut])
+    for r in cur.fetchall():
+        results.append({
+            'source_table': 'pharmacies', 'id': r['id'],
+            'nom': r['dirigeant'] or r['nom'] or '',
+            'categorie': 'Pharmacie',
+            'telephone_direct': r['telephone_direct'] or r['telephone'] or '',
+            'ville': r['ville'] or '', 'cp': r['cp'] or '',
+            'statut': r['statut'], 'note': r['note'] or '',
+            'date_creation': ''
+        })
+
+    conn.close()
+
+    total = len(results)
+    start = (page - 1) * per_page
+    page_results = results[start:start + per_page]
+
+    return jsonify({'data': page_results, 'total': total, 'page': page, 'pages': (total + per_page - 1) // per_page})
 
 
 if __name__ == '__main__':
