@@ -59,13 +59,12 @@ def scrape_google_places():
     total_new = 0
     today = date.today().isoformat()
 
-    # On tourne sur un sous-ensemble différent chaque jour pour varier (basé sur le jour de l'année)
     day_offset = date.today().timetuple().tm_yday
     villes_today = VILLES[day_offset % len(VILLES):] + VILLES[:day_offset % len(VILLES)]
 
     for prof_query, prof_label in PROFESSIONS_ARTISANS:
         prof_new = 0
-        for ville_name, lat, lng in villes_today[:8]:  # 8 villes par jour pour rester rapide
+        for ville_name, lat, lng in villes_today[:8]:
             try:
                 url = "https://places.googleapis.com/v1/places:searchText"
                 headers = {
@@ -138,7 +137,6 @@ def scrape_osteopathes():
     total_new = 0
     today = date.today().isoformat()
 
-    # On scanne 10 départements différents chaque jour (rotation)
     day_offset = date.today().timetuple().tm_yday
     start_idx = (day_offset * 10) % len(DEPTS_CYCLE)
     depts_today = (DEPTS_CYCLE[start_idx:] + DEPTS_CYCLE[:start_idx])[:10]
@@ -153,10 +151,12 @@ def scrape_osteopathes():
         try:
             url = f"https://www.osteopathie.org/?fond=annuaire&departement={dept}&pays=France+m%C3%A9tropolitaine&page=1"
             r = requests.get(url, headers=headers, timeout=15)
+            print(f"  Dept {dept}: status={r.status_code}, taille={len(r.text)}")
             if r.status_code != 200:
                 continue
 
             tels = tel_re.findall(r.text)
+            print(f"    -> {len(tels)} tels trouvés dans le HTML")
             count = 0
             for t in tels:
                 tel = fmt_tel(t)
@@ -170,10 +170,11 @@ def scrape_osteopathes():
                     total_new += 1
 
             if count > 0:
-                print(f"  Dept {dept}: +{count}")
+                print(f"  Dept {dept}: +{count} nouveaux")
             conn.commit()
             time.sleep(0.8)
-        except Exception:
+        except Exception as e:
+            print(f"  Dept {dept}: erreur {e}")
             continue
 
     conn.close()
@@ -222,7 +223,7 @@ def enrichir_insee():
     cur = conn.cursor()
 
     for table in ['sante', 'artisans', 'pharmacies']:
-        for col in ['date_creation', 'siren', 'nom_entreprise_sirene', 'naf']:
+        for col in ['date_creation', 'siren', 'nom_entreprise_sirene', 'naf', 'insee_tente']:
             try:
                 cur.execute(f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {col} TEXT")
                 conn.commit()
@@ -244,10 +245,15 @@ def enrichir_insee():
             cols += f", {cp_col}"
 
         try:
+            # FIX: on exclut les noms trop courts (1-2 lettres, données mal parsées)
+            # FIX: on marque insee_tente='1' pour ne jamais retenter ceux qui ont déjà échoué
+            # FIX: ORDER BY RANDOM() pour ne plus toujours tomber sur les mêmes 300
             cur.execute(f"""
                 SELECT {cols} FROM {table}
                 WHERE (date_creation IS NULL OR date_creation = '')
-                AND {nom_col} IS NOT NULL AND {nom_col} != ''
+                AND (insee_tente IS NULL OR insee_tente = '')
+                AND {nom_col} IS NOT NULL AND LENGTH(TRIM({nom_col})) >= 3
+                ORDER BY RANDOM()
                 LIMIT 300
             """)
             contacts = list(cur.fetchall())
@@ -256,29 +262,37 @@ def enrichir_insee():
 
         print(f"  {table}: {len(contacts)} à enrichir")
         enrichis = 0
+        tentes = 0
 
         for contact in contacts:
             nom = contact.get(nom_col, '') or ''
             prenom = contact.get(prenom_col, '') if prenom_col else ''
             cp = contact.get(cp_col, '') if cp_col else ''
 
-            if not nom:
+            if not nom or len(nom.strip()) < 3:
                 continue
 
             result = search_insee(nom, prenom or '', cp or '')
+            tentes += 1
             if result and result.get('date_creation'):
                 cur.execute(f"""
                     UPDATE {table}
-                    SET date_creation=%s, siren=%s, nom_entreprise_sirene=%s, naf=%s
+                    SET date_creation=%s, siren=%s, nom_entreprise_sirene=%s, naf=%s, insee_tente='1'
                     WHERE id=%s
                 """, (result['date_creation'], result['siren'], result['nom_entreprise'], result['naf'], contact['id']))
                 enrichis += 1
                 total_enrichis += 1
+            else:
+                # Marquer comme tenté même si échec, pour ne pas reboucler dessus indéfiniment
+                cur.execute(f"UPDATE {table} SET insee_tente='1' WHERE id=%s", (contact['id'],))
+
+            if tentes % 50 == 0:
+                conn.commit()
 
             time.sleep(0.15)
 
         conn.commit()
-        print(f"  ✅ {table}: {enrichis} enrichis")
+        print(f"  ✅ {table}: {enrichis}/{tentes} enrichis")
 
     conn.close()
     print(f"✅ INSEE total: {total_enrichis} enrichis")

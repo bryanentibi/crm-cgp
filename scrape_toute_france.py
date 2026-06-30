@@ -1,0 +1,108 @@
+from playwright.sync_api import sync_playwright
+import re, json
+from datetime import date
+
+def conv(t):
+    t = str(t).replace(' ','')
+    if t.startswith('0033'): t = '0'+t[4:]
+    return t
+
+def lire(page, seen, nid, today):
+    res = []
+    cells = page.locator('div[role=gridcell]').all()
+    texts = [c.inner_text().strip() for c in cells if c.inner_text().strip()]
+    i = 0
+    while i < len(texts):
+        t = texts[i]
+        if re.match(r'^\d{11}$', t) and t not in seen:
+            seen.add(t)
+            nom = texts[i+2] if i+2 < len(texts) else ''
+            tf = tp = cpv = ''
+            for j in range(i+3, min(i+11, len(texts))):
+                v = texts[j]
+                if re.match(r'^0033[67]\d{8}$', v): tp = conv(v)
+                elif re.match(r'^0033\d{9}$', v): tf = conv(v)
+                elif re.match(r'^\d{5} - ', v): cpv = v
+            p = nom.strip().split(' ',1)
+            res.append({'id':nid+len(res),'nom':p[0],'prenom':p[1].title() if len(p)>1 else '','specialite':'Infirmier','rpps':t,'adresse':'','cp':cpv.split(' - ')[0] if cpv else '','ville':cpv.split(' - ')[1] if cpv and ' - ' in cpv else '','telephone':tf,'telephone_direct':tp,'email':'','mode_exercice':'liberal','date_debut':'','date_ajout':today,'statut':'nouveau','note':'','source':'Ordre National Infirmiers'})
+            i += 10
+        else:
+            i += 1
+    return res
+
+with sync_playwright() as pw:
+    browser = pw.chromium.launch(headless=False)
+    page = browser.new_page(viewport={'width':1920,'height':1080})
+    page.goto('https://app.powerbi.com/view?r=eyJrIjoiNmY5NjQwZDAtY2UyOC00OGY5LTlkNzgtNDZmMzMxNmZjOTNlIiwidCI6IjZmMjdmNjhjLWFmMTYtNDkzZC1iNDgzLTAxOTI2OGY1YTFiOCIsImMiOjl9',timeout=30000)
+    page.wait_for_timeout(8000)
+
+    all_inf = []
+    seen = set()
+    today = date.today().isoformat()
+
+    # Ouvrir menu
+    page.locator('text=Tout').first.click()
+    page.wait_for_timeout(2000)
+
+    # Faire defiler le menu pour charger tous les CIDOI
+    menu = page.locator('div[class*=scrollRegion]').nth(0)
+    all_cidoi_names = set()
+    
+    for scroll in range(20):
+        checkboxes = page.locator('div[class*=slicerItemContainer]').all()
+        for cb in checkboxes:
+            try:
+                t = cb.inner_text().strip()
+                if ('CIDOI' in t or 'CDOI' in t) and t not in all_cidoi_names:
+                    all_cidoi_names.add(t)
+            except: pass
+        page.mouse.wheel(0, 300)
+        page.wait_for_timeout(500)
+
+    print(f'{len(all_cidoi_names)} CIDOI trouves au total:')
+    for c in sorted(all_cidoi_names):
+        print(f'  {c}')
+
+    # Traiter chaque CIDOI
+    for nom_cidoi in sorted(all_cidoi_names):
+        print(f'\n{nom_cidoi}...')
+        try:
+            # Scroll jusqu'au CIDOI
+            cb = page.locator(f'text="{nom_cidoi}"').first
+            cb.scroll_into_view_if_needed()
+            page.wait_for_timeout(500)
+            cb.click()
+            page.wait_for_timeout(4000)
+
+            nouveaux = lire(page, seen, 500000+len(all_inf), today)
+            all_inf.extend(nouveaux)
+            avec = sum(1 for x in nouveaux if x['telephone_direct'])
+            print(f'  {len(nouveaux)} infirmiers, {avec} portables')
+
+            # Sauvegarder regulierement
+            if len(all_inf) % 500 < 20:
+                with open('data/professionnels_sante.json') as f:
+                    ex = json.load(f)
+                with open('data/professionnels_sante.json','w') as f:
+                    json.dump(ex + all_inf, f, ensure_ascii=False)
+                print(f'  Sauvegarde intermediaire: {len(ex)+len(all_inf)} total')
+
+            cb.scroll_into_view_if_needed()
+            cb.click()
+            page.wait_for_timeout(1000)
+
+        except Exception as e:
+            print(f'  Erreur: {e}')
+
+    browser.close()
+
+print(f'\nTotal recolte: {len(all_inf)} infirmiers')
+avec = [x for x in all_inf if x['telephone_direct']]
+print(f'{len(avec)} avec portable ({round(len(avec)/max(len(all_inf),1)*100)}%)')
+
+with open('data/professionnels_sante.json') as f:
+    ex = json.load(f)
+all_data = ex + all_inf
+with open('data/professionnels_sante.json','w') as f:
+    json.dump(all_data, f, ensure_ascii=False)
+print(f'Sauvegarde finale! Total base: {len(all_data)}')

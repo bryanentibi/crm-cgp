@@ -1,0 +1,185 @@
+Annuaire
+Select Row
+10104536775
+M.
+A C MAXIME
+21 - Côte-d'Or
+Non
+1 BOULEVARD JEANNE D ARC
+21000 - DIJON
+0033380293031
+Diplôme d'Etat français d'Infirmier
+Select Row
+10108447912
+Mme
+AABDI MINA
+81 - Tarn
+Non
+Diplôme d'Etat français d'Infirmier
+Select Row
+10108646174
+Mme
+AABID LINA
+59 - Nord
+Non
+Diplôme d'Etat français d'Infirmier
+Select Row
+10110833695
+Mme
+AABOUCH ASMAE
+34 - Hérault
+Non
+4 ROUTE ST PONS
+34600 - BEDARIEUX
+0033467955656
+Diplôme d'Etat français d'Infirmier
+Select Row
+10106531295
+M.
+AACHACH ISMAIL
+89 - Yonne
+Non
+8BRUE RENOIR
+89000 - AUXERRE
+Diplôme d'Etat français d'Infirmier
+Select Row
+10106636961
+M.
+AACHACH ISSAM
+89 - Yonne
+Non
+8BRUE RENOIR
+89000 - AUXERRE
+0033613805352
+Diplôme d'Etat français d'Infirmier
+Select Row
+10109615566
+Mme
+AACHBOUN ALIA
+45 - Loiret
+Non
+14 AVENUE DE L'HOPITAL
+45067 - ORLEANS CEDEX 2
+0033238514444
+Diplôme d'Etat français d'Infirmier
+Select Row
+10108263574
+Mme
+AACH-CHOUBA ELMEZOURI AMINA
+66 - Pyrénées-Orientales
+Non
+20 AVENUE DU LANGUEDOC
+66046 - PERPIGNAN CEDEX
+0033468616633
+Diplôme d'Etat français d'Infirmier
+Select Row
+10108297085
+Mme
+AADMI MYRIAM
+67 - Bas-Rhin
+Non
+29 RUE DU FAUBOURG NATIONAL
+67000 - STRASBOURG
+Diplôme d'Etat français d'Infirmier
+Select Row
+10103601075
+Mme
+AADNANE SARAH
+57 - Moselle
+Non
+Diplôme d'Etat français d'Infirmier
+Select Row
+10102511325
+M.
+AADSI KARIM
+42 - Loire
+Non
+72 AVENUE LEON JOUHAUX
+42100 - SAINT ETIENNE
+0033634626101
+Diplôme d'Etat français d'Infirmier
+Select Row
+10107702887
+Mme
+AAFIR SALIMA
+87 - Haute-Vienne
+Non
+8 AVENUE DOMINIQUE LARREY
+87000 - LIMOGES
+0033555056666
+Diplôme d'Etat français d'Infirmier
+Select Row
+10103436605
+Mme
+AALBERTS MONICA
+66 - Pyrénées-Orientales
+Non
+20 AVENUE DU LANGUEDOC
+66046 - PERPIGNAN CEDEX
+0033468616633
+Diplôme d'Etat français d'Infirmier
+Select Row
+10105982168
+Mme
+AALLOU RATIBA
+34 - Hérault
+Non
+150 AVENUE CLEMENT ADER
+34170 - CASTELNAU LE LEZ
+0033430631800
+Diplôme d'Etat français d'Infirmier
+Select Row
+10107523580
+Mme
+AALLOU SONIA
+34 - Hérault
+Non
+0033467888990
+Diplôme d'Etat français d'Infirmier
+Select Row
+10105849342
+Mme
+AALOUACH FATIMA
+78 - Yvelines
+Non
+BOULEVARD GEORGES CLEMENCEAU
+78480 - VERNEUIL-SUR-SEINE
+0033139716175
+Diplôme d'Etat français d'Infirmier
+Select Row
+10107242942
+Mme
+AAMAR AAZIZA
+89 - Yonne
+Non
+Diplôme d'Etat français d'Infirmier
+Select Row
+10111281639
+Mme
+AAMARINE SALWA
+93 - Seine-Saint-Denis
+Non
+30 RUE DIDEROT
+93200 - ST DENIS
+0033142356868
+Diplôme d'Etat français d'Infirmier
+Select Row
+10111738059
+Mme
+AANANOUCH SARA
+71 - Saône-et-Loire
+Non
+350 BOULEVARD LOUIS ESCANDE
+71000 - MACON
+0033385203040
+Diplôme d'Etat français d'Infirmier
+Select Row
+10102595823
+Mme
+AANGOUR HANAA
+95 - Val-d'Oise
+Non
+2 RUE DE LA RESISTANCE
+95370 - MONTIGNY LES CORMEILLES
+0033678652213
+Diplôme d'Etat français d'Infirmier
