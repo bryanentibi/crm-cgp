@@ -398,6 +398,7 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
       <div class="sb-item" onclick="setF('avec_tel')"><span class="sb-icon">📱</span>Avec 06 direct</div>
       <div class="sb-item" onclick="setF('nrp')"><span class="sb-icon">📵</span>NRP<span class="sb-num" id="sn-nrp">0</span></div>
       <div class="sb-item" onclick="setF('rdv')"><span class="sb-icon">📅</span>RDV<span class="sb-num" id="sn-rdv">0</span></div>
+      <div class="sb-item" onclick="setF('ko')"><span class="sb-icon">❌</span>KO<span class="sb-num" id="sn-ko">0</span></div>
     </div>
 
     <div class="sb-lbl collapsible" style="margin-top:6px" onclick="toggleSection('out')">Outils <span class="sb-chevron" id="chev-out">▾</span></div>
@@ -1327,6 +1328,7 @@ async function loadPhr(){
 }
 
 // Detail panel
+let _openDPToken = 0;
 async function openDP(id,type,tr){
   eid=id;etype=type;
   const key=type==='sante'?'p':'phr';
@@ -1334,11 +1336,12 @@ async function openDP(id,type,tr){
   tr?.classList.add('sel');
   document.getElementById(`dp-${key}`).classList.add('open');
   const ep=type==='sante'?'sante':'pharmacies';
+  const myToken = ++_openDPToken;
   try{
-    const r=await fetch(`${API}/${ep}?per_page=9999`);
-    const d=await r.json();
-    const c=d.data.find(x=>x.id===id);
-    if(!c)return;
+    const r=await fetch(`${API}/${ep}/${id}`);
+    if(myToken !== _openDPToken) return; // un clic plus récent a eu lieu entre temps, on annule
+    const c=await r.json();
+    if(!c||!c.id)return;
     const isPhr=type==='pharmacies';
     const color=isPhr?'var(--green)':PC[prof]||'var(--blue)';
     const av=document.getElementById(`dpav-${key}`);
@@ -1369,7 +1372,7 @@ async function openDP(id,type,tr){
         <div><div class="dfl">Mode exercice</div><div class="dfv">${c.mode_exercice||'—'}</div></div>
         <div><div class="dfl">RPPS</div><div class="dfv" style="font-family:monospace;font-size:11px">${c.rpps||'—'}</div></div>
         <div><div class="dfl">Début activité</div><div class="dfv">${c.date_debut||'—'}</div></div>`;
-      document.getElementById('dptel-p').value=c.telephone_direct||'';
+      const dptelP=document.getElementById('dptel-p');dptelP.value=c.telephone_direct||'';dptelP.dataset.original=c.telephone_direct||'';
       document.getElementById('dpno-p').value=c.note||'';
     }else{
       document.getElementById('dpco-phr').innerHTML=`
@@ -1379,7 +1382,7 @@ async function openDP(id,type,tr){
         <div><div class="dfl">SIRET</div><div class="dfv" style="font-family:monospace;font-size:11px">${c.siret||'—'}</div></div>
         <div><div class="dfl">CA</div><div class="dfv">${c.ca?(c.ca/1000).toFixed(0)+'k €':'—'}</div></div>
         <div><div class="dfl">Effectif</div><div class="dfv">${c.effectif_min?`${c.effectif_min}–${c.effectif_max||'+'}`:' —'}</div></div>`;
-      document.getElementById('dptel-phr').value=c.telephone_direct||'';
+      const dptelPhr=document.getElementById('dptel-phr');dptelPhr.value=c.telephone_direct||'';dptelPhr.dataset.original=c.telephone_direct||'';
       document.getElementById('dpno-phr').value=c.note||'';
     }
   }catch(ex){toast('❌ Erreur','err');}
@@ -1410,7 +1413,14 @@ async function saveDP(type){
   const k=type==='sante'?'p':'phr';
   const dpEl=document.getElementById(`dp-${k}`);
   const statut=dpEl.querySelector('.dps.ac')?.dataset.s||'';
-  const body={telephone_direct:document.getElementById(`dptel-${k}`).value.replace(/\s/g,''),statut,note:document.getElementById(`dpno-${k}`).value};
+  const telField=document.getElementById(`dptel-${k}`);
+  // Sécurité: si le champ tél a un data-loaded="1" (chargé depuis le serveur) et qu'il est vide alors qu'il ne l'était pas, on ne l'écrase pas par erreur
+  const telVal = telField.value.replace(/\s/g,'');
+  const body={telephone_direct:telVal,statut,note:document.getElementById(`dpno-${k}`).value};
+  if(!telVal && telField.dataset.original){
+    // Le champ a été vidé accidentellement: on garde l'ancienne valeur plutôt que d'écraser
+    delete body.telephone_direct;
+  }
   try{
     const r=await fetch(`${API}/${type==='sante'?'sante':'pharmacies'}/${eid}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     if(r.ok){toast('✅ Sauvegardé','ok');if(type==='sante')loadP();else loadPhr();loadStats();}
@@ -1473,6 +1483,7 @@ async function loadStats(){
     document.getElementById('sn-new').textContent=g.nouveaux_jour||0;
     const snNrpEl=document.getElementById('sn-nrp');if(snNrpEl)snNrpEl.textContent=g.nrp||0;
     const snRdvEl=document.getElementById('sn-rdv');if(snRdvEl)snRdvEl.textContent=g.rdv||0;
+    const snKoEl=document.getElementById('sn-ko');if(snKoEl)snKoEl.textContent=g.ko||0;
     const sp=s.par_specialite||{};
     const cnt=keys=>Object.entries(sp).filter(([k])=>keys.some(x=>k.toLowerCase().includes(x.toLowerCase()))).reduce((a,[,v])=>a+v,0);
     document.getElementById('pc-all').textContent=s.total||0;
@@ -1940,7 +1951,7 @@ async function saveArt(){
   };
   try{
     const r=await fetch(`${API}/artisans/${artEid}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-    if(r.ok){toast('✅ Sauvegardé','ok');loadArt();}
+    if(r.ok){toast('✅ Sauvegardé','ok');loadArt();loadStats();}
     else toast('❌ Erreur','err');
   }catch(ex){toast('❌ Serveur hors ligne','err');}
 }
@@ -2132,6 +2143,7 @@ window.saveRDV = async function() {
   if(rdvContactType==='sante') loadP();
   else if(rdvContactType==='artisans') loadArt();
   else loadPhr();
+  loadStats();
   
   btn.textContent = '📅 Ajouter à Google Calendar'; btn.disabled = false;
 }
