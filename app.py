@@ -128,6 +128,13 @@ def api_sante():
     nouveaux = request.args.get('nouveaux', '')
     specialites = request.args.get('specialites', '')
     annee = request.args.get('annee', '')
+    sort_col = request.args.get('sort_col', '')
+    sort_dir = request.args.get('sort_dir', 'desc')
+
+    ALLOWED_SORT = {'nom','specialite','ville','telephone_direct','telephone','date_creation','statut'}
+    if sort_col not in ALLOWED_SORT:
+        sort_col = ''
+    sort_dir = 'ASC' if sort_dir == 'asc' else 'DESC'
 
     if USE_DB:
         conn = get_db()
@@ -161,7 +168,17 @@ def api_sante():
         cur.execute(f"SELECT COUNT(*) as total FROM sante WHERE {where_str}", params)
         total = cur.fetchone()['total']
         offset = (page - 1) * per_page
-        cur.execute(f"SELECT * FROM sante WHERE {where_str} ORDER BY id LIMIT %s OFFSET %s", params + [per_page, offset])
+
+        if sort_col == 'telephone_direct':
+            order_clause = f"(telephone_direct IS NOT NULL AND telephone_direct != '') {sort_dir}, telephone_direct {sort_dir}"
+        elif sort_col == 'date_creation':
+            order_clause = f"(date_creation IS NULL OR date_creation = '') ASC, date_creation {sort_dir}"
+        elif sort_col:
+            order_clause = f"{sort_col} {sort_dir} NULLS LAST"
+        else:
+            order_clause = "id"
+
+        cur.execute(f"SELECT * FROM sante WHERE {where_str} ORDER BY {order_clause} LIMIT %s OFFSET %s", params + [per_page, offset])
         rows = [dict(r) for r in cur.fetchall()]
         conn.close()
         return jsonify({'data': rows, 'total': total, 'page': page, 'pages': (total + per_page - 1) // per_page})
@@ -178,6 +195,9 @@ def api_sante():
         if specialites:
             spes = [s.lower() for s in specialites.split('|')]
             data = [c for c in data if any(s in (c.get('specialite','') or '').lower() for s in spes)]
+        if sort_col:
+            reverse = sort_dir == 'DESC'
+            data = sorted(data, key=lambda c: (c.get(sort_col) is None, c.get(sort_col) or ''), reverse=reverse)
         total = len(data)
         start = (page - 1) * per_page
         return jsonify({'data': data[start:start+per_page], 'total': total, 'page': page, 'pages': (total + per_page - 1) // per_page})
@@ -290,6 +310,13 @@ def api_artisans():
     statut = request.args.get('statut', '')
     profession = request.args.get('profession', '')
     annee = request.args.get('annee', '')
+    sort_col = request.args.get('sort_col', '')
+    sort_dir = request.args.get('sort_dir', 'desc')
+
+    ALLOWED_SORT = {'nom','profession','ville','telephone_direct','date_creation','statut'}
+    if sort_col not in ALLOWED_SORT:
+        sort_col = ''
+    sort_dir = 'ASC' if sort_dir == 'asc' else 'DESC'
 
     if USE_DB:
         conn = get_db()
@@ -316,7 +343,17 @@ def api_artisans():
         cur.execute(f"SELECT COUNT(*) as total FROM artisans WHERE {where_str}", params)
         total = cur.fetchone()['total']
         offset = (page - 1) * per_page
-        cur.execute(f"SELECT * FROM artisans WHERE {where_str} ORDER BY id LIMIT %s OFFSET %s", params + [per_page, offset])
+
+        if sort_col == 'telephone_direct':
+            order_clause = f"(telephone_direct IS NOT NULL AND telephone_direct != '') {sort_dir}, telephone_direct {sort_dir}"
+        elif sort_col == 'date_creation':
+            order_clause = f"(date_creation IS NULL OR date_creation = '') ASC, date_creation {sort_dir}"
+        elif sort_col:
+            order_clause = f"{sort_col} {sort_dir} NULLS LAST"
+        else:
+            order_clause = "id"
+
+        cur.execute(f"SELECT * FROM artisans WHERE {where_str} ORDER BY {order_clause} LIMIT %s OFFSET %s", params + [per_page, offset])
         rows = [dict(r) for r in cur.fetchall()]
         conn.close()
         return jsonify({'data': rows, 'total': total, 'page': page, 'pages': (total + per_page - 1) // per_page})
@@ -324,7 +361,6 @@ def api_artisans():
         data = load_json('artisans.json')
         if not data:
             return jsonify({'data': [], 'total': 0, 'page': 1, 'pages': 0})
-        # Ajouter ids si absents
         for i, c in enumerate(data):
             if 'id' not in c:
                 c['id'] = i + 1
@@ -334,6 +370,9 @@ def api_artisans():
             data = [c for c in data if c.get('statut','') == statut]
         if profession:
             data = [c for c in data if c.get('profession','') == profession]
+        if sort_col:
+            reverse = sort_dir == 'DESC'
+            data = sorted(data, key=lambda c: (c.get(sort_col) is None, c.get(sort_col) or ''), reverse=reverse)
         total = len(data)
         start = (page - 1) * per_page
         return jsonify({'data': data[start:start+per_page], 'total': total, 'page': page, 'pages': (total + per_page - 1) // per_page})
