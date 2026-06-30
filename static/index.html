@@ -380,25 +380,25 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
     <div class="sb-lbl collapsible" onclick="toggleSection('nav')">Navigation <span class="sb-chevron" id="chev-nav">▾</span></div>
     <div class="sb-section" id="sec-nav">
       <div class="sb-item on" id="nav-dash" onclick="showV('dashboard')"><span class="sb-icon">📊</span>Dashboard</div>
-      <div class="sb-item" id="nav-inf" onclick="goProf('inf')"><span class="sb-icon">💉</span>Infirmiers<span class="pcnt" id="pc-inf">—</span></div>
-      <div class="sb-item" id="nav-kin" onclick="goProf('kin')"><span class="sb-icon">🦴</span>Kiné / Ostéo<span class="pcnt" id="pc-kin">—</span></div>
-      <div class="sb-item" id="nav-med" onclick="goProf('med')"><span class="sb-icon">🩺</span>Médecins<span class="pcnt" id="pc-med">—</span></div>
-      <div class="sb-item" id="nav-den" onclick="goProf('den')"><span class="sb-icon">🦷</span>Dentistes<span class="pcnt" id="pc-den">—</span></div>
-      <div class="sb-item" id="nav-psy" onclick="goProf('psy')"><span class="sb-icon">🧠</span>Psy / Ortho<span class="pcnt" id="pc-psy">—</span></div>
-      <div class="sb-item" id="nav-phr" onclick="showV('pharmacies')"><span class="sb-icon">💊</span>Pharmacies<span class="sb-num" id="sn-phr">25k</span></div>
-      <div class="sb-item" id="nav-ro" onclick="showV('ro')"><span class="sb-icon">📁</span>Ancien R&O<span class="sb-num" style="background:var(--yellow-light);color:var(--yellow)">50+</span></div>
-      <div class="sb-item" id="nav-art" onclick="showV('artisans')"><span class="sb-icon">🔧</span>Artisans<span class="sb-num" id="sn-art">0</span></div>
-      <div class="sb-item" id="nav-arb" onclick="showV('arbitrage')"><span class="sb-icon">⚖️</span>Arbitrage clients<span class="sb-num" style="background:var(--purple-light);color:var(--purple)">108</span></div>
+      <div class="sb-item" id="nav-inf" onclick="goProf('inf')"><span class="sb-icon">💉</span>Infirmiers</div>
+      <div class="sb-item" id="nav-kin" onclick="goProf('kin')"><span class="sb-icon">🦴</span>Kiné / Ostéo</div>
+      <div class="sb-item" id="nav-med" onclick="goProf('med')"><span class="sb-icon">🩺</span>Médecins</div>
+      <div class="sb-item" id="nav-den" onclick="goProf('den')"><span class="sb-icon">🦷</span>Dentistes</div>
+      <div class="sb-item" id="nav-psy" onclick="goProf('psy')"><span class="sb-icon">🧠</span>Psy / Ortho</div>
+      <div class="sb-item" id="nav-phr" onclick="showV('pharmacies')"><span class="sb-icon">💊</span>Pharmacies</div>
+      <div class="sb-item" id="nav-ro" onclick="showV('ro')"><span class="sb-icon">📁</span>Ancien R&O</div>
+      <div class="sb-item" id="nav-art" onclick="showV('artisans')"><span class="sb-icon">🔧</span>Artisans</div>
+      <div class="sb-item" id="nav-arb" onclick="showV('arbitrage')"><span class="sb-icon">⚖️</span>Arbitrage clients</div>
       <div class="sb-item" id="nav-mail" onclick="showV('mailing')"><span class="sb-icon">📧</span>Mailing</div>
     </div>
 
     <div class="sb-lbl collapsible" style="margin-top:6px" onclick="toggleSection('flt')">Filtres rapides <span class="sb-chevron" id="chev-flt">▾</span></div>
     <div class="sb-section" id="sec-flt">
-      <div class="sb-item" onclick="setF('new_today')"><span class="sb-icon">🆕</span>Nouveaux du jour<span class="sb-num" id="sn-new">0</span></div>
+      <div class="sb-item" onclick="setF('new_today')"><span class="sb-icon">🆕</span>Nouveaux du jour</div>
       <div class="sb-item" onclick="setF('avec_tel')"><span class="sb-icon">📱</span>Avec 06 direct</div>
-      <div class="sb-item" onclick="setF('nrp')"><span class="sb-icon">📵</span>NRP<span class="sb-num" id="sn-nrp">0</span></div>
-      <div class="sb-item" onclick="setF('rdv')"><span class="sb-icon">📅</span>RDV<span class="sb-num" id="sn-rdv">0</span></div>
-      <div class="sb-item" onclick="setF('ko')"><span class="sb-icon">❌</span>KO<span class="sb-num" id="sn-ko">0</span></div>
+      <div class="sb-item" onclick="setF('nrp')"><span class="sb-icon">📵</span>NRP</div>
+      <div class="sb-item" onclick="setF('rdv')"><span class="sb-icon">📅</span>RDV</div>
+      <div class="sb-item" onclick="setF('ko')"><span class="sb-icon">❌</span>KO</div>
     </div>
 
     <div class="sb-lbl collapsible" style="margin-top:6px" onclick="toggleSection('out')">Outils <span class="sb-chevron" id="chev-out">▾</span></div>
@@ -1442,10 +1442,11 @@ async function loadDash(){
     document.getElementById('d-cli').textContent=((s.statuts?.client||0)+(p.statuts?.client||0));
     document.getElementById('d-new').textContent=`${s.nouveaux_jour||0} aujourd'hui`;
     const st=s.statuts||{};
-    document.getElementById('pv-n').textContent=(s.nouveaux_jour||0).toLocaleString('fr');
-    document.getElementById('pv-rdv').textContent=(st.rdv||0).toLocaleString('fr');
-    document.getElementById('pv-r').textContent=(st.nrp||0).toLocaleString('fr');
-    document.getElementById('pv-ko').textContent=(st.ko||0).toLocaleString('fr');
+    const g=d.global||{};
+    document.getElementById('pv-n').textContent=(g.nouveaux_jour||0).toLocaleString('fr');
+    document.getElementById('pv-rdv').textContent=(g.rdv||0).toLocaleString('fr');
+    document.getElementById('pv-r').textContent=(g.nrp||0).toLocaleString('fr');
+    document.getElementById('pv-ko').textContent=(g.ko||0).toLocaleString('fr');
     document.getElementById('pv-creation').textContent=(s.avec_date_creation||0).toLocaleString('fr');
     renderBarChart('ch-spe',s.par_specialite||{},{
       'Infirmier':'#3182CE','Masseur-kinésithérapeute':'#805AD5','Médecin':'#2B6CB0',
@@ -1478,20 +1479,20 @@ async function loadStats(){
     document.getElementById('kpi-tot').textContent=tot.toLocaleString('fr');
     document.getElementById('kpi-tel').textContent=(s.avec_tel||0).toLocaleString('fr');
     document.getElementById('kpi-cli').textContent=((s.statuts?.client||0)+(p.statuts?.client||0));
-    document.getElementById('sn-tot').textContent=s.total>999?Math.round(s.total/1000)+'k':s.total||0;
-    document.getElementById('sn-phr').textContent=p.total>999?Math.round(p.total/1000)+'k':p.total||0;
-    document.getElementById('sn-new').textContent=g.nouveaux_jour||0;
+    {const eTot=document.getElementById('sn-tot');if(eTot)eTot.textContent=s.total>999?Math.round(s.total/1000)+'k':s.total||0;}
+    {const e1=document.getElementById('sn-phr');if(e1)e1.textContent=p.total>999?Math.round(p.total/1000)+'k':p.total||0;}
+    {const e3=document.getElementById('sn-new');if(e3)e3.textContent=g.nouveaux_jour||0;}
     const snNrpEl=document.getElementById('sn-nrp');if(snNrpEl)snNrpEl.textContent=g.nrp||0;
     const snRdvEl=document.getElementById('sn-rdv');if(snRdvEl)snRdvEl.textContent=g.rdv||0;
     const snKoEl=document.getElementById('sn-ko');if(snKoEl)snKoEl.textContent=g.ko||0;
     const sp=s.par_specialite||{};
     const cnt=keys=>Object.entries(sp).filter(([k])=>keys.some(x=>k.toLowerCase().includes(x.toLowerCase()))).reduce((a,[,v])=>a+v,0);
-    document.getElementById('pc-all').textContent=s.total||0;
-    document.getElementById('pc-inf').textContent=cnt(['Infirmier']);
-    document.getElementById('pc-kin').textContent=cnt(['Masseur','Ostéo','Kinési']);
-    document.getElementById('pc-med').textContent=cnt(['Médecin','Cardio','Radio']);
-    document.getElementById('pc-den').textContent=cnt(['Dentiste']);
-    document.getElementById('pc-psy').textContent=cnt(['Psycho','Orthophon']);
+    {const e4=document.getElementById('pc-all');if(e4)e4.textContent=s.total||0;}
+    {const e5=document.getElementById('pc-inf');if(e5)e5.textContent=cnt(['Infirmier']);}
+    {const e6=document.getElementById('pc-kin');if(e6)e6.textContent=cnt(['Masseur','Ostéo','Kinési']);}
+    {const e7=document.getElementById('pc-med');if(e7)e7.textContent=cnt(['Médecin','Cardio','Radio']);}
+    {const e8=document.getElementById('pc-den');if(e8)e8.textContent=cnt(['Dentiste']);}
+    {const e9=document.getElementById('pc-psy');if(e9)e9.textContent=cnt(['Psycho','Orthophon']);}
   }catch(ex){}
 }
 
@@ -1867,7 +1868,7 @@ async function loadArt(){
       const el=document.getElementById('sa-'+c);
       if(el)el.innerHTML=sortState.art.col===c?(sortState.art.dir==='asc'?' <span style="color:var(--blue)">▲</span>':' <span style="color:var(--blue)">▼</span>'):' <span style="opacity:.25">⇅</span>';
     });
-    document.getElementById('sn-art').textContent=d.total>999?Math.round(d.total/1000)+'k':d.total;
+    {const e2=document.getElementById('sn-art');if(e2)e2.textContent=d.total>999?Math.round(d.total/1000)+'k':d.total;}
     
     if(!d.data.length){tbody.innerHTML='<tr class="empty"><td colspan="8">Aucun résultat</td></tr>';renderPag('art',0,0,0);return;}
     
