@@ -127,6 +127,7 @@ def api_sante():
     sans_direct = request.args.get('sans_direct', '')
     nouveaux = request.args.get('nouveaux', '')
     specialites = request.args.get('specialites', '')
+    annee = request.args.get('annee', '')
 
     if USE_DB:
         conn = get_db()
@@ -145,6 +146,13 @@ def api_sante():
             where.append("(telephone_direct IS NULL OR telephone_direct = '')")
         if nouveaux:
             where.append("date_ajout = CURRENT_DATE::text")
+        if annee == 'recent':
+            where.append("date_creation IS NOT NULL AND date_creation != '' AND date_creation::date > (CURRENT_DATE - INTERVAL '1 year')")
+        elif annee == 'recent3':
+            where.append("date_creation IS NOT NULL AND date_creation != '' AND date_creation::date > (CURRENT_DATE - INTERVAL '3 years')")
+        elif annee:
+            where.append("date_creation LIKE %s")
+            params.append(f'{annee}-%')
         if specialites:
             spes = specialites.split('|')
             where.append("(" + " OR ".join(["LOWER(specialite) LIKE %s"] * len(spes)) + ")")
@@ -281,6 +289,7 @@ def api_artisans():
     search = request.args.get('search', '').lower()
     statut = request.args.get('statut', '')
     profession = request.args.get('profession', '')
+    annee = request.args.get('annee', '')
 
     if USE_DB:
         conn = get_db()
@@ -296,6 +305,13 @@ def api_artisans():
         if profession:
             where.append("profession = %s")
             params.append(profession)
+        if annee == 'recent':
+            where.append("date_creation IS NOT NULL AND date_creation != '' AND date_creation::date > (CURRENT_DATE - INTERVAL '1 year')")
+        elif annee == 'recent3':
+            where.append("date_creation IS NOT NULL AND date_creation != '' AND date_creation::date > (CURRENT_DATE - INTERVAL '3 years')")
+        elif annee:
+            where.append("date_creation LIKE %s")
+            params.append(f'{annee}-%')
         where_str = " AND ".join(where)
         cur.execute(f"SELECT COUNT(*) as total FROM artisans WHERE {where_str}", params)
         total = cur.fetchone()['total']

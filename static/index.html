@@ -479,6 +479,16 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
       <div class="sw"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M11 11l3 3"/></svg><input type="text" id="search" placeholder="Nom, ville..." oninput="applyF()"></div>
       <select class="fs" id="sel-st" onchange="applyF()"><option value="">Tous statuts</option><option value="nrp">📵 NRP</option><option value="rdv">📅 RDV</option><option value="ko">❌ KO</option><option value="nouveau">Nouveau</option></select>
       <select class="fs" id="sel-dept" onchange="applyF()"><option value="">Tous dép.</option></select>
+      <select class="fs" id="sel-annee" onchange="applyF()">
+        <option value="">Toute date</option>
+        <option value="2026">📅 Installés 2026</option>
+        <option value="2025">📅 Installés 2025</option>
+        <option value="2024">📅 Installés 2024</option>
+        <option value="2023">📅 Installés 2023</option>
+        <option value="2022">📅 Installés 2022</option>
+        <option value="recent">🔥 Moins de 1 an</option>
+        <option value="recent3">🔥 Moins de 3 ans</option>
+      </select>
       <span class="chip" id="cnt-p">—</span>
     </div>
     <div style="display:flex;flex:1;min-height:0;overflow:hidden">
@@ -751,12 +761,22 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
         <option value="Chauffagiste">Chauffagiste</option>
         <option value="Carreleur">Carreleur</option>
       </select>
+      <select class="fs" id="sel-art-annee" onchange="applyFA()">
+        <option value="">Toute date</option>
+        <option value="2026">📅 Installés 2026</option>
+        <option value="2025">📅 Installés 2025</option>
+        <option value="2024">📅 Installés 2024</option>
+        <option value="2023">📅 Installés 2023</option>
+        <option value="2022">📅 Installés 2022</option>
+        <option value="recent">🔥 Moins de 1 an</option>
+        <option value="recent3">🔥 Moins de 3 ans</option>
+      </select>
       <span class="chip" id="cnt-art">—</span>
     </div>
     <div style="display:flex;flex:1;min-height:0;overflow:hidden">
       <div class="tw">
         <table>
-          <thead><tr><th>NOM</th><th>PROFESSION</th><th>VILLE</th><th>📱 06 DIRECT</th><th>SOURCE</th><th>STATUT</th><th>NOTE</th><th></th></tr></thead>
+          <thead><tr><th>NOM</th><th>PROFESSION</th><th>VILLE</th><th>📱 06 DIRECT</th><th>⏱ ANCIENNETÉ</th><th>STATUT</th><th>NOTE</th><th></th></tr></thead>
           <tbody id="tb-art"><tr class="empty"><td colspan="8"><span class="spin"></span></td></tr></tbody>
         </table>
       </div>
@@ -1043,10 +1063,12 @@ async function loadP(){
   const q=document.getElementById('search')?.value||'';
   const st=document.getElementById('sel-st')?.value||'';
   const dept=document.getElementById('sel-dept')?.value||'';
+  const annee=document.getElementById('sel-annee')?.value||'';
   if(q)p.set('search',q);
   if(st)p.set('statut',st);
   else if(flt&&['nouveau','contacte','interesse','a-rappeler','client'].includes(flt))p.set('statut',flt);
   if(dept)p.set('dept',dept);
+  if(annee)p.set('annee',annee);
   if(PS[prof])p.set('specialites',PS[prof].join('|'));
   if(sub==='avec')p.set('avec_direct','1');
   else if(sub==='sans')p.set('sans_direct','1');
@@ -1065,7 +1087,7 @@ async function loadP(){
         <td><div>${e(row.ville||'—')}</div><div class="cs">${row.cp||''}</div></td>
         <td>${ht?`<span class="tok">${fmt(ht)}</span>`:`<span class="tno">—</span>`}</td>
         <td>${row.telephone?`<span class="tfix">${fmt(row.telephone)}</span>`:`<span style="color:var(--text3)">—</span>`}</td>
-        <td>${ageBadge(row.date_debut||row.date_ajout)}</td>
+        <td>${ageBadge(row.date_creation||row.date_debut||row.date_ajout)}</td>
         <td><span class="badge ${SL[row.statut]||'b-blue'}">${SN[row.statut]||'Nouveau'}</span></td>
         <td>${ht?`<a href="tel:${ht.replace(/\s/g,'')}" class="btn btn-green" style="padding:3px 8px;font-size:11px;text-decoration:none" onclick="event.stopPropagation()">📞</a>`:''}</td>
       </tr>`;
@@ -1609,9 +1631,11 @@ async function loadArt(){
     const q=document.getElementById('srch-art')?.value||'';
     const st=document.getElementById('sel-art-st')?.value||'';
     const prof=document.getElementById('sel-art-prof')?.value||'';
+    const annee=document.getElementById('sel-art-annee')?.value||'';
     if(q)p.set('search',q);
     if(st)p.set('statut',st);
     if(prof)p.set('profession',prof);
+    if(annee)p.set('annee',annee);
     if(artSub&&artSub!=='all')p.set('profession',artSub);
     
     const r=await fetch(`${API}/artisans?${p}`);
@@ -1630,7 +1654,7 @@ async function loadArt(){
         <td><span class="badge b-orange" style="font-size:10px">${e(row.profession||'—')}</span></td>
         <td><div>${e(row.ville||'—')}</div><div class="cs">${row.cp||''}</div></td>
         <td><span class="tok">${e(row.telephone_direct||'—')}</span></td>
-        <td><span style="font-size:10px;color:var(--text3)">${e(row.source||'')}</span></td>
+        <td>${ageBadge(row.date_creation)}</td>
         <td><span class="badge" style="background:${col.bg};color:${col.text};border:1px solid ${col.border}">${col.label}</span></td>
         <td><span style="font-size:11px;color:var(--text2)">${e((row.note||'').substring(0,25)||'—')}</span></td>
         <td>${row.telephone_direct?`<a href="tel:${row.telephone_direct.replace(/\s/g,'')}" class="btn btn-green" style="padding:3px 8px;font-size:11px;text-decoration:none" onclick="event.stopPropagation()">📞</a>`:''}</td>
