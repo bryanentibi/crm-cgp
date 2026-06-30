@@ -232,7 +232,7 @@ def update_sante(id):
         cur = conn.cursor()
         fields = []
         params = []
-        for k in ['statut', 'note', 'telephone_direct']:
+        for k in ['statut', 'note', 'telephone_direct', 'nom', 'prenom']:
             if k in body:
                 fields.append(f"{k} = %s")
                 params.append(body[k])
@@ -298,7 +298,7 @@ def update_pharmacies(id):
         cur = conn.cursor()
         fields = []
         params = []
-        for k in ['statut', 'note', 'telephone_direct']:
+        for k in ['statut', 'note', 'telephone_direct', 'nom', 'prenom']:
             if k in body:
                 fields.append(f"{k} = %s")
                 params.append(body[k])
@@ -407,7 +407,7 @@ def update_artisan(id):
         cur = conn.cursor()
         fields = []
         params = []
-        for k in ['statut', 'note', 'telephone_direct']:
+        for k in ['statut', 'note', 'telephone_direct', 'nom', 'prenom']:
             if k in body:
                 fields.append(f"{k} = %s")
                 params.append(body[k])
@@ -596,6 +596,68 @@ def filtre_global():
     page_results = results[start:start + per_page]
 
     return jsonify({'data': page_results, 'total': total, 'page': page, 'pages': (total + per_page - 1) // per_page})
+
+
+
+@app.route('/api/arbitrage-barriere', methods=['GET'])
+def get_arbitrage_barriere():
+    if not USE_DB:
+        return jsonify([])
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM arbitrage_barriere ORDER BY id")
+    rows = [dict(r) for r in cur.fetchall()]
+    conn.close()
+    return jsonify(rows)
+
+@app.route('/api/arbitrage-barriere/<int:id>', methods=['PATCH'])
+def update_arbitrage_barriere(id):
+    body = request.json or {}
+    if not USE_DB:
+        return jsonify({'ok': False})
+    conn = get_db()
+    cur = conn.cursor()
+    fields = []
+    params = []
+    for k in ['nom', 'montant', 'note', 'commentaire', 'statut', 'checked']:
+        if k in body:
+            fields.append(f"{k} = %s")
+            params.append(body[k])
+    if fields:
+        cur.execute(f"UPDATE arbitrage_barriere SET {', '.join(fields)} WHERE id = %s", params + [id])
+        conn.commit()
+    conn.close()
+    return jsonify({'ok': True})
+
+@app.route('/api/arbitrage-optimum', methods=['GET'])
+def get_arbitrage_optimum():
+    if not USE_DB:
+        return jsonify([])
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM arbitrage_optimum ORDER BY id")
+    rows = [dict(r) for r in cur.fetchall()]
+    conn.close()
+    return jsonify(rows)
+
+@app.route('/api/arbitrage-optimum/<int:id>', methods=['PATCH'])
+def update_arbitrage_optimum(id):
+    body = request.json or {}
+    if not USE_DB:
+        return jsonify({'ok': False})
+    conn = get_db()
+    cur = conn.cursor()
+    fields = []
+    params = []
+    for k in ['nom', 'date', 'versement', 'note', 'commentaire', 'statut', 'checked']:
+        if k in body:
+            fields.append(f"{k} = %s")
+            params.append(body[k])
+    if fields:
+        cur.execute(f"UPDATE arbitrage_optimum SET {', '.join(fields)} WHERE id = %s", params + [id])
+        conn.commit()
+    conn.close()
+    return jsonify({'ok': True})
 
 
 if __name__ == '__main__':
