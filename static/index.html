@@ -308,6 +308,13 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
 
 .sortable{cursor:pointer;user-select:none;transition:color .15s}
 .sortable:hover{color:var(--blue)}
+
+.collapsible{cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none}
+.collapsible:hover{color:var(--blue)}
+.sb-chevron{font-size:10px;transition:transform .2s}
+.sb-chevron.closed{transform:rotate(-90deg)}
+.sb-section{overflow:hidden;transition:max-height .25s ease}
+.sb-section.closed{max-height:0!important}
 </style>
 </head>
 <body>
@@ -370,43 +377,35 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
   </div>
 
   <nav class="sb-nav">
-    <div class="sb-lbl">Navigation</div>
-    <div class="sb-item on" id="nav-dash" onclick="showV('dashboard')"><span class="sb-icon">📊</span>Dashboard</div>
-    <div class="sb-item" id="nav-pros" onclick="showV('prospects')"><span class="sb-icon">👥</span>Prospects<span class="sb-num" id="sn-tot">—</span></div>
-    <div class="sb-item" id="nav-phr" onclick="showV('pharmacies')"><span class="sb-icon">💊</span>Pharmacies<span class="sb-num" id="sn-phr">25k</span></div>
-    <div class="sb-item" id="nav-ro" onclick="showV('ro')"><span class="sb-icon">📁</span>Ancien R&O<span class="sb-num" style="background:var(--yellow-light);color:var(--yellow)">50+</span></div>
-            <div class="sb-item" id="nav-art" onclick="showV('artisans')"><span class="sb-icon">🔧</span>Artisans<span class="sb-num" id="sn-art">0</span></div>
-    <div class="sb-item" id="nav-mail" onclick="showV('mailing')"><span class="sb-icon">📧</span>Mailing</div>
-    <div class="sb-item" id="nav-arb" onclick="showV('arbitrage')"><span class="sb-icon">⚖️</span>Arbitrage clients<span class="sb-num" style="background:var(--purple-light);color:var(--purple)">108</span></div>
-
-    <div class="sb-lbl" style="margin-top:6px">Spécialité</div>
-    <div class="prof-wrap">
-      <button class="prof-btn" onclick="toggleP()">
-        <div class="pdot" id="pdot" style="background:var(--text3)"></div>
-        <span id="plbl">Toutes professions</span>
-        <span class="parr" id="parr">▼</span>
-      </button>
-      <div class="pmenu" id="pmenu">
-        <div class="poption sel" data-p="all" onclick="selP('all',this)"><div class="pdot" style="background:var(--text3)"></div>Toutes<span class="pcnt" id="pc-all">—</span></div>
-        <div class="poption" data-p="inf" onclick="selP('inf',this)"><div class="pdot" style="background:#3182CE"></div>Infirmiers<span class="pcnt" id="pc-inf">—</span></div>
-        <div class="poption" data-p="kin" onclick="selP('kin',this)"><div class="pdot" style="background:#805AD5"></div>Kiné / Ostéo<span class="pcnt" id="pc-kin">—</span></div>
-        <div class="poption" data-p="med" onclick="selP('med',this)"><div class="pdot" style="background:#2B6CB0"></div>Médecins<span class="pcnt" id="pc-med">—</span></div>
-        <div class="poption" data-p="den" onclick="selP('den',this)"><div class="pdot" style="background:#DD6B20"></div>Dentistes<span class="pcnt" id="pc-den">—</span></div>
-        <div class="poption" data-s="psy" onclick="selP('psy',this)"><div class="pdot" style="background:#D53F8C"></div>Psy / Ortho<span class="pcnt" id="pc-psy">—</span></div>
-        <div class="poption" data-p="art" onclick="selP('art',this)"><div class="pdot" style="background:#DD6B20"></div>Artisans<span class="pcnt" id="pc-art">—</span></div>
-      </div>
+    <div class="sb-lbl collapsible" onclick="toggleSection('nav')">Navigation <span class="sb-chevron" id="chev-nav">▾</span></div>
+    <div class="sb-section" id="sec-nav">
+      <div class="sb-item on" id="nav-dash" onclick="showV('dashboard')"><span class="sb-icon">📊</span>Dashboard</div>
+      <div class="sb-item" id="nav-inf" onclick="goProf('inf')"><span class="sb-icon">💉</span>Infirmiers<span class="pcnt" id="pc-inf">—</span></div>
+      <div class="sb-item" id="nav-kin" onclick="goProf('kin')"><span class="sb-icon">🦴</span>Kiné / Ostéo<span class="pcnt" id="pc-kin">—</span></div>
+      <div class="sb-item" id="nav-med" onclick="goProf('med')"><span class="sb-icon">🩺</span>Médecins<span class="pcnt" id="pc-med">—</span></div>
+      <div class="sb-item" id="nav-den" onclick="goProf('den')"><span class="sb-icon">🦷</span>Dentistes<span class="pcnt" id="pc-den">—</span></div>
+      <div class="sb-item" id="nav-psy" onclick="goProf('psy')"><span class="sb-icon">🧠</span>Psy / Ortho<span class="pcnt" id="pc-psy">—</span></div>
+      <div class="sb-item" id="nav-phr" onclick="showV('pharmacies')"><span class="sb-icon">💊</span>Pharmacies<span class="sb-num" id="sn-phr">25k</span></div>
+      <div class="sb-item" id="nav-ro" onclick="showV('ro')"><span class="sb-icon">📁</span>Ancien R&O<span class="sb-num" style="background:var(--yellow-light);color:var(--yellow)">50+</span></div>
+      <div class="sb-item" id="nav-art" onclick="showV('artisans')"><span class="sb-icon">🔧</span>Artisans<span class="sb-num" id="sn-art">0</span></div>
+      <div class="sb-item" id="nav-arb" onclick="showV('arbitrage')"><span class="sb-icon">⚖️</span>Arbitrage clients<span class="sb-num" style="background:var(--purple-light);color:var(--purple)">108</span></div>
+      <div class="sb-item" id="nav-mail" onclick="showV('mailing')"><span class="sb-icon">📧</span>Mailing</div>
     </div>
 
-    <div class="sb-lbl" style="margin-top:6px">Filtres rapides</div>
-    <div class="sb-item" onclick="setF('new_today')"><span class="sb-icon">🆕</span>Nouveaux du jour<span class="sb-num" id="sn-new">0</span></div>
-    <div class="sb-item" onclick="setF('avec_tel')"><span class="sb-icon">📱</span>Avec 06 direct</div>
-    <div class="sb-item" onclick="setF('nrp')"><span class="sb-icon">📵</span>NRP<span class="sb-num" id="sn-nrp">0</span></div>
-    <div class="sb-item" onclick="setF('rdv')"><span class="sb-icon">📅</span>RDV<span class="sb-num" id="sn-rdv">0</span></div>
+    <div class="sb-lbl collapsible" style="margin-top:6px" onclick="toggleSection('flt')">Filtres rapides <span class="sb-chevron" id="chev-flt">▾</span></div>
+    <div class="sb-section" id="sec-flt">
+      <div class="sb-item" onclick="setF('new_today')"><span class="sb-icon">🆕</span>Nouveaux du jour<span class="sb-num" id="sn-new">0</span></div>
+      <div class="sb-item" onclick="setF('avec_tel')"><span class="sb-icon">📱</span>Avec 06 direct</div>
+      <div class="sb-item" onclick="setF('nrp')"><span class="sb-icon">📵</span>NRP<span class="sb-num" id="sn-nrp">0</span></div>
+      <div class="sb-item" onclick="setF('rdv')"><span class="sb-icon">📅</span>RDV<span class="sb-num" id="sn-rdv">0</span></div>
+    </div>
 
-    <div class="sb-lbl" style="margin-top:6px">Outils</div>
-    <div class="sb-item" onclick="doLogout()" style="color:var(--red)"><span class="sb-icon">🚪</span>Déconnexion</div>
-    <div class="sb-item" onclick="openScr()"><span class="sb-icon">⚡</span>Lancer scraping</div>
-    <div class="sb-item" onclick="doExport()"><span class="sb-icon">⬇</span>Exporter CSV</div>
+    <div class="sb-lbl collapsible" style="margin-top:6px" onclick="toggleSection('out')">Outils <span class="sb-chevron" id="chev-out">▾</span></div>
+    <div class="sb-section" id="sec-out">
+      <div class="sb-item" onclick="doLogout()" style="color:var(--red)"><span class="sb-icon">🚪</span>Déconnexion</div>
+      <div class="sb-item" onclick="openScr()"><span class="sb-icon">⚡</span>Lancer scraping</div>
+      <div class="sb-item" onclick="doExport()"><span class="sb-icon">⬇</span>Exporter CSV</div>
+    </div>
   </nav>
 </aside>
 
@@ -599,8 +598,8 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
         </div>
       </div>
       <div class="arb-tabs">
-        <button class="arb-tab ac" id="arb-t-b" onclick="showArb('barriere')">🔵 Barrière PER <span style="background:var(--blue-light);color:var(--blue);padding:1px 7px;border-radius:20px;font-size:11px;margin-left:6px">51</span></button>
-        <button class="arb-tab" id="arb-t-o" onclick="showArb('optimum')">🟢 Optimum Suivi <span style="background:var(--green-light);color:var(--green);padding:1px 7px;border-radius:20px;font-size:11px;margin-left:6px">57</span></button>
+        <button class="arb-tab ac" id="arb-t-b" onclick="showArb('barriere')">👤 Bryan <span style="background:var(--blue-light);color:var(--blue);padding:1px 7px;border-radius:20px;font-size:11px;margin-left:6px">51</span></button>
+        <button class="arb-tab" id="arb-t-o" onclick="showArb('optimum')">👤 Alexis <span style="background:var(--green-light);color:var(--green);padding:1px 7px;border-radius:20px;font-size:11px;margin-left:6px">57</span></button>
       </div>
       
       <!-- Barrière PER -->
@@ -853,15 +852,26 @@ const PL={all:'Toutes professions',inf:'Infirmiers',kin:'Kiné / Ostéo',med:'M�
 const SL={'':'b-gray',nouveau:'b-gray',nrp:'b-orange',rdv:'b-green',ko:'b-red','contacte':'b-blue','interesse':'b-purple','a-rappeler':'b-orange','client':'b-green','sans-suite':'b-gray'};
 const SN={'':'Nouveau',nouveau:'Nouveau',nrp:'📵 NRP',rdv:'📅 RDV',ko:'❌ KO','contacte':'Contacté','interesse':'Intéressé','a-rappeler':'À rappeler','client':'Client','sans-suite':'Sans suite'};
 
-let prof='all',pg=1,pgP=1,sub='all',subP='all',flt='',eid=null,etype=null,scrInt=null;
+let prof='inf',pg=1,pgP=1,sub='all',subP='all',flt='',eid=null,etype=null,scrInt=null;
 
 
 // ── ARBITRAGE DATA ──
 const BARRIERE_RAW = [{"id": "messner", "nom": "Messner", "montant": "150", "note": "+594", "statut": ""}, {"id": "foussanigue", "nom": "Foussanigue", "montant": "400", "statut": ""}, {"id": "thinieg", "nom": "Thinieg", "montant": "150", "statut": ""}, {"id": "nicole", "nom": "Nicole", "montant": "250", "statut": ""}, {"id": "guyader", "nom": "Guyader", "montant": "500", "statut": ""}, {"id": "dumaugne", "nom": "Dumaugne", "montant": "200", "statut": ""}, {"id": "landny", "nom": "Landny", "montant": "150", "statut": ""}, {"id": "oden", "nom": "Oden", "montant": "100", "statut": ""}, {"id": "neder", "nom": "Neder", "montant": "200", "statut": ""}, {"id": "ruel", "nom": "Ruel", "montant": "290", "statut": ""}, {"id": "mendy", "nom": "Mendy", "montant": "500", "statut": ""}, {"id": "mometeau", "nom": "Mometeau", "montant": "150", "statut": ""}, {"id": "ouvier", "nom": "Ouvier", "montant": "100", "statut": ""}, {"id": "trescaute", "nom": "Trescaute", "montant": "250", "statut": ""}, {"id": "honey", "nom": "Honey", "montant": "200", "statut": ""}, {"id": "chavarelle", "nom": "Chavarelle", "montant": "390", "statut": ""}, {"id": "pagan", "nom": "Pagan", "montant": "100", "statut": "annulé"}, {"id": "binet", "nom": "Binet", "montant": "400", "statut": ""}, {"id": "napoleon", "nom": "Napoleon", "montant": "150", "statut": "rdv"}, {"id": "hurel", "nom": "Hurel", "montant": "600", "statut": ""}, {"id": "richez", "nom": "Richez", "montant": "200", "statut": "annulé"}, {"id": "tounlan", "nom": "Tounlan", "montant": "150", "statut": "annulé"}, {"id": "veragten", "nom": "Veragten", "montant": "300", "statut": "annulé"}, {"id": "louviot", "nom": "Louviot", "montant": "150", "statut": ""}, {"id": "brouslant", "nom": "Brouslant", "montant": "100", "statut": "annulé"}, {"id": "beude", "nom": "Beude", "montant": "200", "statut": "rdv"}, {"id": "cagnion", "nom": "Cagnion", "montant": "200", "statut": "annulé"}, {"id": "louboutin", "nom": "Louboutin", "montant": "340", "statut": ""}, {"id": "ninguella", "nom": "Ninguella", "montant": "150", "statut": ""}, {"id": "henry", "nom": "Henry", "montant": "200", "statut": ""}, {"id": "dupant", "nom": "Dupant", "montant": "200", "statut": ""}, {"id": "delnue", "nom": "Delnue", "montant": "300", "statut": ""}, {"id": "saussol", "nom": "Saussol", "montant": "100", "statut": ""}, {"id": "thenon", "nom": "Thenon", "montant": "300", "statut": ""}, {"id": "stinzi", "nom": "Stinzi", "montant": "100", "statut": ""}, {"id": "achin", "nom": "Achin", "montant": "360", "statut": ""}, {"id": "brize", "nom": "Brize", "montant": "100", "statut": ""}, {"id": "ziouche", "nom": "Ziouche", "montant": "100", "statut": ""}, {"id": "billet", "nom": "Billet", "montant": "400", "statut": ""}, {"id": "fondeur", "nom": "Fondeur", "montant": "200", "statut": ""}, {"id": "samyn", "nom": "Samyn", "montant": "100", "statut": ""}, {"id": "dos_santos", "nom": "Dos Santos", "montant": "100", "statut": ""}, {"id": "sungit", "nom": "Sungit", "montant": "100", "statut": ""}, {"id": "baude2", "nom": "Baude", "montant": "100", "statut": "rdv"}, {"id": "cattignier", "nom": "Cattignier", "montant": "200", "statut": ""}, {"id": "canotte", "nom": "Canotte", "montant": "150", "statut": ""}, {"id": "thobert", "nom": "Thobert", "montant": "150", "statut": ""}, {"id": "champbussel", "nom": "Champbussel", "montant": "100", "statut": ""}, {"id": "communier", "nom": "Communier", "montant": "100", "statut": ""}, {"id": "dufetal", "nom": "Dufetal", "montant": "200", "statut": ""}, {"id": "piovano", "nom": "Piovano", "montant": "250", "statut": ""}];
 const OPTIMUM_RAW = [{"id": "mouysset", "nom": "MME MOUYSSET", "versement": "150", "date": "12/11/2024", "annule": "true"}, {"id": "braud", "nom": "MME BRAUD", "versement": "150", "date": "16/12/2024", "annule": "false"}, {"id": "caldas", "nom": "MME CALDAS", "versement": "200", "date": "17/12/2024", "annule": "false"}, {"id": "duffy", "nom": "MME DUFFY", "versement": "100", "date": "19/12/2024", "annule": "false"}, {"id": "thonier", "nom": "MME THONIER", "versement": "100", "date": "20/12/2024", "annule": "true"}, {"id": "dominici", "nom": "MME DOMINICI", "versement": "100", "date": "08/01/2025", "annule": "false"}, {"id": "battistelli", "nom": "MR BATTISTELLI", "versement": "200", "date": "08/01/2025", "annule": "false"}, {"id": "anger", "nom": "MME ANGER", "versement": "100", "date": "17/01/2025", "annule": "false"}, {"id": "peraud", "nom": "MME PERAUD", "versement": "100", "date": "20/01/2025", "annule": "false"}, {"id": "tabard", "nom": "MME TABARD", "versement": "150", "date": "23/01/2025", "annule": "false"}, {"id": "kwa_moutome", "nom": "MME KWA MOUTOME", "versement": "100", "date": "03/02/2025", "annule": "true"}, {"id": "basile", "nom": "MME BASILE", "versement": "200", "date": "25/02/2025", "annule": "false"}, {"id": "cossec", "nom": "MME COSSEC", "versement": "100", "date": "26/02/2025", "annule": "true"}, {"id": "merceron", "nom": "MME MERCERON", "versement": "100", "date": "26/02/2025", "annule": "true"}, {"id": "mejean", "nom": "MME MEJEAN", "versement": "100", "date": "26/02/2025", "annule": "true"}, {"id": "mouezza", "nom": "MR MOUEZZA", "versement": "150", "date": "03/03/2025", "annule": "true"}, {"id": "regnier", "nom": "MME REGNIER", "versement": "100", "date": "05/03/2025", "annule": "true"}, {"id": "canonne", "nom": "MME CANONNE", "versement": "100", "date": "07/03/2025", "annule": "false"}, {"id": "berruezo", "nom": "MME BERRUEZO", "versement": "150", "date": "10/03/2025", "annule": "true"}, {"id": "jezequel", "nom": "MME JEZEQUEL", "versement": "400", "date": "12/03/2025", "annule": "true"}, {"id": "silete", "nom": "MME SILETE", "versement": "150", "date": "15/03/2025", "annule": "false"}, {"id": "dheilly", "nom": "MR D", "versement": "200", "date": "17/03/2025", "annule": "false"}, {"id": "de_carvhalo", "nom": "MME DE CARVHALO", "versement": "100", "date": "20/03/2025", "annule": "false"}, {"id": "remenant", "nom": "MME REMENANT", "versement": "150", "date": "20/03/2025", "annule": "false"}, {"id": "guingueno", "nom": "MME GUINGUENO", "versement": "150", "date": "21/03/2025", "annule": "true"}, {"id": "rousseau", "nom": "MR ROUSSEAU", "versement": "150", "date": "26/03/2025", "annule": "true"}, {"id": "quignon", "nom": "MME QUIGNON", "versement": "200", "date": "31/03/2025", "annule": "true"}, {"id": "nganga1", "nom": "MME NGANGA", "versement": "100", "date": "03/04/2025", "annule": "false"}, {"id": "garnier", "nom": "MME GARNIER", "versement": "100", "date": "11/04/2025", "annule": "false"}, {"id": "cacciatore", "nom": "MME CACCIATORE", "versement": "400", "date": "23/04/2025", "annule": "true"}, {"id": "heringuez", "nom": "MME HERINGUEZ", "versement": "100", "date": "02/05/2025", "annule": "true"}, {"id": "juin1", "nom": "MME JUIN", "versement": "200", "date": "02/05/2025", "annule": "true"}, {"id": "debaud", "nom": "MME DEBAUD", "versement": "350", "date": "12/05/2025", "annule": "false"}, {"id": "ohayon", "nom": "MR OHAYON", "versement": "200", "date": "12/05/2025", "annule": "false"}, {"id": "bottalico", "nom": "MME BOTTALICO", "versement": "100", "date": "20/05/2025", "annule": "false"}, {"id": "lacroix", "nom": "MME LACROIX", "versement": "150", "date": "26/05/2025", "annule": "false"}, {"id": "loiseau", "nom": "MME LOISEAU", "versement": "100", "date": "02/06/2025", "annule": "false"}, {"id": "simao", "nom": "MME SIMAO", "versement": "130", "date": "03/06/2025", "annule": "false"}, {"id": "gohdbane", "nom": "MME GOHDBANE", "versement": "200", "date": "03/06/2025", "annule": "false"}, {"id": "nganga2", "nom": "MME NGANGA (2", "versement": "100", "date": "04/06/2025", "annule": "true"}, {"id": "zaragoza", "nom": "MME ZARAGOZA", "versement": "150", "date": "12/06/2025", "annule": "false"}, {"id": "martin", "nom": "MR MARTIN", "versement": "250", "date": "13/06/2025", "annule": "false"}, {"id": "marques", "nom": "MME MARQUES", "versement": "100", "date": "13/06/2025", "annule": "false"}, {"id": "boulogne", "nom": "MME BOULOGNE", "versement": "280", "date": "23/06/2025", "annule": "true"}, {"id": "maillard", "nom": "MME MAILLARD", "versement": "150", "date": "24/06/2025", "annule": "false"}, {"id": "derail1", "nom": "MR DERAIL", "versement": "100", "date": "02/07/2025", "annule": "false"}, {"id": "grandin", "nom": "MME GRANDIN", "versement": "100", "date": "07/07/2025", "annule": "false"}, {"id": "juin2", "nom": "MME JUIN (2", "versement": "200", "date": "07/07/2025", "annule": "false"}, {"id": "giacci", "nom": "MME GIACCI", "versement": "100", "date": "08/07/2025", "annule": "true"}, {"id": "longefay", "nom": "MME LONGEFAY", "versement": "150", "date": "11/07/2025", "annule": "true"}, {"id": "szymczewski1", "nom": "MME SZYMCZEWSKI", "versement": "300", "date": "22/07/2025", "annule": "false"}, {"id": "fonseca", "nom": "MR FONSECA RODRIGUES", "versement": "100", "date": "18/08/2025", "annule": "true"}, {"id": "lassagne", "nom": "MME LASSAGNE", "versement": "350", "date": "21/08/2025", "annule": "true"}, {"id": "belleil", "nom": "MME BELLEIL", "versement": "200", "date": "26/08/2025", "annule": "false"}, {"id": "derail2", "nom": "MR DERAIL (2", "versement": "100", "date": "28/08/2025", "annule": "true"}, {"id": "szymczewski2", "nom": "MME SZYMCZEWSKI (2", "versement": "300", "date": "13/10/2025", "annule": "true"}, {"id": "montana", "nom": "MME MONTANA", "versement": "250", "date": "15/10/2025", "annule": "false"}];
 
-let bState = BARRIERE_RAW.map(c => ({...c, statut: c.statut||'', note: c.note||'', commentaire: '', checked: false}));
-let oState = OPTIMUM_RAW.map(c => ({...c, statut: c.annule==='true'?'ko':(c.statut||''), note: c.note||'', commentaire: '', checked: false}));
+function loadArbState(key, raw, defaults) {
+  try {
+    const saved = JSON.parse(localStorage.getItem(key) || 'null');
+    if (saved && Array.isArray(saved) && saved.length === raw.length) return saved;
+  } catch(e) {}
+  return raw.map(c => ({...c, ...defaults(c)}));
+}
+function saveArbState(key, state) {
+  try { localStorage.setItem(key, JSON.stringify(state)); } catch(e) {}
+}
+
+let bState = loadArbState('arb_bryan', BARRIERE_RAW, c => ({statut: c.statut||'', note: c.note||'', commentaire: c.commentaire||'', checked: false}));
+let oState = loadArbState('arb_alexis', OPTIMUM_RAW, c => ({statut: c.annule==='true'?'ko':(c.statut||''), note: c.note||'', commentaire: c.commentaire||'', checked: false}));
 
 const ARB_COLORS = {
   'rdv':      {bg:'#EBF8FF',border:'#3182CE',text:'#2C5282',label:'\uD83D\uDCC5 RDV Pris'},
@@ -906,14 +916,26 @@ function renderBarriere(){
   items.map(c=>{
     const col=arbColor(c.statut),ri=bState.indexOf(c);
     return`<div style="display:grid;grid-template-columns:32px 2fr 80px 130px 1fr 185px;align-items:center;padding:9px 16px;border-bottom:1px solid var(--border);background:${col.bg};border-left:4px solid ${col.border}">
-      <input type="checkbox" style="cursor:pointer;width:15px;height:15px;accent-color:${col.border}" ${c.checked?'checked':''} onchange="bState[${ri}].checked=this.checked">
-      <span style="font-weight:600;color:${col.text};font-size:13px">${e(c.nom||'')}</span>
-      <span style="color:var(--green);font-weight:700;font-family:monospace">${c.montant||0}\u20ac</span>
-      <span style="color:var(--text2);font-size:11px;padding:0 4px">${e(c.note||'\u2014')}</span>
+      <input type="checkbox" style="cursor:pointer;width:15px;height:15px;accent-color:${col.border}" ${c.checked?'checked':''} onchange="bState[${ri}].checked=this.checked;saveArbState('arb_bryan',bState)">
+      <input type="text" value="${e(c.nom||'')}" placeholder="Nom..."
+        style="border:none;background:transparent;font-weight:600;color:${col.text};font-size:13px;font-family:Inter,sans-serif;outline:none;padding:2px 4px;border-radius:4px;width:100%"
+        onfocus="this.style.background='white';this.style.border='1px solid '+'${col.border}'"
+        onblur="this.style.background='transparent';this.style.border='none'"
+        onchange="bState[${ri}].nom=this.value;saveArbState('arb_bryan',bState);toast('✅ Nom sauvegardé','ok')">
+      <input type="number" value="${c.montant||0}"
+        style="border:1px solid transparent;background:transparent;color:var(--green);font-weight:700;font-family:monospace;outline:none;padding:2px 4px;border-radius:4px;width:75px"
+        onfocus="this.style.background='white';this.style.borderColor='${col.border}'"
+        onblur="this.style.background='transparent';this.style.borderColor='transparent'"
+        onchange="bState[${ri}].montant=parseFloat(this.value)||0;saveArbState('arb_bryan',bState);toast('✅ Montant sauvegardé','ok')">€
+      <input type="text" value="${e(c.note||'')}" placeholder="Note..."
+        style="border:none;background:transparent;color:var(--text2);font-size:11px;font-family:Inter,sans-serif;outline:none;padding:2px 4px;border-radius:4px;width:100%"
+        onfocus="this.style.background='white';this.style.border='1px solid '+'${col.border}'"
+        onblur="this.style.background='transparent';this.style.border='none'"
+        onchange="bState[${ri}].note=this.value;saveArbState('arb_bryan',bState);toast('✅ Note sauvegardée','ok')">
       <input type="text" value="${e(c.commentaire||'')}" placeholder="Note libre..."
         style="border:1px solid ${col.border};border-radius:5px;padding:4px 8px;font-size:11px;width:95%;background:white;font-family:Inter,sans-serif;outline:none"
-        onchange="bState[${ri}].commentaire=this.value;toast('\u2705 Sauvegard\u00e9','ok')">
-      <select onchange="bState[${ri}].statut=this.value;renderBarriere();toast('\u2705 Statut mis \u00e0 jour','ok')"
+        onchange="bState[${ri}].commentaire=this.value;saveArbState('arb_bryan',bState);toast('\u2705 Sauvegard\u00e9','ok')">
+      <select onchange="bState[${ri}].statut=this.value;saveArbState('arb_bryan',bState);renderBarriere();toast('\u2705 Statut mis \u00e0 jour','ok')"
         style="border:2px solid ${col.border};border-radius:6px;padding:5px 8px;font-size:11px;font-weight:600;background:${col.bg};color:${col.text};cursor:pointer;font-family:Inter,sans-serif;outline:none;width:100%">
         <option value="" ${!c.statut?'selected':''}>\u2B55 \u00c0 Appeler</option>
         <option value="rdv" ${c.statut==='rdv'?'selected':''}>\uD83D\uDCC5 RDV Pris</option>
@@ -953,14 +975,26 @@ function renderOptimum(){
   items.map(c=>{
     const col=arbColor(c.statut),ri=oState.indexOf(c);
     return`<div style="display:grid;grid-template-columns:32px 2fr 100px 100px 1fr 185px;align-items:center;padding:9px 16px;border-bottom:1px solid var(--border);background:${col.bg};border-left:4px solid ${col.border}">
-      <input type="checkbox" style="cursor:pointer;width:15px;height:15px;accent-color:${col.border}" ${c.checked?'checked':''} onchange="oState[${ri}].checked=this.checked">
-      <span style="font-weight:600;color:${col.text};font-size:13px">${e(c.nom||'')}</span>
-      <span style="color:var(--text2);font-size:11px">${c.date||'\u2014'}</span>
-      <span style="color:var(--green);font-weight:700;font-family:monospace">${c.versement||0}\u20ac</span>
+      <input type="checkbox" style="cursor:pointer;width:15px;height:15px;accent-color:${col.border}" ${c.checked?'checked':''} onchange="oState[${ri}].checked=this.checked;saveArbState('arb_alexis',oState)">
+      <input type="text" value="${e(c.nom||'')}" placeholder="Nom..."
+        style="border:none;background:transparent;font-weight:600;color:${col.text};font-size:13px;font-family:Inter,sans-serif;outline:none;padding:2px 4px;border-radius:4px;width:100%"
+        onfocus="this.style.background='white';this.style.border='1px solid '+'${col.border}'"
+        onblur="this.style.background='transparent';this.style.border='none'"
+        onchange="oState[${ri}].nom=this.value;saveArbState('arb_alexis',oState);toast('✅ Nom sauvegardé','ok')">
+      <input type="text" value="${e(c.date||'')}" placeholder="Date..."
+        style="border:none;background:transparent;color:var(--text2);font-size:11px;font-family:Inter,sans-serif;outline:none;padding:2px 4px;border-radius:4px;width:100%"
+        onfocus="this.style.background='white';this.style.border='1px solid '+'${col.border}'"
+        onblur="this.style.background='transparent';this.style.border='none'"
+        onchange="oState[${ri}].date=this.value;saveArbState('arb_alexis',oState);toast('✅ Date sauvegardée','ok')">
+      <input type="number" value="${c.versement||0}"
+        style="border:1px solid transparent;background:transparent;color:var(--green);font-weight:700;font-family:monospace;outline:none;padding:2px 4px;border-radius:4px;width:75px"
+        onfocus="this.style.background='white';this.style.borderColor='${col.border}'"
+        onblur="this.style.background='transparent';this.style.borderColor='transparent'"
+        onchange="oState[${ri}].versement=parseFloat(this.value)||0;saveArbState('arb_alexis',oState);toast('✅ Versement sauvegardé','ok')">€
       <input type="text" value="${e(c.commentaire||'')}" placeholder="Note libre..."
         style="border:1px solid ${col.border};border-radius:5px;padding:4px 8px;font-size:11px;width:95%;background:white;font-family:Inter,sans-serif;outline:none"
-        onchange="oState[${ri}].commentaire=this.value;toast('\u2705 Sauvegard\u00e9','ok')">
-      <select onchange="oState[${ri}].statut=this.value;renderOptimum();toast('\u2705 Statut mis \u00e0 jour','ok')"
+        onchange="oState[${ri}].commentaire=this.value;saveArbState('arb_alexis',oState);toast('\u2705 Sauvegard\u00e9','ok')">
+      <select onchange="oState[${ri}].statut=this.value;saveArbState('arb_alexis',oState);renderOptimum();toast('\u2705 Statut mis \u00e0 jour','ok')"
         style="border:2px solid ${col.border};border-radius:6px;padding:5px 8px;font-size:11px;font-weight:600;background:${col.bg};color:${col.text};cursor:pointer;font-family:Inter,sans-serif;outline:none;width:100%">
         <option value="" ${!c.statut?'selected':''}>\u2B55 \u00c0 Appeler</option>
         <option value="rdv" ${c.statut==='rdv'?'selected':''}>\uD83D\uDCC5 RDV Pris</option>
@@ -1021,13 +1055,61 @@ const OPTI_DATA = [
 ];
 
 // Navigation
+
+// ── SECTIONS COLLAPSIBLES ──
+function toggleSection(id){
+  const sec = document.getElementById('sec-'+id);
+  const chev = document.getElementById('chev-'+id);
+  sec.classList.toggle('closed');
+  chev.classList.toggle('closed');
+  if(!sec.classList.contains('closed')) sec.style.maxHeight = sec.scrollHeight + 'px';
+  else sec.style.maxHeight = '0px';
+}
+// Init max-height au chargement
+window.addEventListener('load', ()=>{
+  document.querySelectorAll('.sb-section').forEach(s=>{ s.style.maxHeight = s.scrollHeight + 'px'; });
+});
+
+// ── NAVIGATION PAR PROFESSION ──
+function goProf(p){
+  prof = p;
+  pg = 1;
+  document.getElementById('plbl') && (document.getElementById('plbl').textContent = PL[p]);
+  showV('prospects');
+  renderHead();
+  loadP();
+}
+
 function showV(v){
   document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
   document.getElementById('view-'+v)?.classList.add('on');
   document.querySelectorAll('.sb-item').forEach(x=>x.classList.remove('on'));
-  const nm={dashboard:'dash',prospects:'pros',pharmacies:'phr',ro:'ro',arbitrage:'arb',mailing:'mail',artisans:'art'};
-  document.getElementById('nav-'+nm[v])?.classList.add('on');
-  const T={dashboard:['Dashboard','Vue d’ensemble live'],mailing:['Mailing','Compose et envoie des emails depuis Vauban et Evka'],artisans:['Artisans','Plombiers · Serruriers · Electriciens · Peintres · Maçons'],prospects:['Professionnels de santé','Infirmiers · Kinés · Médecins · Dentistes'],pharmacies:['Pharmacies','25 472 contacts France entière'],ro:['Ancien R&O','Anciens clients AVIVA/OPTIMUM · Team Entibi · Renonciations'],arbitrage:['Arbitrage clients','Suivi bascules Barrière PER et Optimum']};
+  
+  if(v==='prospects'){
+    const profNav={inf:'nav-inf',kin:'nav-kin',med:'nav-med',den:'nav-den',psy:'nav-psy'};
+    document.getElementById(profNav[prof]||'nav-inf')?.classList.add('on');
+  } else {
+    const nm={dashboard:'dash',pharmacies:'phr',ro:'ro',arbitrage:'arb',mailing:'mail',artisans:'art'};
+    document.getElementById('nav-'+nm[v])?.classList.add('on');
+  }
+  
+  const PROF_TITLES={
+    inf:['Infirmiers','Professionnels infirmiers libéraux France entière'],
+    kin:['Kinésithérapeutes / Ostéopathes','Praticiens kiné et ostéo'],
+    med:['Médecins','Médecins généralistes et spécialistes'],
+    den:['Dentistes','Chirurgiens-dentistes'],
+    psy:['Psy / Orthophonistes','Psychologues, orthophonistes, sages-femmes'],
+  };
+  
+  const T={
+    dashboard:['Dashboard','Vue d\u2019ensemble live'],
+    mailing:['Mailing','Compose et envoie des emails depuis Vauban et Evka'],
+    artisans:['Artisans','Plombiers · Serruriers · Electriciens · Peintres · Maçons'],
+    prospects: PROF_TITLES[prof] || ['Infirmiers','Professionnels infirmiers libéraux'],
+    pharmacies:['Pharmacies','25 472 contacts France entière'],
+    ro:['Ancien R&O','Anciens clients AVIVA/OPTIMUM · Team Entibi · Renonciations'],
+    arbitrage:['Arbitrage clients','Suivi bascules Barrière PER et Optimum']
+  };
   const t=T[v]||[v,''];
   document.getElementById('ttl').textContent=t[0];
   document.getElementById('tsub').textContent=t[1];
