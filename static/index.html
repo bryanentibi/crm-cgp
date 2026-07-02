@@ -1836,9 +1836,9 @@ function sendMail() {
   const batch = emails.slice(0, BATCH);
   const reste = emails.slice(BATCH);
 
-  // Tous les destinataires en Cci (copie cachée) = mailing de masse propre
-  // authuser force Gmail à utiliser le compte choisi (Vauban ou Evka)
-  const url = `https://mail.google.com/mail/?authuser=${encodeURIComponent(currentFrom)}&view=cm&fs=1&bcc=${encodeURIComponent(batch.join(','))}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  // À = ta propre adresse (propre et pro) · Cci = tous les destinataires (invisibles entre eux)
+  // /u/{email}/ force Gmail à ouvrir le compte choisi (Vauban ou Evka)
+  const url = `https://mail.google.com/mail/u/${encodeURIComponent(currentFrom)}/?view=cm&fs=1&to=${encodeURIComponent(currentFrom)}&bcc=${encodeURIComponent(batch.join(','))}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   window.open(url, '_blank');
 
   if (reste.length) {
