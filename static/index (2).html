@@ -1,0 +1,2280 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bryan CGP — CRM</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0F1117;--white:#1A1D2E;--border:#2D3148;--border2:#3D4166;
+  --text:#E8EAED;--text2:#A8ABBE;--text3:#6B7094;
+  --blue:#4D9EFF;--blue-light:#1A2540;--blue-dark:#2563EB;
+  --green:#34D399;--green-light:#0D2D22;
+  --red:#F87171;--red-light:#2D1515;
+  --orange:#FB923C;--orange-light:#2D1A0A;
+  --yellow:#FCD34D;--yellow-light:#2D2410;
+  --purple:#A78BFA;--purple-light:#1E1A35;
+  --sidebar:240px;
+  --shadow:0 1px 3px rgba(0,0,0,0.1),0 1px 2px rgba(0,0,0,0.06);
+  --shadow-md:0 4px 6px rgba(0,0,0,0.07),0 2px 4px rgba(0,0,0,0.06);
+  --shadow-lg:0 10px 25px rgba(0,0,0,0.1),0 4px 6px rgba(0,0,0,0.05);
+}
+html,body{height:100%;overflow:hidden;font-family:'Inter',sans-serif;background:var(--bg)}
+body{display:flex;font-size:13px;color:var(--text)}
+
+/* ── SIDEBAR ── */
+.sidebar{
+  width:var(--sidebar);min-width:var(--sidebar);background:var(--white);
+  border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;
+  box-shadow:var(--shadow);
+}
+.sb-logo{
+  padding:16px 18px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;
+}
+.sb-logo-icon{
+  width:34px;height:34px;border-radius:9px;
+  background:linear-gradient(135deg,#3182CE,#805AD5);
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-weight:800;font-size:14px;flex-shrink:0;
+  box-shadow:0 2px 8px rgba(49,130,206,0.3);
+}
+.sb-logo-name{font-size:14px;font-weight:700;color:var(--text)}
+.sb-logo-sub{font-size:9.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px}
+
+/* KPI sidebar */
+.sb-kpis{padding:12px}
+.sb-kpi{
+  border-radius:10px;padding:11px 13px;margin-bottom:8px;border:1px solid var(--border);
+  cursor:pointer;transition:all .15s;background:var(--white);
+}
+.sb-kpi:hover{border-color:var(--blue);box-shadow:var(--shadow-md);transform:translateY(-1px)}
+.sb-kpi-val{font-size:22px;font-weight:800;letter-spacing:-1px}
+.sb-kpi-lbl{font-size:10px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+
+/* Nav */
+.sb-nav{flex:1;padding:6px 0 16px}
+.sb-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3);padding:10px 18px 3px}
+.sb-item{
+  display:flex;align-items:center;gap:9px;padding:8px 18px;cursor:pointer;
+  color:var(--text2);font-size:12.5px;font-weight:500;transition:all .12s;
+  border-left:3px solid transparent;
+}
+.sb-item:hover{background:var(--bg);color:var(--text)}
+.sb-item.on{background:var(--blue-light);color:var(--blue);border-left-color:var(--blue);font-weight:600}
+.sb-icon{font-size:14px;width:17px;text-align:center;flex-shrink:0}
+.sb-num{margin-left:auto;font-size:10px;font-weight:700;padding:1px 7px;border-radius:20px;background:var(--border);color:var(--text2)}
+.sb-item.on .sb-num{background:var(--blue-light);color:var(--blue)}
+
+/* Profession dropdown */
+.prof-wrap{margin:2px 12px 6px;position:relative}
+.prof-btn{
+  width:100%;background:var(--white);border:1px solid var(--border);border-radius:8px;
+  padding:8px 11px;color:var(--text2);font-size:12px;font-weight:500;cursor:pointer;
+  display:flex;align-items:center;gap:7px;font-family:'Inter',sans-serif;transition:all .15s;
+}
+.prof-btn:hover{border-color:var(--blue);color:var(--text)}
+.pdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.parr{margin-left:auto;font-size:9px;transition:transform .2s;color:var(--text3)}
+.pmenu{
+  position:absolute;left:0;right:0;top:calc(100% + 3px);background:var(--white);
+  border:1px solid var(--border2);border-radius:10px;overflow:hidden;z-index:100;
+  display:none;box-shadow:var(--shadow-lg);
+}
+.pmenu.show{display:block}
+.poption{display:flex;align-items:center;gap:9px;padding:9px 13px;cursor:pointer;font-size:12px;color:var(--text2);transition:all .1s}
+.poption:hover,.poption.sel{background:var(--blue-light);color:var(--blue)}
+.pcnt{margin-left:auto;font-size:10px;color:var(--text3);font-weight:600}
+
+/* ── MAIN ── */
+.main{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden}
+.topbar{
+  background:var(--white);border-bottom:1px solid var(--border);height:52px;
+  display:flex;align-items:center;padding:0 22px;gap:12px;flex-shrink:0;
+  box-shadow:var(--shadow);
+}
+.topbar-ttl{font-size:16px;font-weight:700}
+.topbar-sub{font-size:11px;color:var(--text3);margin-top:1px}
+.tb-right{margin-left:auto;display:flex;gap:8px;align-items:center}
+
+/* Buttons */
+.btn{
+  display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:7px;
+  font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);
+  background:var(--white);color:var(--text2);transition:all .15s;font-family:'Inter',sans-serif;
+}
+.btn:hover{background:var(--bg);border-color:var(--border2);color:var(--text)}
+.btn-blue{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn-blue:hover{background:var(--blue-dark);color:#fff}
+.btn-green{background:var(--green);border-color:var(--green);color:#fff}
+.btn-green:hover{opacity:.9}
+
+/* VIEWS */
+.view{display:none;flex-direction:column;flex:1;min-height:0;overflow:hidden}
+.view.on{display:flex}
+
+/* ── DASHBOARD ── */
+.dash{flex:1;overflow-y:auto;padding:28px 32px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:32px}
+.kcard{
+  background:var(--white);border:1px solid var(--border);border-radius:12px;
+  padding:18px;cursor:pointer;transition:all .2s;box-shadow:var(--shadow);
+  position:relative;overflow:hidden;
+}
+.kcard:hover{box-shadow:var(--shadow-lg);transform:translateY(-2px)}
+.kcard-accent{position:absolute;top:0;left:0;right:0;height:4px;border-radius:12px 12px 0 0}
+.k-icon{font-size:22px;margin-bottom:10px}
+.k-val{font-size:30px;font-weight:900;letter-spacing:-1.5px}
+.k-lbl{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-top:4px}
+.k-sub{font-size:11px;color:var(--text2);margin-top:6px}
+.k-badge{display:inline-flex;padding:1px 7px;border-radius:20px;font-size:10px;font-weight:700;margin-left:4px}
+
+.charts{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:28px}
+.chart-box{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:18px;box-shadow:var(--shadow)}
+.chart-ttl{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--text3);margin-bottom:14px}
+.bar-row{display:flex;align-items:center;gap:9px;margin-bottom:9px}
+.bar-lbl{font-size:11.5px;color:var(--text2);width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0}
+.bar-track{flex:1;height:6px;background:var(--border);border-radius:20px;overflow:hidden}
+.bar-fill{height:100%;border-radius:20px;transition:width .7s ease}
+.bar-v{font-size:10.5px;color:var(--text3);width:40px;text-align:right;font-weight:600;flex-shrink:0}
+
+.pipe-row{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.pipe-box{
+  border-radius:10px;padding:14px 10px;text-align:center;border:2px solid transparent;
+  cursor:pointer;transition:all .2s;
+}
+.pipe-box:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
+.pipe-v{font-size:22px;font-weight:900;margin-bottom:4px}
+.pipe-lbl{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+
+/* ── TABLE VIEWS ── */
+.sub-bar{background:var(--white);border-bottom:1px solid var(--border);padding:9px 18px;display:flex;align-items:center;gap:7px;flex-shrink:0;flex-wrap:wrap}
+.stab{padding:5px 13px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);color:var(--text2);transition:all .13s;background:var(--white)}
+.stab:hover{border-color:var(--blue-dark);color:var(--blue)}
+.stab.on{background:var(--blue);border-color:var(--blue);color:#fff}
+.stab.on-g{background:var(--green);border-color:var(--green);color:#fff}
+
+.toolbar{background:var(--white);border-bottom:1px solid var(--border);padding:9px 18px;display:flex;align-items:center;gap:9px;flex-shrink:0;flex-wrap:wrap}
+.sw{position:relative;flex:1;min-width:160px;max-width:300px}
+.sw svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:13px;height:13px;color:var(--text3);pointer-events:none}
+.sw input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:7px 10px 7px 30px;color:var(--text);font-size:12px;outline:none;font-family:'Inter',sans-serif;transition:border-color .15s}
+.sw input:focus{border-color:var(--blue);background:var(--white)}
+.sw input::placeholder{color:var(--text3)}
+select.fs{background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:7px 10px;color:var(--text2);font-size:12px;outline:none;cursor:pointer;font-family:'Inter',sans-serif}
+select.fs:focus{border-color:var(--blue)}
+.chip{font-size:11px;color:var(--text3);padding:4px 11px;background:var(--bg);border-radius:20px;border:1px solid var(--border);margin-left:auto;font-weight:600;white-space:nowrap}
+
+/* TABLE */
+.tw{flex:1;overflow:auto}
+table{width:100%;border-collapse:collapse;min-width:680px}
+thead{position:sticky;top:0;z-index:10}
+thead th{background:var(--bg);padding:10px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer}
+thead th:hover{color:var(--text2)}
+tbody tr{border-bottom:1px solid var(--border);cursor:pointer;transition:background .08s}
+tbody tr:hover{background:var(--blue-light)}
+tbody tr.sel{background:var(--blue-light)!important;border-left:3px solid var(--blue)}
+tbody tr.ht{background:var(--green-light)}
+tbody tr.ht:hover{background:#C6F6D5}
+tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
+.cn{font-weight:600;font-size:13px;color:var(--text)}.cs{font-size:11px;color:var(--text3);margin-top:1px}
+.tok{color:var(--green);font-weight:700;font-family:monospace;font-size:13px;white-space:nowrap}
+.tfix{color:var(--text2);font-family:monospace;font-size:12px;white-space:nowrap}
+.tno{color:var(--text3);font-size:11px}
+.spe{display:inline-flex;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600}
+.badge{display:inline-flex;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+.b-blue{background:var(--blue-light);color:var(--blue)}
+.b-green{background:var(--green-light);color:var(--green)}
+.b-orange{background:var(--orange-light);color:var(--orange)}
+.b-yellow{background:var(--yellow-light);color:var(--yellow)}
+.b-purple{background:var(--purple-light);color:var(--purple)}
+.b-gray{background:var(--bg);color:var(--text3)}
+.age{display:inline-flex;padding:2px 7px;border-radius:20px;font-size:11px;font-weight:700}
+.an{background:var(--green-light);color:var(--green);border:1px solid #C6F6D5}
+.am{background:var(--yellow-light);color:var(--yellow);border:1px solid #FEFCBF}
+.ao{background:var(--bg);color:var(--text3);border:1px solid var(--border)}
+
+/* PAGINATION */
+.pag{display:flex;align-items:center;justify-content:space-between;padding:10px 18px;border-top:1px solid var(--border);background:var(--white);flex-shrink:0}
+.pag-info{font-size:11.5px;color:var(--text3);font-weight:500}
+.pag-btns{display:flex;gap:3px}
+.pgb{width:30px;height:30px;background:var(--white);border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .1s}
+.pgb:hover:not(:disabled){background:var(--blue-light);color:var(--blue);border-color:var(--blue)}
+.pgb.ac{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:700}
+.pgb:disabled{opacity:.25;cursor:not-allowed}
+
+/* DETAIL PANEL */
+.dp{width:0;min-width:0;background:var(--white);border-left:1px solid var(--border);overflow:hidden;transition:width .25s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;flex-shrink:0;box-shadow:-2px 0 8px rgba(0,0,0,.06)}
+.dp.open{width:370px;min-width:370px}
+.dp-hdr{padding:16px;border-bottom:1px solid var(--border);flex-shrink:0;position:relative;background:linear-gradient(135deg,#EBF8FF,#FAF5FF)}
+.dp-x{position:absolute;top:12px;right:12px;width:26px;height:26px;background:var(--white);border:1px solid var(--border);border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text2);font-size:11px;transition:all .12s;box-shadow:var(--shadow)}
+.dp-x:hover{background:var(--red-light);color:var(--red);border-color:var(--red)}
+.dp-ava{width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;margin-bottom:9px;box-shadow:var(--shadow)}
+.dp-name{font-size:16px;font-weight:700;margin-bottom:2px}
+.dp-spec{font-size:12px;color:var(--text2);margin-bottom:11px}
+.dp-acts{display:flex;gap:6px;flex-wrap:wrap}
+.dp-pipe{display:flex;gap:3px;padding:10px 16px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg)}
+.dps{flex:1;padding:5px 3px;border-radius:6px;font-size:9px;font-weight:700;text-align:center;cursor:pointer;border:1px solid var(--border);color:var(--text3);transition:all .13s;background:var(--white)}
+.dps:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-light)}
+.dps[data-s=""].ac,.dps[data-s=nouveau].ac{background:#F7FAFC;border-color:#CBD5E0;color:#4A5568}
+.dps[data-s=nrp].ac{background:#FFFAF0;border-color:#DD6B20;color:#C05621}
+.dps[data-s=rdv].ac{background:#F0FFF4;border-color:#38A169;color:#276749}
+.dps[data-s=ko].ac{background:#FFF5F5;border-color:#E53E3E;color:#C53030}
+.dps[data-s=client].ac{background:var(--green-light);border-color:var(--green);color:var(--green)}
+.dp-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--white)}
+.dptab{padding:9px 14px;font-size:12px;font-weight:600;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;transition:all .12s}
+.dptab:hover{color:var(--text)}
+.dptab.ac{color:var(--blue);border-bottom-color:var(--blue)}
+.dp-body{flex:1;overflow-y:auto;padding:14px 16px}
+.dp-sec{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--text3);margin:14px 0 7px}
+.dp-sec:first-child{margin-top:0}
+.dp-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.dfl{font-size:10px;color:var(--text3);margin-bottom:2px;font-weight:500}
+.dfv{font-size:12.5px;color:var(--text);font-weight:500}
+.dfv.em{color:var(--blue);font-size:11.5px}
+.dp-stats{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:12px}
+.dpst{border-radius:9px;padding:11px;text-align:center;border:1px solid var(--border)}
+.dpst-v{font-size:20px;font-weight:800;letter-spacing:-1px}
+.dpst-l{font-size:9px;color:var(--text3);margin-top:2px;font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+.dp-inp{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:8px 11px;color:var(--green);font-size:16px;font-weight:700;font-family:monospace;letter-spacing:1px;outline:none;transition:border-color .15s}
+.dp-inp:focus{border-color:var(--green);background:var(--white)}
+.dp-ta{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:8px 11px;color:var(--text);font-size:12.5px;resize:vertical;min-height:75px;outline:none;font-family:'Inter',sans-serif;transition:border-color .15s}
+.dp-ta:focus{border-color:var(--blue);background:var(--white)}
+.dp-save{width:100%;margin-top:9px;padding:10px;border:none;border-radius:8px;background:var(--blue);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s}
+.dp-save:hover{background:var(--blue-dark);transform:translateY(-1px)}
+
+/* ── ANCIEN R&O ── */
+.ro-body-wrap{flex:1;overflow-y:auto;padding:18px 20px}
+.ro-sec-hdr{display:flex;align-items:center;gap:9px;margin-bottom:12px;margin-top:20px}
+.ro-sec-hdr:first-child{margin-top:0}
+.ro-sec-ttl{font-size:14px;font-weight:700}
+.ro-sec-cnt{padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700}
+.rocard{background:var(--white);border:1px solid var(--border);border-radius:11px;margin-bottom:7px;overflow:hidden;cursor:pointer;transition:all .2s;box-shadow:var(--shadow)}
+.rocard:hover{box-shadow:var(--shadow-md);border-color:var(--border2)}
+.rocard-hdr{padding:13px 15px;display:flex;align-items:center;gap:11px}
+.ro-ava{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0}
+.ro-nm{font-weight:600;font-size:13px}.ro-mt{font-size:11px;color:var(--text2);margin-top:1px}
+.rocard-body{padding:12px 15px;border-top:1px solid var(--border);display:none;background:var(--bg)}
+.rocard.open .rocard-body{display:block}
+.ro-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:4px}
+.rfl{font-size:9.5px;color:var(--text3);margin-bottom:2px;font-weight:500}
+.rfv{font-size:12px;color:var(--text);font-weight:500}
+.ct-item{background:var(--white);border:1px solid var(--border);border-radius:7px;padding:9px 11px;margin-bottom:5px;box-shadow:var(--shadow)}
+.ct-ref{font-size:11.5px;font-weight:600;font-family:monospace;color:var(--blue)}
+.ct-det{font-size:11px;color:var(--text2);margin-top:2px}
+
+/* ── ARBITRAGE CLIENTS ── */
+.arb-wrap{flex:1;overflow-y:auto;padding:18px 20px}
+.arb-tabs{display:flex;gap:8px;margin-bottom:18px}
+.arb-tab{padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:2px solid var(--border);color:var(--text2);background:var(--white);transition:all .15s;box-shadow:var(--shadow)}
+.arb-tab:hover{border-color:var(--blue);color:var(--blue)}
+.arb-tab.ac{background:var(--blue);border-color:var(--blue);color:#fff}
+.arb-section{display:none}
+.arb-section.on{display:block}
+.arb-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+.arb-stat{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:14px 16px;box-shadow:var(--shadow)}
+.arb-stat-val{font-size:24px;font-weight:800;letter-spacing:-1px}
+.arb-stat-lbl{font-size:10px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-top:3px}
+.arb-search{display:flex;gap:9px;margin-bottom:14px;align-items:center;flex-wrap:wrap}
+.arb-table{background:var(--white);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
+.arb-row{display:grid;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .08s}
+.arb-row:last-child{border-bottom:none}
+.arb-row:hover{background:var(--blue-light)}
+.arb-row.annule{opacity:.5}
+.arb-row.appele{background:var(--green-light)}
+.arb-thead{background:var(--bg);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--text3);cursor:default}
+.arb-thead:hover{background:var(--bg)}
+.arb-nom{font-weight:600}
+.arb-badge{display:inline-flex;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600}
+
+/* MISC */
+.spin{display:inline-block;width:14px;height:14px;border:2px solid var(--border2);border-top-color:var(--blue);border-radius:50%;animation:sp .6s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.empty td{text-align:center;padding:48px;color:var(--text3)}
+.toasts{position:fixed;bottom:18px;right:18px;z-index:9999;display:flex;flex-direction:column;gap:6px}
+.toast{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:11px 16px;font-size:13px;min-width:250px;animation:su .2s ease;box-shadow:var(--shadow-lg)}
+.toast.ok{border-left:4px solid var(--green);color:var(--green)}
+.toast.err{border-left:4px solid var(--red);color:var(--red)}
+@keyframes su{from{transform:translateY(8px);opacity:0}to{opacity:1}}
+.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;backdrop-filter:blur(4px);align-items:center;justify-content:center}
+.ov.show{display:flex}
+.ov-box{background:var(--white);border:1px solid var(--border);border-radius:16px;width:520px;max-width:95vw;padding:26px;box-shadow:var(--shadow-lg)}
+.scr-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:18px 0}
+.scr-src{background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:13px;cursor:pointer;transition:all .2s}
+.scr-src:hover,.scr-src.sel{border-color:var(--blue);background:var(--blue-light)}
+.prog-tr{background:var(--border);border-radius:20px;height:5px;overflow:hidden;margin:12px 0 5px}
+.prog-f{height:100%;background:var(--blue);border-radius:20px;transition:width .5s}
+
+.sortable{cursor:pointer;user-select:none;transition:color .15s}
+.sortable:hover{color:var(--blue)}
+
+.collapsible{cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none}
+.collapsible:hover{color:var(--blue)}
+.sb-chevron{font-size:10px;transition:transform .2s}
+.sb-chevron.closed{transform:rotate(-90deg)}
+.sb-section{overflow:hidden;max-height:600px;transition:max-height .25s ease}
+.sb-section.closed{max-height:0!important}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+
+<!-- LOGIN PAGE -->
+<div id="login-page" style="display:none;position:fixed;inset:0;background:linear-gradient(135deg,#EBF8FF 0%,#FAF5FF 100%);z-index:9999;display:flex;align-items:center;justify-content:center">
+  <div style="background:white;border:1px solid var(--border);border-radius:20px;padding:40px;width:380px;box-shadow:0 20px 60px rgba(0,0,0,0.15)">
+    <div style="text-align:center;margin-bottom:28px">
+      <div style="width:56px;height:56px;background:linear-gradient(135deg,#3182CE,#805AD5);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;color:white;margin:0 auto 14px">B</div>
+      <div style="font-size:22px;font-weight:800;color:var(--text)">Bryan CGP</div>
+      <div style="font-size:13px;color:var(--text3);margin-top:4px">CRM Prospection — Connexion</div>
+    </div>
+    <div style="margin-bottom:14px">
+      <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);display:block;margin-bottom:6px">Identifiant</label>
+      <input type="text" id="login-user" placeholder="bryanentibi" 
+        style="width:100%;border:1px solid var(--border);border-radius:9px;padding:11px 14px;font-size:14px;font-family:Inter,sans-serif;outline:none;transition:border-color .15s;box-sizing:border-box"
+        onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'"
+        onkeydown="if(event.key==='Enter')document.getElementById('login-pwd').focus()">
+    </div>
+    <div style="margin-bottom:20px">
+      <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);display:block;margin-bottom:6px">Mot de passe</label>
+      <input type="password" id="login-pwd" placeholder="••••••••"
+        style="width:100%;border:1px solid var(--border);border-radius:9px;padding:11px 14px;font-size:14px;font-family:Inter,sans-serif;outline:none;transition:border-color .15s;box-sizing:border-box"
+        onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'"
+        onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div id="login-err" style="display:none;background:#FFF5F5;border:1px solid #FEB2B2;border-radius:8px;padding:10px 14px;font-size:13px;color:var(--red);margin-bottom:14px"></div>
+    <button onclick="doLogin()" id="login-btn"
+      style="width:100%;padding:13px;background:var(--blue);border:none;border-radius:10px;color:white;font-size:14px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;transition:all .2s;box-shadow:0 4px 12px rgba(49,130,206,.3)">
+      Se connecter
+    </button>
+    <div style="text-align:center;margin-top:14px;font-size:11px;color:var(--text3)">Evka Conseil · Vauban Associés</div>
+  </div>
+</div>
+
+<aside class="sidebar">
+  <div class="sb-logo">
+    <div class="sb-logo-icon">B</div>
+    <div>
+      <div class="sb-logo-name">Bryan CGP</div>
+      <div class="sb-logo-sub">CRM Prospection</div>
+    </div>
+  </div>
+
+  <div class="sb-kpis">
+    <div class="sb-kpi" onclick="showV('dashboard')" style="border-left:3px solid var(--blue)">
+      <div class="sb-kpi-val" id="kpi-tot" style="color:var(--blue)">—</div>
+      <div class="sb-kpi-lbl">Prospects total</div>
+    </div>
+    <div class="sb-kpi" onclick="setF('avec_tel')" style="border-left:3px solid var(--green)">
+      <div class="sb-kpi-val" id="kpi-tel" style="color:var(--green)">—</div>
+      <div class="sb-kpi-lbl">Avec 06 direct</div>
+    </div>
+    <div class="sb-kpi" onclick="setF('client')" style="border-left:3px solid var(--purple)">
+      <div class="sb-kpi-val" id="kpi-cli" style="color:var(--purple)">—</div>
+      <div class="sb-kpi-lbl">Clients signés</div>
+    </div>
+  </div>
+
+  <nav class="sb-nav">
+    <div class="sb-lbl collapsible" onclick="toggleSection('nav')">Navigation <span class="sb-chevron" id="chev-nav">▾</span></div>
+    <div class="sb-section" id="sec-nav">
+      <div class="sb-item on" id="nav-dash" onclick="showV('dashboard')"><span class="sb-icon">📊</span>Dashboard</div>
+      <div class="sb-item" id="nav-inf" onclick="goProf('inf')"><span class="sb-icon">💉</span>Infirmiers</div>
+      <div class="sb-item" id="nav-kin" onclick="goProf('kin')"><span class="sb-icon">🦴</span>Kiné / Ostéo</div>
+      <div class="sb-item" id="nav-med" onclick="goProf('med')"><span class="sb-icon">🩺</span>Médecins</div>
+      <div class="sb-item" id="nav-den" onclick="goProf('den')"><span class="sb-icon">🦷</span>Dentistes</div>
+      <div class="sb-item" id="nav-psy" onclick="goProf('psy')"><span class="sb-icon">🧠</span>Psy / Ortho</div>
+      <div class="sb-item" id="nav-phr" onclick="showV('pharmacies')"><span class="sb-icon">💊</span>Pharmacies</div>
+      <div class="sb-item" id="nav-ro" onclick="showV('ro')"><span class="sb-icon">📁</span>Ancien R&O</div>
+      <div class="sb-item" id="nav-art" onclick="showV('artisans')"><span class="sb-icon">🔧</span>Artisans</div>
+      <div class="sb-item" id="nav-arb" onclick="showV('arbitrage')"><span class="sb-icon">⚖️</span>Arbitrage clients</div>
+      <div class="sb-item" id="nav-mail" onclick="showV('mailing')"><span class="sb-icon">📧</span>Mailing</div>
+    </div>
+
+    <div class="sb-lbl collapsible" style="margin-top:6px" onclick="toggleSection('flt')">Filtres rapides <span class="sb-chevron" id="chev-flt">▾</span></div>
+    <div class="sb-section" id="sec-flt">
+      <div class="sb-item" onclick="setF('new_today')"><span class="sb-icon">🆕</span>Nouveaux du jour</div>
+      <div class="sb-item" onclick="setF('avec_tel')"><span class="sb-icon">📱</span>Avec 06 direct</div>
+      <div class="sb-item" onclick="setF('nrp')"><span class="sb-icon">📵</span>NRP</div>
+      <div class="sb-item" onclick="setF('rdv')"><span class="sb-icon">📅</span>RDV</div>
+      <div class="sb-item" onclick="setF('ko')"><span class="sb-icon">❌</span>KO</div>
+    </div>
+
+    <div class="sb-lbl collapsible" style="margin-top:6px" onclick="toggleSection('out')">Outils <span class="sb-chevron" id="chev-out">▾</span></div>
+    <div class="sb-section" id="sec-out">
+      <div class="sb-item" onclick="doLogout()" style="color:var(--red)"><span class="sb-icon">🚪</span>Déconnexion</div>
+      <div class="sb-item" onclick="openScr()"><span class="sb-icon">⚡</span>Lancer scraping</div>
+      <div class="sb-item" id="nav-export" onclick="doExport()"><span class="sb-icon">⬇</span>Exporter CSV</div>
+    </div>
+  </nav>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="topbar">
+    <div>
+      <div class="topbar-ttl" id="ttl">Dashboard</div>
+      <div class="topbar-sub" id="tsub">Vue d’ensemble de ta prospection</div>
+    </div>
+    <div class="tb-right">
+      <button class="btn" onclick="loadStats()">↻ Actualiser</button>
+      <button class="btn btn-blue" onclick="openScr()">⚡ Scraping</button>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="view on" id="view-dashboard">
+    <div class="dash">
+      <div class="kpi-row">
+        <div class="kcard" onclick="showV('prospects')">
+          <div class="kcard-accent" style="background:var(--blue)"></div>
+          <div class="k-icon">👨‍⚕️</div><div class="k-val" id="d-sante" style="color:var(--blue)">—</div>
+          <div class="k-lbl">Pros de santé</div>
+          <div class="k-sub">Infirmiers · Kinés · Médecins<span class="k-badge" style="background:var(--blue-light);color:var(--blue)" id="d-new">0 aujourd'hui</span></div>
+        </div>
+        <div class="kcard" onclick="setF('avec_tel');showV('prospects')">
+          <div class="kcard-accent" style="background:var(--green)"></div>
+          <div class="k-icon">📱</div><div class="k-val" id="d-tel" style="color:var(--green)">—</div>
+          <div class="k-lbl">Avec 06 direct</div>
+          <div class="k-sub" id="d-pct">Numéros enrichis</div>
+        </div>
+        <div class="kcard" onclick="showV('pharmacies')">
+          <div class="kcard-accent" style="background:var(--orange)"></div>
+          <div class="k-icon">💊</div><div class="k-val" id="d-phr" style="color:var(--orange)">25 472</div>
+          <div class="k-lbl">Pharmacies</div>
+          <div class="k-sub" id="d-phrdir">Dirigeants disponibles</div>
+        </div>
+        <div class="kcard" onclick="setF('client');showV('prospects')">
+          <div class="kcard-accent" style="background:var(--purple)"></div>
+          <div class="k-icon">✅</div><div class="k-val" id="d-cli" style="color:var(--purple)">—</div>
+          <div class="k-lbl">Clients signés</div>
+          <div class="k-sub">Portefeuille actif</div>
+        </div>
+      </div>
+      <div class="charts">
+        <div class="chart-box">
+          <div class="chart-ttl">Répartition par spécialité</div>
+          <div id="ch-spe"><div style="color:var(--text3);text-align:center;padding:16px;font-size:12px">Lance le scraping pour voir les données</div></div>
+        </div>
+        <div class="chart-box">
+          <div class="chart-ttl">Pipeline de prospection</div>
+          <div class="pipe-row" style="grid-template-columns:repeat(5,1fr)">
+            <div class="pipe-box" style="background:var(--blue-light);border-color:#BEE3F8" onclick="setF('new_today')"><div class="pipe-v" style="color:var(--blue)" id="pv-n">—</div><div class="pipe-lbl" style="color:var(--blue)">🆕 Nouveaux scrappés</div></div>
+            <div class="pipe-box" style="background:var(--green-light);border-color:#C6F6D5" onclick="setF('rdv')"><div class="pipe-v" style="color:var(--green)" id="pv-rdv">—</div><div class="pipe-lbl" style="color:var(--green)">📅 RDV pris</div></div>
+            <div class="pipe-box" style="background:#FFFAF0;border-color:#FBD38D" onclick="setF('nrp')"><div class="pipe-v" style="color:#DD6B20" id="pv-r">—</div><div class="pipe-lbl" style="color:#DD6B20">📵 À rappeler</div></div>
+            <div class="pipe-box" style="background:#FFF5F5;border-color:#FEB2B2" onclick="setF('ko')"><div class="pipe-v" style="color:#E53E3E" id="pv-ko">—</div><div class="pipe-lbl" style="color:#E53E3E">❌ KO</div></div>
+            <div class="pipe-box" style="background:var(--purple-light);border-color:#D6BCFA" onclick="setF('avec_creation')"><div class="pipe-v" style="color:var(--purple)" id="pv-creation">—</div><div class="pipe-lbl" style="color:var(--purple)">📅 Avec date création</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROSPECTS -->
+  <div class="view" id="view-prospects">
+    <div class="sub-bar">
+      <div class="stab on" id="st-all" onclick="setST('all')">Tous</div>
+      <div class="stab" id="st-avec" onclick="setST('avec')">📱 Avec 06</div>
+      <div class="stab" id="st-new" onclick="setST('new_today')">🆕 Nouveaux du jour</div>
+    </div>
+    <div class="toolbar">
+      <div class="sw"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M11 11l3 3"/></svg><input type="text" id="search" placeholder="Nom, ville..." oninput="applyF()"></div>
+      <select class="fs" id="sel-st" onchange="applyF()"><option value="">Tous statuts</option><option value="nrp">📵 NRP</option><option value="rdv">📅 RDV</option><option value="ko">❌ KO</option><option value="nouveau">Nouveau</option></select>
+      <select class="fs" id="sel-dept" onchange="applyF()"><option value="">Tous dép.</option></select>
+      <select class="fs" id="sel-annee" onchange="applyF()">
+        <option value="">Toute date</option>
+        <option value="2026">📅 Installés 2026</option>
+        <option value="2025">📅 Installés 2025</option>
+        <option value="2024">📅 Installés 2024</option>
+        <option value="2023">📅 Installés 2023</option>
+        <option value="2022">📅 Installés 2022</option>
+        <option value="recent">🔥 Moins de 1 an</option>
+        <option value="recent3">🔥 Moins de 3 ans</option>
+      </select>
+      <span class="chip" id="cnt-p">—</span>
+    </div>
+    <div style="display:flex;flex:1;min-height:0;overflow:hidden">
+      <div class="tw"><table><thead id="th-p"></thead><tbody id="tb-p"><tr class="empty"><td colspan="8"><span class="spin"></span></td></tr></tbody></table></div>
+      <div class="dp" id="dp-p">
+        <div class="dp-hdr">
+          <div class="dp-x" onclick="closeDp('p')">✕</div>
+          <div class="dp-ava" id="dpav-p"></div>
+          <div id="dpnm-p-view" class="dp-name" onclick="window.toggleNameEdit('p')" style="cursor:pointer" title="Cliquer pour modifier">—</div>
+          <div id="dpnm-p-edit" style="display:none;gap:6px;margin-bottom:4px">
+            <input type="text" id="dpnm-p-prenom" placeholder="Prénom" style="width:48%;border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:13px;font-family:Inter,sans-serif">
+            <input type="text" id="dpnm-p-nom" placeholder="Nom" style="width:48%;border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:13px;font-family:Inter,sans-serif">
+            <button onclick="window.saveNomPrenom('p')" class="btn btn-blue" style="padding:5px 10px;font-size:12px">✓</button>
+          </div>
+          <div class="dp-spec" id="dpsp-p">—</div>
+          <div class="dp-acts">
+            <a class="btn btn-green" id="dpcall-p" href="#" style="display:none;text-decoration:none">📞 Appeler</a>
+            <button class="btn btn-blue" onclick="saveDP('sante')">💾 Sauvegarder</button>
+          </div>
+        </div>
+        <div class="dp-pipe">
+          <div class="dps" data-s="" onclick="setDPS('')">⭕ Nouveau</div>
+          <div class="dps" data-s="nrp" onclick="setDPS('nrp')">📵 NRP</div>
+          <div class="dps" data-s="rdv" onclick="setDPS('rdv')">📅 RDV</div>
+          <div class="dps" data-s="ko" onclick="setDPS('ko')">❌ KO</div>
+        </div>
+        <div class="dp-tabs"><div class="dptab ac" onclick="swDPT('ov-p',this)">Infos</div><div class="dptab" onclick="swDPT('nt-p',this)">Notes</div></div>
+        <div class="dp-body">
+          <div id="ov-p">
+            <div class="dp-stats" id="dpst-p"></div>
+            <div class="dp-sec">Coordonnées</div><div class="dp-grid" id="dpco-p"></div>
+            <div class="dp-sec">Infos professionnelles</div><div class="dp-grid" id="dppr-p"></div>
+            <div class="dp-sec">📱 Numéro direct</div>
+            <input class="dp-inp" type="text" id="dptel-p" placeholder="0612345678">
+          </div>
+          <div id="nt-p" style="display:none">
+            <div class="dp-sec">Notes d'appel</div>
+            <textarea class="dp-ta" id="dpno-p" placeholder="Résumé échange, objections, prochaine étape..."></textarea>
+            <button class="dp-save" onclick="saveDP('sante')">💾 Sauvegarder</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="pag"><div class="pag-info" id="pi-p">—</div><div class="pag-btns" id="pb-p"></div></div>
+  </div>
+
+  <!-- PHARMACIES -->
+  <div class="view" id="view-pharmacies">
+    <div class="sub-bar">
+      <div class="stab on" id="stp-all" onclick="setSTP('all')">Toutes</div>
+      <div class="stab" id="stp-avec" onclick="setSTP('avec')">📱 Avec 06</div>
+      <div class="stab" id="stp-sans" onclick="setSTP('sans')">— Sans numéro</div>
+    </div>
+    <div class="toolbar">
+      <div class="sw"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M11 11l3 3"/></svg><input type="text" id="srch-phr" placeholder="Nom, dirigeant, ville..." oninput="applyFP()"></div>
+      <select class="fs" id="sel-stp" onchange="applyFP()"><option value="">Tous statuts</option><option value="nouveau">Non contactées</option><option value="contacte">Contactées</option><option value="client">Clientes</option></select>
+      <span class="chip" id="cnt-phr">—</span>
+    </div>
+    <div style="display:flex;flex:1;min-height:0;overflow:hidden">
+      <div class="tw">
+        <table>
+          <thead><tr><th>PHARMACIE</th><th>DIRIGEANT</th><th>VILLE</th><th style="min-width:150px">📞 TÉL FIXE</th><th style="min-width:150px">📱 TÉL DIRECT</th><th>EMAIL</th><th>CA</th><th>STATUT</th><th></th></tr></thead>
+          <tbody id="tb-phr"><tr class="empty"><td colspan="9"><span class="spin"></span></td></tr></tbody>
+        </table>
+      </div>
+      <div class="dp" id="dp-phr">
+        <div class="dp-hdr" style="background:linear-gradient(135deg,#F0FFF4,#FAF5FF)">
+          <div class="dp-x" onclick="closeDp('phr')">✕</div>
+          <div class="dp-ava" id="dpav-phr" style="background:var(--green-light);color:var(--green);font-size:18px">💊</div>
+          <div class="dp-name" id="dpnm-phr">—</div>
+          <div class="dp-spec" id="dpsp-phr">—</div>
+          <div class="dp-acts">
+            <a class="btn btn-green" id="dpcall-phr" href="#" style="display:none;text-decoration:none">📞 Appeler</a>
+            <button class="btn btn-blue" onclick="saveDP('pharmacies')">💾 Sauvegarder</button>
+          </div>
+        </div>
+        <div class="dp-pipe">
+          <div class="dps" data-s="" onclick="setDPS('')">⭕ Nouveau</div>
+          <div class="dps" data-s="nrp" onclick="setDPS('nrp')">📵 NRP</div>
+          <div class="dps" data-s="rdv" onclick="setDPS('rdv')">📅 RDV</div>
+          <div class="dps" data-s="ko" onclick="setDPS('ko')">❌ KO</div>
+        </div>
+        <div class="dp-tabs"><div class="dptab ac" onclick="swDPT('ov-phr',this)">Infos</div><div class="dptab" onclick="swDPT('nt-phr',this)">Notes</div></div>
+        <div class="dp-body">
+          <div id="ov-phr"><div class="dp-grid" id="dpco-phr"></div><div class="dp-sec">📱 Numéro direct</div><input class="dp-inp" type="text" id="dptel-phr" placeholder="0612345678"></div>
+          <div id="nt-phr" style="display:none"><div class="dp-sec">Notes</div><textarea class="dp-ta" id="dpno-phr"></textarea><button class="dp-save" onclick="saveDP('pharmacies')">💾 Sauvegarder</button></div>
+        </div>
+      </div>
+    </div>
+    <div class="pag"><div class="pag-info" id="pi-phr">—</div><div class="pag-btns" id="pb-phr"></div></div>
+  </div>
+
+  <!-- ANCIEN R&O -->
+  <div class="view" id="view-ro">
+    <div class="toolbar">
+      <div class="sw"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M11 11l3 3"/></svg><input type="text" id="ro-q" placeholder="Nom, ville, profession..." oninput="renderRO()"></div>
+      <select class="fs" id="ro-f" onchange="renderRO()"><option value="">Toutes sources</option><option value="liste">📋 Anciens clients AVIVA/OPTIMUM</option><option value="team">👥 Team Entibi</option><option value="opti">🔄 Renonciations PER</option></select>
+      <span class="chip" id="ro-cnt">—</span>
+    </div>
+    <div class="ro-body-wrap" id="ro-body"></div>
+  </div>
+
+  <!-- ARBITRAGE CLIENTS -->
+  <div class="view" id="view-arbitrage">
+    <div class="arb-wrap">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
+        <div>
+          <div style="font-size:16px;font-weight:700">⚖️ Arbitrage clients</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:2px">Suivi des bascules Barrière PER et Optimum</div>
+        </div>
+      </div>
+      <div class="arb-tabs">
+        <button class="arb-tab ac" id="arb-t-b" onclick="showArb('barriere')">👤 Bryan <span style="background:var(--blue-light);color:var(--blue);padding:1px 7px;border-radius:20px;font-size:11px;margin-left:6px">51</span></button>
+        <button class="arb-tab" id="arb-t-o" onclick="showArb('optimum')">👤 Alexis <span style="background:var(--green-light);color:var(--green);padding:1px 7px;border-radius:20px;font-size:11px;margin-left:6px">57</span></button>
+      </div>
+      
+      <!-- Barrière PER -->
+      <div class="arb-section on" id="arb-barriere">
+        <div class="arb-stats" id="arb-b-stats"></div>
+        <div class="arb-search">
+          <div class="sw" style="max-width:250px"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M11 11l3 3"/></svg><input type="text" id="arb-b-q" placeholder="Rechercher..." oninput="renderBarriere()"></div>
+          <select class="fs" id="arb-b-f" onchange="renderBarriere()"><option value="tous">Tous</option><option value="a_appeler">À appeler</option><option value="rdv">RDV pris</option><option value="annule">Annulé</option></select>
+          <button class="btn" onclick="exportArbCSV('barriere')">⬇ Export CSV</button>
+        </div>
+        <div class="arb-table" id="arb-b-table"></div>
+      </div>
+      
+      <!-- Optimum Suivi -->
+      <div class="arb-section" id="arb-optimum">
+        <div class="arb-stats" id="arb-o-stats"></div>
+        <div class="arb-search">
+          <div class="sw" style="max-width:250px"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M11 11l3 3"/></svg><input type="text" id="arb-o-q" placeholder="Rechercher..." oninput="renderOptimum()"></div>
+          <select class="fs" id="arb-o-f" onchange="renderOptimum()"><option value="tous">Tous</option><option value="actif">Actif</option><option value="annule">Annulé</option></select>
+          <button class="btn" onclick="exportArbCSV('optimum')">⬇ Export CSV</button>
+        </div>
+        <div class="arb-table" id="arb-o-table"></div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- MAILING -->
+  <div class="view" id="view-mailing">
+    <div style="flex:1;overflow-y:auto;padding:22px">
+      <div style="max-width:900px;margin:0 auto">
+        
+        <!-- Header -->
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:22px">
+          <div>
+            <div style="font-size:18px;font-weight:800">📧 Mailing</div>
+            <div style="font-size:12px;color:var(--text3);margin-top:2px">Compose et envoie des emails depuis tes adresses Vauban et Evka</div>
+          </div>
+        </div>
+
+        <!-- Sélecteur adresse expéditeur -->
+        <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:16px;box-shadow:var(--shadow)">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--text3);margin-bottom:12px">📤 EXPÉDITEUR</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <div class="mail-from-btn ac" onclick="selFrom(this,'bryan.entibi@vauban-associes.fr')" data-email="bryan.entibi@vauban-associes.fr"
+              style="padding:10px 16px;border-radius:9px;border:2px solid var(--blue);background:var(--blue-light);color:var(--blue);cursor:pointer;font-size:12.5px;font-weight:600;transition:all .15s">
+              🏛️ Vauban Associés<br><span style="font-size:10px;font-weight:400;opacity:.8">bryan.entibi@vauban-associes.fr</span>
+            </div>
+            <div class="mail-from-btn" onclick="selFrom(this,'bryan.entibi@evka-conseil.fr')" data-email="bryan.entibi@evka-conseil.fr"
+              style="padding:10px 16px;border-radius:9px;border:2px solid var(--border);background:var(--white);color:var(--text2);cursor:pointer;font-size:12.5px;font-weight:600;transition:all .15s">
+              ⚜️ Evka Conseil<br><span style="font-size:10px;font-weight:400;opacity:.8">bryan.entibi@evka-conseil.fr</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          
+          <!-- Colonne gauche: Composition -->
+          <div>
+            <!-- Destinataires -->
+            <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:16px;box-shadow:var(--shadow)">
+              <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--text3);margin-bottom:10px">👤 DESTINATAIRES</div>
+              <textarea id="mail-to" placeholder="email1@gmail.com, email2@hotmail.fr..." 
+                style="width:100%;border:1px solid var(--border);border-radius:8px;padding:10px;font-size:12px;font-family:Inter,sans-serif;resize:vertical;min-height:70px;outline:none;background:var(--bg)"
+                oninput="updateMailCount()"></textarea>
+              <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+                <button class="btn" onclick="importDests('sante')" style="font-size:11px">+ Infirmiers avec 06</button>
+                <button class="btn" onclick="importDests('pharmacies')" style="font-size:11px">+ Pharmacies</button>
+                <button class="btn" onclick="importDests('liste')" style="font-size:11px">+ Anciens clients</button>
+                <button class="btn" style="font-size:11px;color:var(--red)" onclick="document.getElementById('mail-to').value='';updateMailCount()">✕ Vider</button>
+              </div>
+              <div id="mail-count" style="font-size:11px;color:var(--text3);margin-top:8px">0 destinataire</div>
+            </div>
+
+            <!-- Objet -->
+            <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:16px;box-shadow:var(--shadow)">
+              <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--text3);margin-bottom:10px">📝 OBJET</div>
+              <input type="text" id="mail-subject" placeholder="Objet de votre email..." 
+                style="width:100%;border:1px solid var(--border);border-radius:8px;padding:10px;font-size:13px;font-family:Inter,sans-serif;outline:none;background:var(--bg)">
+            </div>
+
+            <!-- Corps du mail -->
+            <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:16px;box-shadow:var(--shadow)">
+              <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--text3);margin-bottom:10px">✉️ MESSAGE</div>
+              <textarea id="mail-body" placeholder="Corps de votre email..."
+                style="width:100%;border:1px solid var(--border);border-radius:8px;padding:10px;font-size:13px;font-family:Inter,sans-serif;resize:vertical;min-height:200px;outline:none;background:var(--bg);line-height:1.6"></textarea>
+            </div>
+
+            <!-- Bouton envoyer -->
+            <button onclick="sendMail()" 
+              style="width:100%;padding:14px;background:var(--blue);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;box-shadow:0 4px 12px rgba(49,130,206,.3);transition:all .2s">
+              📧 Ouvrir dans Gmail
+            </button>
+            <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:8px">Ouvre Gmail avec le mail pré-rempli · Pour envoi en masse utilise Gmail directement</div>
+          </div>
+
+          <!-- Colonne droite: Templates -->
+          <div>
+            <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:18px;box-shadow:var(--shadow)">
+              <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--text3);margin-bottom:14px">⚡ TEMPLATES</div>
+              <div id="mail-templates">
+                <div class="mail-tpl" onclick="loadTpl('per')" style="border:1px solid var(--border);border-radius:9px;padding:12px;margin-bottom:10px;cursor:pointer;transition:all .15s" onmouseenter="this.style.borderColor='var(--blue)';this.style.background='var(--blue-light)'" onmouseleave="this.style.borderColor='var(--border)';this.style.background='white'">
+                  <div style="font-size:12.5px;font-weight:700;color:var(--blue);margin-bottom:4px">🏦 PER — Retraite complémentaire</div>
+                  <div style="font-size:11px;color:var(--text2)">Présentation Plan Épargne Retraite pour professionnels de santé libéraux</div>
+                </div>
+                <div class="mail-tpl" onclick="loadTpl('prevoyance')" style="border:1px solid var(--border);border-radius:9px;padding:12px;margin-bottom:10px;cursor:pointer;transition:all .15s" onmouseenter="this.style.borderColor='var(--green)';this.style.background='var(--green-light)'" onmouseleave="this.style.borderColor='var(--border)';this.style.background='white'">
+                  <div style="font-size:12.5px;font-weight:700;color:var(--green);margin-bottom:4px">🛡️ Prévoyance TNS</div>
+                  <div style="font-size:11px;color:var(--text2)">Protection revenu, arrêt maladie, invalidité pour indépendants</div>
+                </div>
+                <div class="mail-tpl" onclick="loadTpl('audit')" style="border:1px solid var(--border);border-radius:9px;padding:12px;margin-bottom:10px;cursor:pointer;transition:all .15s" onmouseenter="this.style.borderColor='var(--purple)';this.style.background='var(--purple-light)'" onmouseleave="this.style.borderColor='var(--border)';this.style.background='white'">
+                  <div style="font-size:12.5px;font-weight:700;color:var(--purple);margin-bottom:4px">📊 Audit patrimonial offert</div>
+                  <div style="font-size:11px;color:var(--text2)">Bilan complet gratuit pour optimiser votre situation fiscale et patrimoniale</div>
+                </div>
+                <div class="mail-tpl" onclick="loadTpl('relance')" style="border:1px solid var(--border);border-radius:9px;padding:12px;margin-bottom:10px;cursor:pointer;transition:all .15s" onmouseenter="this.style.borderColor='var(--orange)';this.style.background='var(--orange-light)'" onmouseleave="this.style.borderColor='var(--border)';this.style.background='white'">
+                  <div style="font-size:12.5px;font-weight:700;color:var(--orange);margin-bottom:4px">🔄 Relance ancien client</div>
+                  <div style="font-size:11px;color:var(--text2)">Prise de contact pour bilan annuel ou optimisation de contrat existant</div>
+                </div>
+                <div class="mail-tpl" onclick="loadTpl('arbitrage')" style="border:1px solid var(--border);border-radius:9px;padding:12px;cursor:pointer;transition:all .15s" onmouseenter="this.style.borderColor='#D69E2E';this.style.background='#FFFFF0'" onmouseleave="this.style.borderColor='var(--border)';this.style.background='white'">
+                  <div style="font-size:12.5px;font-weight:700;color:#D69E2E;margin-bottom:4px">⚖️ Arbitrage / Bascule contrat</div>
+                  <div style="font-size:11px;color:var(--text2)">Proposition de bascule Barrière PER ou Optimum vers meilleure offre</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ARTISANS -->
+  <div class="view" id="view-artisans">
+    <div class="sub-bar">
+      <div class="stab on" id="sta-all" onclick="setSTA('all')">Tous</div>
+      <div class="stab" id="sta-plomb" onclick="setSTA('Plombier')">🔧 Plombiers</div>
+      <div class="stab" id="sta-ser" onclick="setSTA('Serrurier')">🔑 Serruriers</div>
+      <div class="stab" id="sta-elec" onclick="setSTA('Electricien')">⚡ Electriciens</div>
+      <div class="stab" id="sta-pein" onclick="setSTA('Peintre')">🖌️ Peintres</div>
+      <div class="stab" id="sta-mac" onclick="setSTA('Macon')">🧱 Maçons</div>
+      <div class="stab" id="sta-men" onclick="setSTA('Menuisier')">🪚 Menuisiers</div>
+      <div class="stab" id="sta-chauf" onclick="setSTA('Chauffagiste')">🌡️ Chauffagistes</div>
+    </div>
+    <div class="toolbar">
+      <div class="sw"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M11 11l3 3"/></svg><input type="text" id="srch-art" placeholder="Nom, ville..." oninput="applyFA()"></div>
+      <select class="fs" id="sel-art-st" onchange="applyFA()">
+        <option value="">Tous statuts</option>
+        <option value="rdv">📅 RDV Pris</option>
+        <option value="signe">✅ Signé</option>
+        <option value="ko">❌ KO</option>
+        <option value="rappeler">🔄 À Rappeler</option>
+        <option value="nrp">📵 NRP</option>
+      </select>
+      <select class="fs" id="sel-art-prof" onchange="applyFA()">
+        <option value="">Toutes professions</option>
+        <option value="Plombier">Plombier</option>
+        <option value="Serrurier">Serrurier</option>
+        <option value="Electricien">Electricien</option>
+        <option value="Peintre">Peintre</option>
+        <option value="Macon">Macon</option>
+        <option value="Menuisier">Menuisier</option>
+        <option value="Chauffagiste">Chauffagiste</option>
+        <option value="Carreleur">Carreleur</option>
+      </select>
+      <select class="fs" id="sel-art-annee" onchange="applyFA()">
+        <option value="">Toute date</option>
+        <option value="2026">📅 Installés 2026</option>
+        <option value="2025">📅 Installés 2025</option>
+        <option value="2024">📅 Installés 2024</option>
+        <option value="2023">📅 Installés 2023</option>
+        <option value="2022">📅 Installés 2022</option>
+        <option value="recent">🔥 Moins de 1 an</option>
+        <option value="recent3">🔥 Moins de 3 ans</option>
+      </select>
+      <span class="chip" id="cnt-art">—</span>
+    </div>
+    <div style="display:flex;flex:1;min-height:0;overflow:hidden">
+      <div class="tw">
+        <table>
+          <thead><tr>
+  <th class="sortable" onclick="setSort('art','nom')">NOM<span id="sa-nom"></span></th>
+  <th class="sortable" onclick="setSort('art','profession')">PROFESSION<span id="sa-profession"></span></th>
+  <th class="sortable" onclick="setSort('art','ville')">VILLE<span id="sa-ville"></span></th>
+  <th class="sortable" onclick="setSort('art','telephone_direct')">📱 06 DIRECT<span id="sa-telephone_direct"></span></th>
+  <th class="sortable" onclick="setSort('art','date_creation')">📅 DATE CRÉATION<span id="sa-date_creation"></span></th>
+  <th class="sortable" onclick="setSort('art','statut')">STATUT<span id="sa-statut"></span></th>
+  <th>NOTE</th><th></th>
+</tr></thead>
+          <tbody id="tb-art"><tr class="empty"><td colspan="8"><span class="spin"></span></td></tr></tbody>
+        </table>
+      </div>
+      <div class="dp" id="dp-art">
+        <div class="dp-hdr" style="background:linear-gradient(135deg,#FFFAF0,#F0FFF4)">
+          <div class="dp-x" onclick="closeDp('art')">✕</div>
+          <div class="dp-ava" id="dpav-art" style="background:#FFFAF0;color:var(--orange);font-size:20px">🔧</div>
+          <div class="dp-name" id="dpnm-art">—</div>
+          <div class="dp-spec" id="dpsp-art">—</div>
+          <div class="dp-acts">
+            <a class="btn btn-green" id="dpcall-art" href="#" style="display:none;text-decoration:none">📞 Appeler</a>
+            <button class="btn btn-blue" onclick="saveArt()">💾 Sauvegarder</button>
+          </div>
+        </div>
+        <div class="dp-pipe" id="dp-art-pipe">
+          <div class="dps" data-s="" onclick="setDPSA('')">⭕ Nouveau</div>
+          <div class="dps" data-s="nrp" onclick="setDPSA('nrp')">📵 NRP</div>
+          <div class="dps" data-s="rdv" onclick="setDPSA('rdv')">📅 RDV</div>
+          <div class="dps" data-s="ko" onclick="setDPSA('ko')">❌ KO</div>
+        </div>
+        <div class="dp-body">
+          <div class="dp-sec">Coordonnées</div>
+          <div class="dp-grid" id="dpco-art"></div>
+          <div class="dp-sec">📱 Numéro direct</div>
+          <input class="dp-inp" type="text" id="dptel-art" placeholder="06 XX XX XX XX">
+          <div class="dp-sec">Notes</div>
+          <textarea class="dp-ta" id="dpno-art" placeholder="Notes, objections, prochaine étape..."></textarea>
+          <button class="dp-save" onclick="saveArt()">💾 Sauvegarder</button>
+        </div>
+      </div>
+    </div>
+    <div class="pag"><div class="pag-info" id="pi-art">—</div><div class="pag-btns" id="pb-art"></div></div>
+  </div>
+
+
+  <!-- FILTRE GLOBAL (RDV/NRP/KO tous types) -->
+  <div class="view" id="view-global">
+    <div class="toolbar">
+      <div class="sw"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M11 11l3 3"/></svg><input type="text" id="srch-glob" placeholder="Nom, ville..." oninput="loadGlobal()"></div>
+      <span class="chip" id="cnt-glob">—</span>
+    </div>
+    <div class="tw" style="flex:1">
+      <table>
+        <thead><tr><th>NOM</th><th>TYPE</th><th>VILLE</th><th>📱 TÉLÉPHONE</th><th>NOTE</th><th></th></tr></thead>
+        <tbody id="tb-glob"><tr class="empty"><td colspan="6"><span class="spin"></span></td></tr></tbody>
+      </table>
+    </div>
+    <div class="pag"><div class="pag-info" id="pi-glob">—</div><div class="pag-btns" id="pb-glob"></div></div>
+  </div>
+
+</main>
+
+<!-- SCRAPING OVERLAY -->
+<div class="ov" id="ov-scr">
+  <div class="ov-box">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <div style="font-size:16px;font-weight:800">⚡ Scraping automatique</div>
+      <div style="cursor:pointer;color:var(--text2);font-size:18px" onclick="closeScr()">✕</div>
+    </div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:2px">Sélectionne les sources</div>
+    <div class="scr-grid">
+      <div class="scr-src sel" data-src="powerbi"><div style="font-size:12.5px;font-weight:600;margin-bottom:3px">🏥 Ordre Infirmiers</div><div style="font-size:11px;color:var(--text2)">510 728 infirmiers + portables</div></div>
+      <div class="scr-src" data-src="rpps"><div style="font-size:12.5px;font-weight:600;margin-bottom:3px">📋 RPPS data.gouv.fr</div><div style="font-size:11px;color:var(--text2)">Tous pros de santé</div></div>
+      <div class="scr-src" data-src="kine"><div style="font-size:12.5px;font-weight:600;margin-bottom:3px">💪 Kinés / Ostéos</div><div style="font-size:11px;color:var(--text2)">Ordre des kinésithérapeutes</div></div>
+      <div class="scr-src" data-src="medecins"><div style="font-size:12.5px;font-weight:600;margin-bottom:3px">👨‍⚕️ Médecins</div><div style="font-size:11px;color:var(--text2)">RPPS + Ameli</div></div>
+    </div>
+    <button onclick="launchScr()" style="width:100%;padding:11px;background:var(--blue);border:none;border-radius:9px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif">⚡ Lancer</button>
+    <div id="scr-prog" style="display:none"><div class="prog-tr"><div class="prog-f" id="scr-bar" style="width:0%"></div></div><div id="scr-msg" style="font-size:11px;color:var(--text3)"></div></div>
+  </div>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<script>
+const API='https://web-production-66741.up.railway.app/api';
+const PC={all:'var(--text2)',inf:'#3182CE',kin:'#805AD5',med:'#2B6CB0',den:'#DD6B20',psy:'#D53F8C'};
+const PS={inf:['Infirmier','Infirmière'],kin:['Masseur','Kinési','Ostéo'],med:['Médecin','Cardio','Radio','Chirur','Gynéco','Pédiatre','Dermato'],den:['Dentiste','Chirurgien-dentiste'],psy:['Psycho','Orthophon','Pédicure','Sage-femme']};
+const PL={all:'Toutes professions',inf:'Infirmiers',kin:'Kiné / Ostéo',med:'Médecins',den:'Dentistes',psy:'Psy / Ortho'};
+const SL={'':'b-gray',nouveau:'b-gray',nrp:'b-orange',rdv:'b-green',ko:'b-red','contacte':'b-blue','interesse':'b-purple','a-rappeler':'b-orange','client':'b-green','sans-suite':'b-gray'};
+const SN={'':'Nouveau',nouveau:'Nouveau',nrp:'📵 NRP',rdv:'📅 RDV',ko:'❌ KO','contacte':'Contacté','interesse':'Intéressé','a-rappeler':'À rappeler','client':'Client','sans-suite':'Sans suite'};
+
+let prof='inf',pg=1,pgP=1,sub='all',subP='all',flt='',eid=null,etype=null,scrInt=null;
+
+
+// ── ARBITRAGE DATA ──
+const BARRIERE_RAW = [{"id": "messner", "nom": "Messner", "montant": "150", "note": "+594", "statut": ""}, {"id": "foussanigue", "nom": "Foussanigue", "montant": "400", "statut": ""}, {"id": "thinieg", "nom": "Thinieg", "montant": "150", "statut": ""}, {"id": "nicole", "nom": "Nicole", "montant": "250", "statut": ""}, {"id": "guyader", "nom": "Guyader", "montant": "500", "statut": ""}, {"id": "dumaugne", "nom": "Dumaugne", "montant": "200", "statut": ""}, {"id": "landny", "nom": "Landny", "montant": "150", "statut": ""}, {"id": "oden", "nom": "Oden", "montant": "100", "statut": ""}, {"id": "neder", "nom": "Neder", "montant": "200", "statut": ""}, {"id": "ruel", "nom": "Ruel", "montant": "290", "statut": ""}, {"id": "mendy", "nom": "Mendy", "montant": "500", "statut": ""}, {"id": "mometeau", "nom": "Mometeau", "montant": "150", "statut": ""}, {"id": "ouvier", "nom": "Ouvier", "montant": "100", "statut": ""}, {"id": "trescaute", "nom": "Trescaute", "montant": "250", "statut": ""}, {"id": "honey", "nom": "Honey", "montant": "200", "statut": ""}, {"id": "chavarelle", "nom": "Chavarelle", "montant": "390", "statut": ""}, {"id": "pagan", "nom": "Pagan", "montant": "100", "statut": "annulé"}, {"id": "binet", "nom": "Binet", "montant": "400", "statut": ""}, {"id": "napoleon", "nom": "Napoleon", "montant": "150", "statut": "rdv"}, {"id": "hurel", "nom": "Hurel", "montant": "600", "statut": ""}, {"id": "richez", "nom": "Richez", "montant": "200", "statut": "annulé"}, {"id": "tounlan", "nom": "Tounlan", "montant": "150", "statut": "annulé"}, {"id": "veragten", "nom": "Veragten", "montant": "300", "statut": "annulé"}, {"id": "louviot", "nom": "Louviot", "montant": "150", "statut": ""}, {"id": "brouslant", "nom": "Brouslant", "montant": "100", "statut": "annulé"}, {"id": "beude", "nom": "Beude", "montant": "200", "statut": "rdv"}, {"id": "cagnion", "nom": "Cagnion", "montant": "200", "statut": "annulé"}, {"id": "louboutin", "nom": "Louboutin", "montant": "340", "statut": ""}, {"id": "ninguella", "nom": "Ninguella", "montant": "150", "statut": ""}, {"id": "henry", "nom": "Henry", "montant": "200", "statut": ""}, {"id": "dupant", "nom": "Dupant", "montant": "200", "statut": ""}, {"id": "delnue", "nom": "Delnue", "montant": "300", "statut": ""}, {"id": "saussol", "nom": "Saussol", "montant": "100", "statut": ""}, {"id": "thenon", "nom": "Thenon", "montant": "300", "statut": ""}, {"id": "stinzi", "nom": "Stinzi", "montant": "100", "statut": ""}, {"id": "achin", "nom": "Achin", "montant": "360", "statut": ""}, {"id": "brize", "nom": "Brize", "montant": "100", "statut": ""}, {"id": "ziouche", "nom": "Ziouche", "montant": "100", "statut": ""}, {"id": "billet", "nom": "Billet", "montant": "400", "statut": ""}, {"id": "fondeur", "nom": "Fondeur", "montant": "200", "statut": ""}, {"id": "samyn", "nom": "Samyn", "montant": "100", "statut": ""}, {"id": "dos_santos", "nom": "Dos Santos", "montant": "100", "statut": ""}, {"id": "sungit", "nom": "Sungit", "montant": "100", "statut": ""}, {"id": "baude2", "nom": "Baude", "montant": "100", "statut": "rdv"}, {"id": "cattignier", "nom": "Cattignier", "montant": "200", "statut": ""}, {"id": "canotte", "nom": "Canotte", "montant": "150", "statut": ""}, {"id": "thobert", "nom": "Thobert", "montant": "150", "statut": ""}, {"id": "champbussel", "nom": "Champbussel", "montant": "100", "statut": ""}, {"id": "communier", "nom": "Communier", "montant": "100", "statut": ""}, {"id": "dufetal", "nom": "Dufetal", "montant": "200", "statut": ""}, {"id": "piovano", "nom": "Piovano", "montant": "250", "statut": ""}];
+const OPTIMUM_RAW = [{"id": "mouysset", "nom": "MME MOUYSSET", "versement": "150", "date": "12/11/2024", "annule": "true"}, {"id": "braud", "nom": "MME BRAUD", "versement": "150", "date": "16/12/2024", "annule": "false"}, {"id": "caldas", "nom": "MME CALDAS", "versement": "200", "date": "17/12/2024", "annule": "false"}, {"id": "duffy", "nom": "MME DUFFY", "versement": "100", "date": "19/12/2024", "annule": "false"}, {"id": "thonier", "nom": "MME THONIER", "versement": "100", "date": "20/12/2024", "annule": "true"}, {"id": "dominici", "nom": "MME DOMINICI", "versement": "100", "date": "08/01/2025", "annule": "false"}, {"id": "battistelli", "nom": "MR BATTISTELLI", "versement": "200", "date": "08/01/2025", "annule": "false"}, {"id": "anger", "nom": "MME ANGER", "versement": "100", "date": "17/01/2025", "annule": "false"}, {"id": "peraud", "nom": "MME PERAUD", "versement": "100", "date": "20/01/2025", "annule": "false"}, {"id": "tabard", "nom": "MME TABARD", "versement": "150", "date": "23/01/2025", "annule": "false"}, {"id": "kwa_moutome", "nom": "MME KWA MOUTOME", "versement": "100", "date": "03/02/2025", "annule": "true"}, {"id": "basile", "nom": "MME BASILE", "versement": "200", "date": "25/02/2025", "annule": "false"}, {"id": "cossec", "nom": "MME COSSEC", "versement": "100", "date": "26/02/2025", "annule": "true"}, {"id": "merceron", "nom": "MME MERCERON", "versement": "100", "date": "26/02/2025", "annule": "true"}, {"id": "mejean", "nom": "MME MEJEAN", "versement": "100", "date": "26/02/2025", "annule": "true"}, {"id": "mouezza", "nom": "MR MOUEZZA", "versement": "150", "date": "03/03/2025", "annule": "true"}, {"id": "regnier", "nom": "MME REGNIER", "versement": "100", "date": "05/03/2025", "annule": "true"}, {"id": "canonne", "nom": "MME CANONNE", "versement": "100", "date": "07/03/2025", "annule": "false"}, {"id": "berruezo", "nom": "MME BERRUEZO", "versement": "150", "date": "10/03/2025", "annule": "true"}, {"id": "jezequel", "nom": "MME JEZEQUEL", "versement": "400", "date": "12/03/2025", "annule": "true"}, {"id": "silete", "nom": "MME SILETE", "versement": "150", "date": "15/03/2025", "annule": "false"}, {"id": "dheilly", "nom": "MR D", "versement": "200", "date": "17/03/2025", "annule": "false"}, {"id": "de_carvhalo", "nom": "MME DE CARVHALO", "versement": "100", "date": "20/03/2025", "annule": "false"}, {"id": "remenant", "nom": "MME REMENANT", "versement": "150", "date": "20/03/2025", "annule": "false"}, {"id": "guingueno", "nom": "MME GUINGUENO", "versement": "150", "date": "21/03/2025", "annule": "true"}, {"id": "rousseau", "nom": "MR ROUSSEAU", "versement": "150", "date": "26/03/2025", "annule": "true"}, {"id": "quignon", "nom": "MME QUIGNON", "versement": "200", "date": "31/03/2025", "annule": "true"}, {"id": "nganga1", "nom": "MME NGANGA", "versement": "100", "date": "03/04/2025", "annule": "false"}, {"id": "garnier", "nom": "MME GARNIER", "versement": "100", "date": "11/04/2025", "annule": "false"}, {"id": "cacciatore", "nom": "MME CACCIATORE", "versement": "400", "date": "23/04/2025", "annule": "true"}, {"id": "heringuez", "nom": "MME HERINGUEZ", "versement": "100", "date": "02/05/2025", "annule": "true"}, {"id": "juin1", "nom": "MME JUIN", "versement": "200", "date": "02/05/2025", "annule": "true"}, {"id": "debaud", "nom": "MME DEBAUD", "versement": "350", "date": "12/05/2025", "annule": "false"}, {"id": "ohayon", "nom": "MR OHAYON", "versement": "200", "date": "12/05/2025", "annule": "false"}, {"id": "bottalico", "nom": "MME BOTTALICO", "versement": "100", "date": "20/05/2025", "annule": "false"}, {"id": "lacroix", "nom": "MME LACROIX", "versement": "150", "date": "26/05/2025", "annule": "false"}, {"id": "loiseau", "nom": "MME LOISEAU", "versement": "100", "date": "02/06/2025", "annule": "false"}, {"id": "simao", "nom": "MME SIMAO", "versement": "130", "date": "03/06/2025", "annule": "false"}, {"id": "gohdbane", "nom": "MME GOHDBANE", "versement": "200", "date": "03/06/2025", "annule": "false"}, {"id": "nganga2", "nom": "MME NGANGA (2", "versement": "100", "date": "04/06/2025", "annule": "true"}, {"id": "zaragoza", "nom": "MME ZARAGOZA", "versement": "150", "date": "12/06/2025", "annule": "false"}, {"id": "martin", "nom": "MR MARTIN", "versement": "250", "date": "13/06/2025", "annule": "false"}, {"id": "marques", "nom": "MME MARQUES", "versement": "100", "date": "13/06/2025", "annule": "false"}, {"id": "boulogne", "nom": "MME BOULOGNE", "versement": "280", "date": "23/06/2025", "annule": "true"}, {"id": "maillard", "nom": "MME MAILLARD", "versement": "150", "date": "24/06/2025", "annule": "false"}, {"id": "derail1", "nom": "MR DERAIL", "versement": "100", "date": "02/07/2025", "annule": "false"}, {"id": "grandin", "nom": "MME GRANDIN", "versement": "100", "date": "07/07/2025", "annule": "false"}, {"id": "juin2", "nom": "MME JUIN (2", "versement": "200", "date": "07/07/2025", "annule": "false"}, {"id": "giacci", "nom": "MME GIACCI", "versement": "100", "date": "08/07/2025", "annule": "true"}, {"id": "longefay", "nom": "MME LONGEFAY", "versement": "150", "date": "11/07/2025", "annule": "true"}, {"id": "szymczewski1", "nom": "MME SZYMCZEWSKI", "versement": "300", "date": "22/07/2025", "annule": "false"}, {"id": "fonseca", "nom": "MR FONSECA RODRIGUES", "versement": "100", "date": "18/08/2025", "annule": "true"}, {"id": "lassagne", "nom": "MME LASSAGNE", "versement": "350", "date": "21/08/2025", "annule": "true"}, {"id": "belleil", "nom": "MME BELLEIL", "versement": "200", "date": "26/08/2025", "annule": "false"}, {"id": "derail2", "nom": "MR DERAIL (2", "versement": "100", "date": "28/08/2025", "annule": "true"}, {"id": "szymczewski2", "nom": "MME SZYMCZEWSKI (2", "versement": "300", "date": "13/10/2025", "annule": "true"}, {"id": "montana", "nom": "MME MONTANA", "versement": "250", "date": "15/10/2025", "annule": "false"}];
+
+let bState = [];
+let oState = [];
+
+async function loadArbFromServer() {
+  try {
+    const [rB, rO] = await Promise.all([
+      fetch(`${API}/arbitrage-barriere`),
+      fetch(`${API}/arbitrage-optimum`)
+    ]);
+    bState = await rB.json();
+    oState = await rO.json();
+    bState.forEach(c => c.checked = !!c.checked);
+    oState.forEach(c => c.checked = !!c.checked);
+  } catch(ex) {
+    console.error('Erreur chargement arbitrage', ex);
+  }
+  if (typeof renderBarriere === 'function') renderBarriere();
+  if (typeof renderOptimum === 'function') renderOptimum();
+}
+
+async function saveArbField(table, id, field, value) {
+  try {
+    const ep = table === 'b' ? 'arbitrage-barriere' : 'arbitrage-optimum';
+    await fetch(`${API}/${ep}/${id}`, {
+      method: 'PATCH',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({[field]: value})
+    });
+  } catch(ex) {
+    toast('❌ Erreur sauvegarde serveur', 'err');
+  }
+}
+
+const ARB_COLORS = {
+  'rdv':      {bg:'#EBF8FF',border:'#3182CE',text:'#2C5282',label:'\uD83D\uDCC5 RDV Pris'},
+  'signe':    {bg:'#F0FFF4',border:'#38A169',text:'#276749',label:'\u2705 Sign\u00e9'},
+  'ko':       {bg:'#FFF5F5',border:'#E53E3E',text:'#C53030',label:'\u274C KO'},
+  'rappeler': {bg:'#FFFAF0',border:'#DD6B20',text:'#C05621',label:'\uD83D\uDD04 \u00c0 Rappeler'},
+  'nrp':      {bg:'#FFFAF0',border:'#DD6B20',text:'#C05621',label:'\uD83D\uDCF5 NRP'},
+  '':         {bg:'#FFFFFF',border:'#E2E8F0',text:'#4A5568',label:'\u2B55 \u00c0 Appeler'},
+};
+function arbColor(s){return ARB_COLORS[s]||ARB_COLORS[''];}
+
+function showArb(v){
+  document.querySelectorAll('.arb-section').forEach(x=>x.classList.remove('on'));
+  document.getElementById('arb-'+v).classList.add('on');
+  document.querySelectorAll('.arb-tab').forEach(t=>t.classList.remove('ac'));
+  document.getElementById('arb-t-'+(v==='barriere'?'b':'o')).classList.add('ac');
+}
+
+function renderBarriere(){
+  const q=(document.getElementById('arb-b-q')?.value||'').toLowerCase();
+  const f=document.getElementById('arb-b-f')?.value||'tous';
+  let items=bState.filter(c=>{
+    if(q&&!(c.nom||'').toLowerCase().includes(q))return false;
+    if(f==='rdv')return c.statut==='rdv';
+    if(f==='signe')return c.statut==='signe';
+    if(f==='ko')return c.statut==='ko';
+    if(f==='rappeler')return c.statut==='rappeler'||c.statut==='nrp';
+    if(f==='appeler')return!c.statut;
+    return true;
+  });
+  const tot=bState.length,rdv=bState.filter(c=>c.statut==='rdv').length,sig=bState.filter(c=>c.statut==='signe').length,ko=bState.filter(c=>c.statut==='ko').length,rap=bState.filter(c=>c.statut==='rappeler'||c.statut==='nrp').length,app=bState.filter(c=>!c.statut).length;
+  document.getElementById('arb-b-stats').innerHTML=`
+    <div class="arb-stat"><div class="arb-stat-val" style="color:var(--blue)">${tot}</div><div class="arb-stat-lbl">Total</div></div>
+    <div class="arb-stat" style="cursor:pointer" onclick="document.getElementById('arb-b-f').value='appeler';renderBarriere()"><div class="arb-stat-val">${app}</div><div class="arb-stat-lbl">\u00c0 Appeler</div></div>
+    <div class="arb-stat" style="cursor:pointer;background:#EBF8FF" onclick="document.getElementById('arb-b-f').value='rdv';renderBarriere()"><div class="arb-stat-val" style="color:var(--blue)">${rdv}</div><div class="arb-stat-lbl">RDV Pris</div></div>
+    <div class="arb-stat" style="cursor:pointer;background:#F0FFF4" onclick="document.getElementById('arb-b-f').value='signe';renderBarriere()"><div class="arb-stat-val" style="color:var(--green)">${sig}</div><div class="arb-stat-lbl">Sign\u00e9s</div></div>
+    <div class="arb-stat" style="cursor:pointer;background:#FFF5F5" onclick="document.getElementById('arb-b-f').value='ko';renderBarriere()"><div class="arb-stat-val" style="color:var(--red)">${ko}</div><div class="arb-stat-lbl">KO</div></div>
+    <div class="arb-stat" style="cursor:pointer;background:#FFFAF0" onclick="document.getElementById('arb-b-f').value='rappeler';renderBarriere()"><div class="arb-stat-val" style="color:var(--orange)">${rap}</div><div class="arb-stat-lbl">\u00c0 Rappeler</div></div>`;
+  const tbl=document.getElementById('arb-b-table');
+  if(!items.length){tbl.innerHTML='<div style="padding:24px;text-align:center;color:var(--text3)">Aucun r\u00e9sultat</div>';return;}
+  tbl.innerHTML=`<div style="display:grid;grid-template-columns:32px 2fr 80px 130px 1fr 185px;padding:10px 16px;background:var(--bg);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--text3);border-bottom:1px solid var(--border)"><span></span><span>NOM</span><span>MONTANT</span><span>NOTE</span><span>COMMENTAIRE</span><span>STATUT</span></div>`+
+  items.map(c=>{
+    const col=arbColor(c.statut),ri=bState.indexOf(c);
+    return`<div style="display:grid;grid-template-columns:32px 2fr 80px 130px 1fr 185px;align-items:center;padding:9px 16px;border-bottom:1px solid var(--border);background:${col.bg};border-left:4px solid ${col.border}">
+      <input type="checkbox" style="cursor:pointer;width:15px;height:15px;accent-color:${col.border}" ${c.checked?'checked':''} onchange="bState[${ri}].checked=this.checked;saveArbField('b',bState[${ri}].id,'checked',this.checked)">
+      <input type="text" value="${e(c.nom||'')}" placeholder="Nom..."
+        style="border:none;background:transparent;font-weight:600;color:${col.text};font-size:13px;font-family:Inter,sans-serif;outline:none;padding:2px 4px;border-radius:4px;width:100%"
+        onfocus="this.style.background='white';this.style.border='1px solid '+'${col.border}'"
+        onblur="this.style.background='transparent';this.style.border='none'"
+        onchange="bState[${ri}].nom=this.value;saveArbField('b',bState[${ri}].id,'nom',this.value);toast('✅ Nom sauvegardé','ok')">
+      <input type="number" value="${c.montant||0}"
+        style="border:1px solid transparent;background:transparent;color:var(--green);font-weight:700;font-family:monospace;outline:none;padding:2px 4px;border-radius:4px;width:75px"
+        onfocus="this.style.background='white';this.style.borderColor='${col.border}'"
+        onblur="this.style.background='transparent';this.style.borderColor='transparent'"
+        onchange="bState[${ri}].montant=parseFloat(this.value)||0;saveArbField('b',bState[${ri}].id,'montant',bState[${ri}].montant);toast('✅ Montant sauvegardé','ok')">€
+      <input type="text" value="${e(c.note||'')}" placeholder="Note..."
+        style="border:none;background:transparent;color:var(--text2);font-size:11px;font-family:Inter,sans-serif;outline:none;padding:2px 4px;border-radius:4px;width:100%"
+        onfocus="this.style.background='white';this.style.border='1px solid '+'${col.border}'"
+        onblur="this.style.background='transparent';this.style.border='none'"
+        onchange="bState[${ri}].note=this.value;saveArbField('b',bState[${ri}].id,'note',this.value);toast('✅ Note sauvegardée','ok')">
+      <input type="text" value="${e(c.commentaire||'')}" placeholder="Note libre..."
+        style="border:1px solid ${col.border};border-radius:5px;padding:4px 8px;font-size:11px;width:95%;background:white;font-family:Inter,sans-serif;outline:none"
+        onchange="bState[${ri}].commentaire=this.value;saveArbField('b',bState[${ri}].id,'commentaire',this.value);toast('\u2705 Sauvegard\u00e9','ok')">
+      <select onchange="bState[${ri}].statut=this.value;saveArbField('b',bState[${ri}].id,'statut',this.value);renderBarriere();toast('\u2705 Statut mis \u00e0 jour','ok')"
+        style="border:2px solid ${col.border};border-radius:6px;padding:5px 8px;font-size:11px;font-weight:600;background:${col.bg};color:${col.text};cursor:pointer;font-family:Inter,sans-serif;outline:none;width:100%">
+        <option value="" ${!c.statut?'selected':''}>\u2B55 \u00c0 Appeler</option>
+        <option value="rdv" ${c.statut==='rdv'?'selected':''}>\uD83D\uDCC5 RDV Pris</option>
+        <option value="signe" ${c.statut==='signe'?'selected':''}>\u2705 Sign\u00e9</option>
+        <option value="ko" ${c.statut==='ko'?'selected':''}>\u274C KO</option>
+        <option value="rappeler" ${c.statut==='rappeler'?'selected':''}>\uD83D\uDD04 \u00c0 Rappeler</option>
+        <option value="nrp" ${c.statut==='nrp'?'selected':''}>\uD83D\uDCF5 NRP</option>
+      </select>
+    </div>`;
+  }).join('');
+}
+
+function renderOptimum(){
+  const q=(document.getElementById('arb-o-q')?.value||'').toLowerCase();
+  const f=document.getElementById('arb-o-f')?.value||'tous';
+  let items=oState.filter(c=>{
+    if(q&&!(c.nom||'').toLowerCase().includes(q))return false;
+    if(f==='rdv')return c.statut==='rdv';
+    if(f==='signe')return c.statut==='signe';
+    if(f==='ko')return c.statut==='ko';
+    if(f==='rappeler')return c.statut==='rappeler'||c.statut==='nrp';
+    if(f==='appeler')return!c.statut;
+    return true;
+  });
+  const tot=oState.length,rdv=oState.filter(c=>c.statut==='rdv').length,sig=oState.filter(c=>c.statut==='signe').length,ko=oState.filter(c=>c.statut==='ko').length,rap=oState.filter(c=>c.statut==='rappeler'||c.statut==='nrp').length,app=oState.filter(c=>!c.statut).length;
+  document.getElementById('arb-o-stats').innerHTML=`
+    <div class="arb-stat"><div class="arb-stat-val" style="color:var(--green)">${tot}</div><div class="arb-stat-lbl">Total</div></div>
+    <div class="arb-stat" style="cursor:pointer" onclick="document.getElementById('arb-o-f').value='appeler';renderOptimum()"><div class="arb-stat-val">${app}</div><div class="arb-stat-lbl">\u00c0 Appeler</div></div>
+    <div class="arb-stat" style="cursor:pointer;background:#EBF8FF" onclick="document.getElementById('arb-o-f').value='rdv';renderOptimum()"><div class="arb-stat-val" style="color:var(--blue)">${rdv}</div><div class="arb-stat-lbl">RDV Pris</div></div>
+    <div class="arb-stat" style="cursor:pointer;background:#F0FFF4" onclick="document.getElementById('arb-o-f').value='signe';renderOptimum()"><div class="arb-stat-val" style="color:var(--green)">${sig}</div><div class="arb-stat-lbl">Sign\u00e9s</div></div>
+    <div class="arb-stat" style="cursor:pointer;background:#FFF5F5" onclick="document.getElementById('arb-o-f').value='ko';renderOptimum()"><div class="arb-stat-val" style="color:var(--red)">${ko}</div><div class="arb-stat-lbl">KO</div></div>
+    <div class="arb-stat" style="cursor:pointer;background:#FFFAF0" onclick="document.getElementById('arb-o-f').value='rappeler';renderOptimum()"><div class="arb-stat-val" style="color:var(--orange)">${rap}</div><div class="arb-stat-lbl">\u00c0 Rappeler</div></div>`;
+  const tbl=document.getElementById('arb-o-table');
+  if(!items.length){tbl.innerHTML='<div style="padding:24px;text-align:center;color:var(--text3)">Aucun r\u00e9sultat</div>';return;}
+  tbl.innerHTML=`<div style="display:grid;grid-template-columns:32px 2fr 100px 100px 1fr 185px;padding:10px 16px;background:var(--bg);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--text3);border-bottom:1px solid var(--border)"><span></span><span>NOM</span><span>DATE</span><span>VERSEMENT</span><span>COMMENTAIRE</span><span>STATUT</span></div>`+
+  items.map(c=>{
+    const col=arbColor(c.statut),ri=oState.indexOf(c);
+    return`<div style="display:grid;grid-template-columns:32px 2fr 100px 100px 1fr 185px;align-items:center;padding:9px 16px;border-bottom:1px solid var(--border);background:${col.bg};border-left:4px solid ${col.border}">
+      <input type="checkbox" style="cursor:pointer;width:15px;height:15px;accent-color:${col.border}" ${c.checked?'checked':''} onchange="oState[${ri}].checked=this.checked;saveArbField('o',oState[${ri}].id,'checked',this.checked)">
+      <input type="text" value="${e(c.nom||'')}" placeholder="Nom..."
+        style="border:none;background:transparent;font-weight:600;color:${col.text};font-size:13px;font-family:Inter,sans-serif;outline:none;padding:2px 4px;border-radius:4px;width:100%"
+        onfocus="this.style.background='white';this.style.border='1px solid '+'${col.border}'"
+        onblur="this.style.background='transparent';this.style.border='none'"
+        onchange="oState[${ri}].nom=this.value;saveArbField('o',oState[${ri}].id,'nom',this.value);toast('✅ Nom sauvegardé','ok')">
+      <input type="text" value="${e(c.date||'')}" placeholder="Date..."
+        style="border:none;background:transparent;color:var(--text2);font-size:11px;font-family:Inter,sans-serif;outline:none;padding:2px 4px;border-radius:4px;width:100%"
+        onfocus="this.style.background='white';this.style.border='1px solid '+'${col.border}'"
+        onblur="this.style.background='transparent';this.style.border='none'"
+        onchange="oState[${ri}].date=this.value;saveArbField('o',oState[${ri}].id,'date',this.value);toast('✅ Date sauvegardée','ok')">
+      <input type="number" value="${c.versement||0}"
+        style="border:1px solid transparent;background:transparent;color:var(--green);font-weight:700;font-family:monospace;outline:none;padding:2px 4px;border-radius:4px;width:75px"
+        onfocus="this.style.background='white';this.style.borderColor='${col.border}'"
+        onblur="this.style.background='transparent';this.style.borderColor='transparent'"
+        onchange="oState[${ri}].versement=parseFloat(this.value)||0;saveArbField('o',oState[${ri}].id,'versement',oState[${ri}].versement);toast('✅ Versement sauvegardé','ok')">€
+      <input type="text" value="${e(c.commentaire||'')}" placeholder="Note libre..."
+        style="border:1px solid ${col.border};border-radius:5px;padding:4px 8px;font-size:11px;width:95%;background:white;font-family:Inter,sans-serif;outline:none"
+        onchange="oState[${ri}].commentaire=this.value;saveArbField('o',oState[${ri}].id,'commentaire',this.value);toast('\u2705 Sauvegard\u00e9','ok')">
+      <select onchange="oState[${ri}].statut=this.value;saveArbField('o',oState[${ri}].id,'statut',this.value);renderOptimum();toast('\u2705 Statut mis \u00e0 jour','ok')"
+        style="border:2px solid ${col.border};border-radius:6px;padding:5px 8px;font-size:11px;font-weight:600;background:${col.bg};color:${col.text};cursor:pointer;font-family:Inter,sans-serif;outline:none;width:100%">
+        <option value="" ${!c.statut?'selected':''}>\u2B55 \u00c0 Appeler</option>
+        <option value="rdv" ${c.statut==='rdv'?'selected':''}>\uD83D\uDCC5 RDV Pris</option>
+        <option value="signe" ${c.statut==='signe'?'selected':''}>\u2705 Sign\u00e9</option>
+        <option value="ko" ${c.statut==='ko'?'selected':''}>\u274C KO</option>
+        <option value="rappeler" ${c.statut==='rappeler'?'selected':''}>\uD83D\uDD04 \u00c0 Rappeler</option>
+        <option value="nrp" ${c.statut==='nrp'?'selected':''}>\uD83D\uDCF5 NRP</option>
+      </select>
+    </div>`;
+  }).join('');
+}
+
+function exportArbCSV(type){
+  const data=type==='barriere'?bState:oState;
+  const keys=['nom','montant','versement','note','date','statut','commentaire'];
+  let csv='\uFEFF'+keys.join(';')+'\n';
+  data.forEach(r=>{csv+=keys.map(k=>JSON.stringify(r[k]??'')).join(';')+'\n';});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download=`arbitrage-${type}-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  toast('\u2705 CSV export\u00e9','ok');
+}
+
+
+// ANCIEN R&O DATA — 165 contacts LISTE.pdf
+const LISTE_DATA = [{"nom": "ANDIAZABAL", "prenom": "SEVERINE", "telephone": "06 76 32 04 44", "email": "sev.andiazabal@gmail.com", "profession": "Graphiste", "ville": "CESSON", "cp": "77240", "contrat": "OPTIMUM *000003420", "montant": 50}, {"nom": "ANDONOFF", "prenom": "ROBERT", "telephone": "06 70 89 72 28", "email": "robert.andonoff@gmail.com", "profession": "Infirmier", "ville": "VIVIERS LES MONTAGNES", "cp": "81290", "contrat": "AVIVA D130049422", "montant": 400}, {"nom": "ANDRADE", "prenom": "CINDY", "telephone": "06 75 98 17 37", "email": "cindy-scp@hotmail.fr", "profession": "Infirmier", "ville": "CHILLY MAZARIN", "cp": "91380", "contrat": "AVIVA D130087445", "montant": 300}, {"nom": "ANDRE", "prenom": "ANTOINE", "telephone": "06 66 28 12 36", "email": "antoine.andre91@gmail.com", "profession": "Medecin", "ville": "ST LEONARD", "cp": "62360", "contrat": "AVIVA D130084894", "montant": 700}, {"nom": "ANDRE", "prenom": "EVE", "telephone": "06 13 99 73 39", "email": "eveandre987@gmail.com", "profession": "Infirmier", "ville": "MIREPOIX", "cp": "09500", "contrat": "AVIVA D130082782", "montant": 300}, {"nom": "ANDRE", "prenom": "QUENTIN", "telephone": "07 60 03 93 99", "email": "quentin.38@free.fr", "profession": "Kinesitherapeuthe", "ville": "STE COLOMBE", "cp": "69560", "contrat": "AVIVA D130090020", "montant": 1000}, {"nom": "ANDRE", "prenom": "ISABELLE", "telephone": "06 70 37 10 68", "email": "isabelle.andre.kine@gmail.com", "profession": "Kinesitherapeuthe", "ville": "LES AVIRONS", "cp": "97425", "contrat": "OPTIMUM T00027768", "montant": 350}, {"nom": "ANDRE", "prenom": "LOUIS", "telephone": "06 42 08 92 19", "email": "andre-louis@orange.fr", "profession": "Chirurgien Dentiste", "ville": "NANCY", "cp": "54000", "contrat": "AVIVA D130056407", "montant": 150}, {"nom": "ANDRE", "prenom": "VIRGINIE", "telephone": "06 31 64 71 68", "email": "mickaelandre@neuf.fr", "profession": "Infirmier", "ville": "ROSPEZ", "cp": "22300", "contrat": "AVIVA D130071972", "montant": 200}, {"nom": "ANDRE", "prenom": "MARINE", "telephone": "06 81 28 95 34", "email": "marine.andre.osteo@gmail.com", "profession": "Osteopathe", "ville": "PARIS", "cp": "75006", "contrat": "AVIVA D130049822", "montant": 90}, {"nom": "ANDREANI", "prenom": "FREDERIC", "telephone": "06 14 15 87 52", "email": "frederic.andreani2b@gmail.com", "profession": "Infirmier", "ville": "PRUNELLI DE FIUMORBO", "cp": "20243", "contrat": "OPTIMUM T00027768", "montant": 300}, {"nom": "ANDREANI", "prenom": "CLAIRE", "telephone": "06 09 64 75 39", "email": "claire.andreani@hotmail.fr", "profession": "Infirmier", "ville": "CALENZANA", "cp": "20214", "contrat": "AVIVA D130070028", "montant": 100}, {"nom": "ANDREANI", "prenom": "HERVE", "telephone": "06 09 36 07 53", "email": "andreaniherve@gmail.com", "profession": "Psychologue", "ville": "FURIANI", "cp": "20600", "contrat": "AVIVA D130086013", "montant": 200}, {"nom": "ANDREANI", "prenom": "ANNE CHARLOTTE", "telephone": "06 74 58 42 00", "email": "contact@archi-aac.com", "profession": "Architecte", "ville": "BASTIA", "cp": "20200", "contrat": "AVIVA D130079815", "montant": 150}, {"nom": "ANDREAU", "prenom": "ETIENNE", "telephone": "06 86 99 95 31", "email": "dioptae@gmail.com", "profession": "Gerant", "ville": "PARIS", "cp": "75018", "contrat": "AVIVA D130060445", "montant": 700}, {"nom": "ANDREI", "prenom": "MELANIE", "telephone": "06 09 35 00 69", "email": "melanie-andrei@hotmail.fr", "profession": "Infirmier", "ville": "AJACCIO", "cp": "20090", "contrat": "AVIVA D130069093", "montant": 250}, {"nom": "ANDRIANAIVOSOA", "prenom": "PATRICIA", "telephone": "07 83 46 73 89", "email": "patricia.andrianaivosoa@gmail.com", "profession": "Infirmier", "ville": "CHATENOY EN BRESSE", "cp": "71380", "contrat": "AVIVA D130074173", "montant": 400}, {"nom": "ANDRIANNE", "prenom": "NADEGE", "telephone": "06 58 28 76 31", "email": "nadege.andrianne@hotmail.fr", "profession": "Hypnotherapeuthe", "ville": "BETHISY ST PIERRE", "cp": "60320", "contrat": "AVIVA D130093106", "montant": 120}, {"nom": "ANDRIEU", "prenom": "KAREN", "telephone": "07 86 70 61 27", "email": "kawwwen@gmail.com", "profession": "Infirmiere", "ville": "USTARITZ", "cp": "64480", "contrat": "AVIVA D130046253", "montant": 150}, {"nom": "ANDRIEUX", "prenom": "CAROLINE", "telephone": "06 66 93 00 77", "email": "kro.andrix@orange.fr", "profession": "Infirmier", "ville": "COUX", "cp": "07000", "contrat": "AVIVA D130065953", "montant": 300}, {"nom": "ANDRIEUX", "prenom": "NADEGE", "telephone": "06 73 36 41 60", "email": "nadegeandrieux23@gmail.com", "profession": "Infirmiere Liberale", "ville": "ANZEME", "cp": "23000", "contrat": "OPTIMUM T00038113", "montant": 850}, {"nom": "ANDRIOT", "prenom": "ADELINE", "telephone": "06 47 40 77 82", "email": "adeandriot@hotmail.fr", "profession": "Podologue", "ville": "MONTHELON", "cp": "71400", "contrat": "AVIVA D130046226", "montant": 105}, {"nom": "ANDRU", "prenom": "FLORIAN", "telephone": "06 80 65 05 62", "email": "audruflorian@yahoo.fr", "profession": "Kinesitherapeuthe", "ville": "MACON", "cp": "71000", "contrat": "AVIVA D130090731", "montant": 200}, {"nom": "ANDRY", "prenom": "CHLOE", "telephone": "06 33 18 76 12", "email": "andry.chloe@gmail.com", "profession": "Osteopathe", "ville": "MAULE", "cp": "78580", "contrat": "AVIVA D130046432", "montant": 100}, {"nom": "ANDURAND", "prenom": "CLAIRE", "telephone": "07 69 17 19 13", "email": "claire.a.psy@gmail.com", "profession": "Psychologue", "ville": "PAMIERS", "cp": "09100", "contrat": "AVIVA D130090444", "montant": 100}, {"nom": "ANEBRI", "prenom": "LAILA", "telephone": "06 68 09 17 56", "email": "anebri.laila@gmail.com", "profession": "Infirmiere", "ville": "ST DENIS LES REBAIS", "cp": "77510", "contrat": "AVIVA D130049978", "montant": 350}, {"nom": "ANGEL", "prenom": "FANNY", "telephone": "06 32 19 59 95", "email": "fanny.angel@hotmail.fr", "profession": "Osteopathe", "ville": "AIRE SUR L ADOUR", "cp": "40800", "contrat": "AVIVA D130048637", "montant": 600}, {"nom": "ANGELLOTTI", "prenom": "JEAN MARC", "telephone": "06 62 41 77 30", "email": "latelierdecuisineduvalois@hotmail.fr", "profession": "Cuisinier", "ville": "CREPY EN VALOIS", "cp": "60800", "contrat": "AVIVA D130089707", "montant": 400}, {"nom": "ANGELONE", "prenom": "FLORENCE", "telephone": "06 72 83 07 32", "email": "florence.angelone@laposte.net", "profession": "Infirmiere Liberale", "ville": "POUILLY EN AUXOIS", "cp": "21320", "contrat": "AVIVA E5193967", "montant": 210}, {"nom": "ANGELOTTI", "prenom": "ROSETTE", "telephone": "06 13 54 11 30", "email": "rosette.angelotti@wanadoo.fr", "profession": "Infirmiere", "ville": "BIGUGLIA", "cp": "20620", "contrat": "AVIVA D130052264", "montant": 400}, {"nom": "ANGELVY", "prenom": "JESSICA", "telephone": "06 72 68 03 63", "email": "jessica.angelvy@gmail.com", "profession": "Infirmiere Liberale", "ville": "VILLERS EN VEXIN", "cp": "27420", "contrat": "AVIVA D130055006", "montant": 300}, {"nom": "BEL-HADJ", "prenom": "ZOHRA", "telephone": "06 28 16 23 76", "email": "zohradu42@hotmail.fr", "profession": "Infirmiere", "ville": "VAULX EN VELIN", "cp": "69120", "contrat": "GENERALIVI 2292105849", "montant": 200}, {"nom": "BELHADJ", "prenom": "ABDESSALEM", "telephone": "06 36 28 78 89", "email": "abdessalem.belhadj@solinum.fr", "profession": "Gerant", "ville": "MONTIGNY LES CORMEILLES", "cp": "95370", "contrat": "AVIVA D130055035", "montant": 500}, {"nom": "BELHAJ", "prenom": "IMEN", "telephone": "06 01 46 81 27", "email": "imen.belhaj98@gmail.fr", "profession": "Infirmiere", "ville": "SCHILTIGHEIM", "cp": "67300", "contrat": "AVIVA D130065902", "montant": 150}, {"nom": "BELIARD", "prenom": "SOPHIE", "telephone": "06 43 86 51 59", "email": "fairychocolat@free.fr", "profession": "Ergotherapeute", "ville": "VILLEFONTAINE", "cp": "38090", "contrat": "AVIVA D130080166", "montant": 100}, {"nom": "BELIERES", "prenom": "LAURIE", "telephone": "06 63 05 66 07", "email": "laurie.belieres47@gmail.com", "profession": "Infirmier", "ville": "VILLENEUVE SUR LOT", "cp": "47300", "contrat": "AVIVA D130056833", "montant": 200}, {"nom": "BELIN", "prenom": "JEAN LOUIS", "telephone": "06 62 36 98 55", "email": "jlb82@gmail.com", "profession": "Infirmiere", "ville": "MARSEILLE", "cp": "13011", "contrat": "AVIVA D130054804", "montant": 300}, {"nom": "BELLAI", "prenom": "HAYAT", "telephone": "06 11 56 70 07", "email": "bellai.hayat@gmail.com", "profession": "Infirmiere", "ville": "LE PONTET", "cp": "84130", "contrat": "AVIVA D130049445", "montant": 150}, {"nom": "BELLAIRE", "prenom": "DIMITRI", "telephone": "06 90 55 13 10", "email": "dimitri.bellaire@hotmail.fr", "profession": "Infirmier", "ville": "GOYAVE", "cp": "97128", "contrat": "AVIVA D130069631", "montant": 150}, {"nom": "BELLANGER", "prenom": "MAXIME", "telephone": "06 43 81 56 92", "email": "mbellang@cisco.com", "profession": "Cadre", "ville": "COURBEVOIE", "cp": "92400", "contrat": "AVIVA D130045748", "montant": 700}, {"nom": "BELLANGER", "prenom": "DANIELLE", "telephone": "06 71 41 24 04", "email": "danielle.bellanger@dbmail.com", "profession": "Pediatre", "ville": "MARSEILLE", "cp": "13008", "contrat": "OPTIMUM T00026233", "montant": 342}, {"nom": "BELLANGER", "prenom": "CAMILLE", "telephone": "06 50 88 34 91", "email": "camille.bellanger94@gmail.com", "profession": "Orthophoniste", "ville": "LYON", "cp": "69008", "contrat": "AVIVA D130068647", "montant": 150}, {"nom": "BELLANTONIO", "prenom": "SOPHIE", "telephone": "06 60 98 96 65", "email": "sophie.bellantonio@wanadoo.fr", "profession": "Medecin Generaliste", "ville": "MAISONS ALFORT", "cp": "94700", "contrat": "AVIVA C540008916", "montant": 500}, {"nom": "BELLAY", "prenom": "KARINE", "telephone": "06 99 62 26 88", "email": "bellay.k67@gmail.com", "profession": "Infirmier", "ville": "BARBATRE", "cp": "85630", "contrat": "AVIVA D130080362", "montant": 200}, {"nom": "BELLEC", "prenom": "CAROLINE", "telephone": "06 68 24 52 92", "email": "mick.caro@orange.fr", "profession": "Infirmiere", "ville": "GARLAN", "cp": "29610", "contrat": "AVIVA D130052263", "montant": 450}, {"nom": "BELLEC", "prenom": "TATIANE", "telephone": "07 68 09 34 38", "email": "osteotbellec@gmail.com", "profession": "Osteopathe", "ville": "HURIGNY", "cp": "71870", "contrat": "AVIVA D130046550", "montant": 200}, {"nom": "BELLEMIN", "prenom": "KARINE", "telephone": "06 63 78 14 46", "email": "ka.bellemin@gmail.com", "profession": "Pediatre", "ville": "MEYZIEU", "cp": "69330", "contrat": "AVIVA D130055799", "montant": 280}, {"nom": "BELLINI", "prenom": "GERALDINE", "telephone": "06 60 78 11 65", "email": "geraldinellini@yahoo.fr", "profession": "Kinesitherapeuthe", "ville": "METZ", "cp": "57000", "contrat": "AVIVA D130060979", "montant": 600}, {"nom": "BELLINO RELIN", "prenom": "MARY", "telephone": "06 95 23 45 86", "email": "rmbellino@gmail.com", "profession": "Graphiste", "ville": "LILLE", "cp": "59800", "contrat": "AVIVA D130087199", "montant": 400}, {"nom": "BELLIOT", "prenom": "CAMILLE", "telephone": "06 32 62 48 02", "email": "camille.belliot@icloud.com", "profession": "Graphiste", "ville": "MARSEILLE", "cp": "13004", "contrat": "AVIVA D130071053", "montant": 300}, {"nom": "BELLON", "prenom": "FLORENCE", "telephone": "06 37 53 93 38", "email": "bellon.florence0524@gmail.com", "profession": "Infirmiere", "ville": "GAP", "cp": "05000", "contrat": "AVIVA D130059426", "montant": 200}, {"nom": "BELORGEY", "prenom": "ODILE", "telephone": "06 60 74 32 48", "email": "odilebret@gmail.com", "profession": "Infirmier", "ville": "BANDOL", "cp": "83150", "contrat": "AVIVA E5059469", "montant": 300}, {"nom": "BELTRAMI", "prenom": "LAETITIA", "telephone": "06 81 85 12 43", "email": "beltrami.laetitia@orange.fr", "profession": "Infirmiere", "ville": "SIGNY L ABBAYE", "cp": "08460", "contrat": "AVIVA D130057069", "montant": 300}, {"nom": "BELUCHE", "prenom": "ODILE", "telephone": "06 80 30 97 17", "email": "belucheodile@yahoo.com", "profession": "Infirmiere", "ville": "CUVE", "cp": "70800", "contrat": "AVIVA D130081780", "montant": 400}, {"nom": "BEMBO", "prenom": "CORENTIN", "telephone": "06 65 44 82 39", "email": "corentinbembo@gmail.com", "profession": "Osteopathe", "ville": "CANNES", "cp": "06400", "contrat": "AVIVA D130083450", "montant": 150}, {"nom": "BEN ABDELJELIL", "prenom": "MARJORIE", "telephone": "06 71 11 12 96", "email": "marjojacko@gmail.com", "profession": "Infirmier", "ville": "HOUPLIN ANCOISNE", "cp": "59263", "contrat": "AVIVA D130073746", "montant": 100}, {"nom": "BEN ABDELLAH", "prenom": "SOUAD", "telephone": "06 11 71 03 59", "email": "blancheneigee@yahoo.fr", "profession": "Infirmier", "ville": "DIJON", "cp": "21000", "contrat": "AVIVA D130077512", "montant": 100}, {"nom": "BEN AMAR", "prenom": "BADRA", "telephone": "06 20 29 23 89", "email": "badrabenamar@yahoo.fr", "profession": "Infirmiere", "ville": "MONTELIMAR", "cp": "26200", "contrat": "AVIVA D130058857", "montant": 150}, {"nom": "BEN AMOR", "prenom": "DONIA", "telephone": "06 15 32 06 19", "email": "donia.bmr@gmail.com", "profession": "Infirmiere", "ville": "MARSEILLE", "cp": "13015", "contrat": "AVIVA D130060999", "montant": 150}, {"nom": "BEN AMOU", "prenom": "CORINNE", "telephone": "06 76 47 55 95", "email": "corinneparty@yahoo.fr", "profession": "Psychologue", "ville": "ST LEON SUR VEZERE", "cp": "24290", "contrat": "OPTIMUM T00003308", "montant": 100}, {"nom": "BEN CHAHATA", "prenom": "PASCALINE", "telephone": "06 03 35 16 74", "email": "benchahata.pascaline@yahoo.fr", "profession": "Infirmiere Liberale", "ville": "ST MARIEN", "cp": "23600", "contrat": "AVIVA D130059126", "montant": 800}, {"nom": "BEN FATAH", "prenom": "CAROLINE", "telephone": "06 16 92 73 86", "email": "carolinemkde@hotmail.fr", "profession": "Kinesitherapeuthe", "ville": "CHAMBERY", "cp": "73000", "contrat": "OPTIMUM T00024654", "montant": 200}, {"nom": "BEN FRAJ", "prenom": "LILIA", "telephone": "06 76 90 90 35", "email": "lilia-benfraj@hotmail.fr", "profession": "Ergotherapeute", "ville": "CAMBRAI", "cp": "59400", "contrat": "AVIVA D130070594", "montant": 250}, {"nom": "BOULONGNE", "prenom": "BETTY", "telephone": "06 50 77 90 35", "email": "boulongne.betty78@hotmail.fr", "profession": "Infirmiere", "ville": "THAIRE", "cp": "17290", "contrat": "AVIVA D130057844", "montant": 200}, {"nom": "BOULY", "prenom": "DAVID", "telephone": "06 80 70 41 90", "email": "gwenetdavid@hotmail.com", "profession": "Infirmier", "ville": "CHATEAU L ABBAYE", "cp": "59230", "contrat": "AVIVA D130074336", "montant": 150}, {"nom": "BOULZE", "prenom": "EMILIE", "telephone": "06 68 12 44 11", "email": "emilie.boulze@gmail.com", "profession": "Medecin", "ville": "VAL D ISERE", "cp": "73150", "contrat": "AVIVA D130099418", "montant": 300}, {"nom": "BOUMERDAS", "prenom": "DJAHID", "telephone": "06 61 93 10 22", "email": "djahid34200@gmail.com", "profession": "Infirmier", "ville": "SETE", "cp": "34200", "contrat": "AVIVA D130055230", "montant": 500}, {"nom": "BOUNOUA", "prenom": "LYDIA", "telephone": "06 29 24 06 10", "email": "lydia.allab@gmail.com", "profession": "Infirmiere", "ville": "CHAMPIGNY SUR MARNE", "cp": "94500", "contrat": "AVIVA D130057550", "montant": 400}, {"nom": "BOUQUET", "prenom": "CECILE", "telephone": "06 84 59 36 76", "email": "c.bouquet2014@gmail.com", "profession": "Infirmier", "ville": "OBERGAILBACH", "cp": "57720", "contrat": "AVIVA D130065465", "montant": 100}, {"nom": "BOUQUET", "prenom": "CAROLINE", "telephone": "06 90 41 03 32", "email": "loukaroline2012@gmail.com", "profession": "Kinesitherapeuthe", "ville": "BAILLIF", "cp": "97123", "contrat": "AVIVA D130044103", "montant": 300}, {"nom": "BOUQUET", "prenom": "LAURA", "telephone": "06 37 57 64 54", "email": "lbouquet76@gmail.com", "profession": "Medecin Generaliste", "ville": "CAUVILLE SUR MER", "cp": "76930", "contrat": "AVIVA D130090627", "montant": 500}, {"nom": "BOUQUILLON", "prenom": "FRANCOISE", "telephone": "06 22 23 01 85", "email": "francoisebouquillon.idel@hotmail.com", "profession": "Infirmiere Liberale", "ville": "BAZOCHES LES GALLERANDES", "cp": "45480", "contrat": "AVIVA D130081101", "montant": 437}, {"nom": "BOUR", "prenom": "JULIE", "telephone": "07 71 29 05 22", "email": "juliebehr@outlook.fr", "profession": "Infirmiere", "ville": "PETIT REDERCHING", "cp": "57410", "contrat": "AVIVA D130055608", "montant": 200}, {"nom": "BOUR", "prenom": "AUDREY", "telephone": "06 73 52 15 25", "email": "audrey.bour@gmail.com", "profession": "Veterinaire", "ville": "VILLEBERNIER", "cp": "49400", "contrat": "AVIVA D130076116", "montant": 150}, {"nom": "BOURACHOT", "prenom": "VALERIE", "telephone": "06 95 06 36 48", "email": "valerie.bourachot@iadfrance.fr", "profession": "Mandataire Immobilier", "ville": "TROYES", "cp": "10000", "contrat": "AVIVA D130101888", "montant": 80}, {"nom": "BOURAUD", "prenom": "JEREMY", "telephone": "06 86 37 48 34", "email": "jnouraudpodo@gmail.com", "profession": "Podologue", "ville": "MONTROUGE", "cp": "92120", "contrat": "AVIVA D130081181", "montant": 200}, {"nom": "BOURBIER", "prenom": "HUGO", "telephone": "06 07 29 58 66", "email": "hbourbier@icloud.com", "profession": "Dentiste", "ville": "CLOHARS CARNOET", "cp": "29360", "contrat": "AVIVA D130087330", "montant": 1800}, {"nom": "BOURBON", "prenom": "NATHALIE", "telephone": "06 22 97 06 67", "email": "bourbon.nat@orange.fr", "profession": "Infirmiere", "ville": "LE FRANCOIS", "cp": "97240", "contrat": "AVIVA D130053218", "montant": 350}, {"nom": "BOURBON", "prenom": "SANDRA", "telephone": "06 72 16 98 57", "email": "dra.30@hotmail.fr", "profession": "Infirmier", "ville": "PIGNAN", "cp": "34570", "contrat": "AVIVA D130045554", "montant": 300}, {"nom": "BOURBOTTE", "prenom": "FANNY", "telephone": "06 06 48 13 86", "email": "fanny.bte@sfr.fr", "profession": "Kinesitherapeuthe", "ville": "BERCHERES LES PIERRES", "cp": "28630", "contrat": "AVIVA D130088376", "montant": 300}, {"nom": "BOURDAIS", "prenom": "VIRGINIE", "telephone": "06 81 49 38 74", "email": "v.bourdais@live.fr", "profession": "Infirmiere", "ville": "CAMPUGNAN", "cp": "33390", "contrat": "AVIVA D130049462", "montant": 150}, {"nom": "BOURDEREAU", "prenom": "BENEDICTE", "telephone": "07 67 52 67 25", "email": "benedicte.bourdereau@gmail.com", "profession": "Kinesitherapeuthe", "ville": "LINIERS", "cp": "86800", "contrat": "AVIVA D130083695", "montant": 100}, {"nom": "BOURDIN", "prenom": "LUCILE", "telephone": "06 98 63 90 34", "email": "bourdin.lucile@gmail.com", "profession": "Psychologue", "ville": "ST JACQUES DE LA LANDE", "cp": "35136", "contrat": "AVIVA D130048945", "montant": 200}, {"nom": "BOURDON", "prenom": "SYLVIE", "telephone": "06 78 95 05 85", "email": "sylvie01_7@hotmail.fr", "profession": "Psychologue", "ville": "ST ALBAN", "cp": "31140", "contrat": "OPTIMUM T00027688", "montant": 150}, {"nom": "BOURDONCLE", "prenom": "JEAN-LOUIS", "telephone": "06 94 23 16 96", "email": "laurily1@hotmail.fr", "profession": "Radiologue", "ville": "MONTSINERY", "cp": "97356", "contrat": "AVIVA C900060701", "montant": 1000}, {"nom": "BOUREZ MATHON", "prenom": "NATHALIE", "telephone": "06 63 85 12 70", "email": "nathalie.bourez.infirmiere@gmail.com", "profession": "Infirmiere", "ville": "AUCHEL", "cp": "62260", "contrat": "AVIVA D130017719", "montant": 350}, {"nom": "BOURGAREL", "prenom": "THOMAS", "telephone": "07 86 12 96 52", "email": "thomas.bourgarel@gmail.com", "profession": "Kinesitherapeuthe", "ville": "ISSY LES MOULINEAUX", "cp": "92130", "contrat": "AVIVA D130064678", "montant": 500}, {"nom": "BOURGEOIS", "prenom": "VALENTIN", "telephone": "06 95 69 64 98", "email": "valentin.bourgeois@outlook.fr", "profession": "Osteopathe", "ville": "ASNIERES SUR SEINE", "cp": "92600", "contrat": "AVIVA D130095415", "montant": 50}, {"nom": "BOURGEOIS", "prenom": "VIRGINIE", "telephone": "07 66 86 46 97", "email": "giniebourgeois@yahoo.fr", "profession": "Infirmiere", "ville": "FRANOIS", "cp": "25770", "contrat": "AVIVA D130059839", "montant": 500}, {"nom": "BOURGEOIS", "prenom": "KENNY", "telephone": "06 50 81 29 85", "email": "bourgeois.kenny@hotmail.fr", "profession": "Osteopathe", "ville": "NEUILLY SUR SEINE", "cp": "92200", "contrat": "AVIVA D130048975", "montant": 200}, {"nom": "BOURGEOIS", "prenom": "CATHERINE", "telephone": "06 70 84 28 19", "email": "cathie1970@orange.fr", "profession": "Infirmiere", "ville": "LAIX", "cp": "54720", "contrat": "AVIVA D130043472", "montant": 600}, {"nom": "BOURGEOIS", "prenom": "CHARLOTTE", "telephone": "06 02 07 09 06", "email": "bourgeois.charlotte.ide@gmail.com", "profession": "Infirmier", "ville": "VILLAINES SOUS MALICORNE", "cp": "72270", "contrat": "OPTIMUM T00023593", "montant": 200}, {"nom": "BOURGEOIS", "prenom": "LAURA", "telephone": "06 58 51 46 06", "email": "laura.bourgeois@hotmail.fr", "profession": "Osteopathe", "ville": "ST GEORGES SUR BAULCHE", "cp": "89000", "contrat": "AVIVA D130054669", "montant": 100}, {"nom": "CHACON", "prenom": "RUDDY", "telephone": "06 31 65 93 68", "email": "ruddy.chacon@laposte.net", "profession": "Infirmier", "ville": "JASSANS RIOTTIER", "cp": "01480", "contrat": "AVIVA D130043557", "montant": 200}, {"nom": "CHADER", "prenom": "SOFYAN", "telephone": "06 52 72 62 43", "email": "sofyan.chader69@gmail.com", "profession": "Coach Sportif", "ville": "LEMPDES", "cp": "63370", "contrat": "AVIVA D130067929", "montant": 500}, {"nom": "CHALAFFRE", "prenom": "CHLOE", "telephone": "06 44 36 30 82", "email": "chloe-chalaffre@orange.fr", "profession": "Kinesitherapeuthe", "ville": "ST GERMAIN LEMBRON", "cp": "63340", "contrat": "AVIVA D130082637", "montant": 300}, {"nom": "CHALARD", "prenom": "MARIE", "telephone": "06 79 71 22 29", "email": "marchala83@gmail.com", "profession": "Sage-Femme", "ville": "AUCAMVILLE", "cp": "31140", "contrat": "AVIVA D130083020", "montant": 300}, {"nom": "CHALLAMEL", "prenom": "MARION", "telephone": "06 01 63 37 07", "email": "challamel.marion@gmail.com", "profession": "Infirmier", "ville": "ST JEOIRE EN FAUCIGNY", "cp": "74490", "contrat": "AVIVA D130070615", "montant": 300}, {"nom": "CHAMBOLLE", "prenom": "ESTELLE", "telephone": "07 72 11 64 46", "email": "estellechambolle@hotmail.com", "profession": "Infirmiere Liberale", "ville": "TORCE EN VALLEE", "cp": "72110", "contrat": "AVIVA D130047892", "montant": 200}, {"nom": "CHAMBON", "prenom": "THOMAS", "telephone": "06 48 94 58 88", "email": "chambon.thomas1995@gmail.com", "profession": "Podologue", "ville": "MASSY", "cp": "91300", "contrat": "AVIVA D130085344", "montant": 300}, {"nom": "CHAMIGNON", "prenom": "ANOUK", "telephone": "07 62 63 81 52", "email": "contact.chiro.chamignon@gmail.com", "profession": "Chiropracteur", "ville": "LILLE", "cp": "59800", "contrat": "AVIVA D130075792", "montant": 50}, {"nom": "CRUCHAUDET", "prenom": "THOMAS", "telephone": "07 52 62 10 97", "email": "thomas.cruchaudet@gmail.com", "profession": "Infirmier", "ville": "IRIGNY", "cp": "69540", "contrat": "AVIVA D130053283", "montant": 500}, {"nom": "CRUCHE", "prenom": "LOUISA", "telephone": "06 75 22 35 73", "email": "louisa.cruche.ortgho@gmail.com", "profession": "Orthophoniste", "ville": "CHERRE", "cp": "72400", "contrat": "AVIVA E5159635", "montant": 200}, {"nom": "CRUGNOLA", "prenom": "SOAZIG", "telephone": "06 60 80 78 40", "email": "soazig.crugnola@sfr.fr", "profession": "Infirmier", "ville": "MOYEUVRE GRANDE", "cp": "57250", "contrat": "AVIVA D130044939", "montant": 100}, {"nom": "CRUSSON", "prenom": "MARIE CLAUDE", "telephone": "06 72 20 04 02", "email": "mc.crusson@sfr.fr", "profession": "Osteopathe", "ville": "ST RAPHAEL", "cp": "83700", "contrat": "AVIVA D130079423", "montant": 300}, {"nom": "CRUZOE", "prenom": "MELISSA", "telephone": "07 83 87 05 94", "email": "melissapodo7@gmail.com", "profession": "Podologue", "ville": "DUCOS", "cp": "97224", "contrat": "AVIVA D130076398", "montant": 150}, {"nom": "CSABI", "prenom": "MARTA", "telephone": "06 58 22 59 56", "email": "casabi.marta@outlook.fr", "profession": "Kinesitherapeuthe", "ville": "CALUIRE ET CUIRE", "cp": "69300", "contrat": "AVIVA D130076023", "montant": 200}, {"nom": "CUBERTAFOND", "prenom": "JULIE", "telephone": "06 13 25 56 95", "email": "julie.cubertafond.jc@gmail.com", "profession": "Osteopathe", "ville": "LYON", "cp": "69006", "contrat": "AVIVA D130047004", "montant": 100}, {"nom": "CUETO", "prenom": "CEDRIC", "telephone": "07 71 58 37 20", "email": "cedric_cueto66@yahoo.fr", "profession": "Veterinaire", "ville": "ST ESTEVE", "cp": "66240", "contrat": "AVIVA D130063352", "montant": 300}, {"nom": "CUEYSSE", "prenom": "CHRISTELLE", "telephone": "06 58 44 78 68", "email": "kry.cueysse@gmail.com", "profession": "Infirmier", "ville": "LA LOUBIERE", "cp": "12740", "contrat": "AVIVA D130067500", "montant": 400}, {"nom": "CUGNET", "prenom": "HORTENSE", "telephone": "06 76 81 46 66", "email": "hortense.cugnet@hotmail.fr", "profession": "Orthophoniste", "ville": "BORDEAUX", "cp": "33000", "contrat": "AVIVA D130057871", "montant": 250}, {"nom": "CUILLERDIER", "prenom": "CHLOE", "telephone": "06 79 79 70 91", "email": "cuillerdierchloe@gmail.com", "profession": "Infirmiere", "ville": "CHATEAUDUN", "cp": "28200", "contrat": "AVIVA D130052561", "montant": 500}, {"nom": "CUISINIER", "prenom": "MANON", "telephone": "06 61 62 08 26", "email": "manon.cuisinier21@gmail.com", "profession": "Infirmier", "ville": "MASSINGY LES SEMUR", "cp": "21140", "contrat": "AVIVA D130054838", "montant": 300}, {"nom": "CUIZINAUD", "prenom": "LUCILE", "telephone": "06 72 90 85 99", "email": "cuizinaudl.irfssl@yahoo.fr", "profession": "Kinesitherapeuthe", "ville": "TOULOUSE", "cp": "31300", "contrat": "AVIVA D130078458", "montant": 300}, {"nom": "CULIOLI", "prenom": "GWENDOLINE", "telephone": "06 77 05 67 85", "email": "gwendoline.culioli@orange.fr", "profession": "Pharmacien", "ville": "QUEVEN", "cp": "56530", "contrat": "OPTIMUM T00029098", "montant": 300}, {"nom": "CULLI ZEISSLOFF", "prenom": "ALTEA", "telephone": "06 63 27 14 12", "email": "alteaculli@pm.me", "profession": "Psychologue", "ville": "STRASBOURG", "cp": "67000", "contrat": "AVIVA D130071308", "montant": 220}, {"nom": "CUNY", "prenom": "NATACHA", "telephone": "06 85 65 66 41", "email": "natachacuny@orange.fr", "profession": "Infirmiere Liberale", "ville": "DAMPIERRE EN BRAY", "cp": "76220", "contrat": "AVIVA D130064975", "montant": 200}, {"nom": "CUPSA", "prenom": "MARIUS", "telephone": "06 46 28 66 01", "email": "marius.cupsa1975@yahoo.fr", "profession": "Kinesitherapeuthe", "ville": "JONQUIERES ST VINCENT", "cp": "30300", "contrat": "AVIVA D130067198", "montant": 350}, {"nom": "CURIEN", "prenom": "ALAN", "telephone": "06 31 74 69 66", "email": "alan.curien@yahoo.fr", "profession": "Infirmier", "ville": "CHOISY", "cp": "74330", "contrat": "AVIVA D130042800", "montant": 300}, {"nom": "CURIA", "prenom": "LUIGI", "telephone": "07 67 06 64 89", "email": "luigi.curia81@gmail.com", "profession": "Kinesitherapeuthe", "ville": "CANNES LA BOCCA", "cp": "06150", "contrat": "AVIVA D130087068", "montant": 300}, {"nom": "CURT", "prenom": "AUDREY", "telephone": "06 17 82 59 16", "email": "curt.audrey@gmail.com", "profession": "Infirmier", "ville": "LYON", "cp": "69003", "contrat": "AVIVA D130050140", "montant": 300}, {"nom": "CURTO", "prenom": "AUDREY", "telephone": "06 78 02 48 18", "email": "audreycurto08@hotmail.fr", "profession": "Infirmier", "ville": "MARSEILLE", "cp": "13012", "contrat": "AVIVA D130084024", "montant": 150}, {"nom": "CUSSAC", "prenom": "YVANA", "telephone": "06 43 75 40 62", "email": "cussacyvana@gmail.com", "profession": "Orthoptiste", "ville": "TOULOUSE", "cp": "31000", "contrat": "AVIVA D130067920", "montant": 100}, {"nom": "CUVELIER", "prenom": "ANTHONY", "telephone": "06 38 58 94 89", "email": "acuvelier83@gmail.com", "profession": "Infirmier", "ville": "LA VALETTE DU VAR", "cp": "83160", "contrat": "AVIVA D130080909", "montant": 400}, {"nom": "CUVILLIER", "prenom": "BLANDINE", "telephone": "06 31 47 97 00", "email": "blandinecuvillier3@gmail.com", "profession": "Kinesitherapeuthe", "ville": "RADINGHEM EN WEPPES", "cp": "59320", "contrat": "AVIVA D130074576", "montant": 500}, {"nom": "DESRAMAUX", "prenom": "NORA", "telephone": "06 75 12 80 94", "email": "nora.brochart@gmail.com", "profession": "Infirmier", "ville": "ANDERNOS LES BAINS", "cp": "33510", "contrat": "AVIVA D130096387", "montant": 300}, {"nom": "DESRIAC", "prenom": "SOIZICK", "telephone": "06 03 48 93 56", "email": "soizick.desriac@orange.fr", "profession": "Infirmier", "ville": "VILLEPOT", "cp": "44110", "contrat": "AVIVA D130071487", "montant": 200}, {"nom": "DESROCHES", "prenom": "JENNIFER", "telephone": "06 25 19 30 57", "email": "jenniferdesroches@hotmail.fr", "profession": "Infirmiere Liberale", "ville": "ST PIERRE DU BOSGUERARD", "cp": "27370", "contrat": "AVIVA D130067557", "montant": 400}, {"nom": "DESSEIN", "prenom": "ANTOINE", "telephone": "06 05 11 65 97", "email": "antoinedessein@live.fr", "profession": "Podologue", "ville": "DOUVRIN", "cp": "62138", "contrat": "OPTIMUM T00027116", "montant": 300}, {"nom": "DESSERRE", "prenom": "MARION", "telephone": "06 37 89 84 20", "email": "desserre.marion@gmail.com", "profession": "Infirmiere Liberale", "ville": "TOURS", "cp": "37000", "contrat": "OPTIMUM T00039602", "montant": 300}, {"nom": "DESSERY", "prenom": "MATTHIEU", "telephone": "06 70 50 08 58", "email": "m.dessery@live.fr", "profession": "Evenementiel", "ville": "PROVINS", "cp": "77160", "contrat": "AVIVA D130089234", "montant": 820}, {"nom": "DESSOLLE", "prenom": "MATHILDE", "telephone": "06 48 84 54 35", "email": "mathilde.desolle@gmail.com", "profession": "Kinesitherapeuthe", "ville": "HERRLISHEIM", "cp": "67850", "contrat": "AVIVA D130093216", "montant": 300}, {"nom": "DETOLLENAERE", "prenom": "FANNY", "telephone": "06 13 02 74 47", "email": "fannydetollenaere@yahoo.com", "profession": "Infirmier", "ville": "BAILLEUL", "cp": "59270", "contrat": "AVIVA D130068126", "montant": 700}, {"nom": "DEUDON", "prenom": "ANNA", "telephone": "06 84 24 08 51", "email": "annadeudon@gmail.com", "profession": "Infirmier", "ville": "FAVARS", "cp": "19330", "contrat": "AVIVA D130079096", "montant": 200}, {"nom": "DEUSY", "prenom": "VALERIE", "telephone": "06 25 01 11 58", "email": "valerie.s0815@orange.fr", "profession": "Infirmiere", "ville": "AIX NOULETTE", "cp": "62160", "contrat": "AVIVA D130093751", "montant": 300}, {"nom": "DEVAUCHELLE", "prenom": "PASCALE", "telephone": "06 62 21 11 16", "email": "pdevauchelle@free.fr", "profession": "Infirmier", "ville": "MONTPELLIER", "cp": "34080", "contrat": "AVIVA D130069380", "montant": 230}, {"nom": "FADILI", "prenom": "MINA", "telephone": "06 17 05 01 39", "email": "mathis28100@outlook.fr", "profession": "Infirmiere", "ville": "DREUX", "cp": "28100", "contrat": "AVIVA D130086933", "montant": 150}, {"nom": "FAFFA", "prenom": "MARIE SARAH", "telephone": "06 76 04 22 03", "email": "faffa.dermato@gmail.com", "profession": "Dermatologue", "ville": "CABRIES", "cp": "13480", "contrat": "AVIVA D130093000", "montant": 700}, {"nom": "FAGGION", "prenom": "TIFENN", "telephone": "06 32 85 73 26", "email": "faggion.tifenn@gmail.com", "profession": "Infirmiere Liberale", "ville": "BELFORT", "cp": "90000", "contrat": "AVIVA D130049329", "montant": 200}, {"nom": "FAILLIE", "prenom": "CAROLINE", "telephone": "06 70 51 85 74", "email": "gregory.faillie@orange.fr", "profession": "Medecin Generaliste", "ville": "CAZES MONDENARD", "cp": "82110", "contrat": "AVIVA D130080801", "montant": 400}, {"nom": "FALCOZ", "prenom": "VANESSA", "telephone": "06 30 66 65 71", "email": "vanou.falcoz@gmail.com", "profession": "Infirmier", "ville": "DOLE", "cp": "39100", "contrat": "AVIVA D130073300", "montant": 450}, {"nom": "FALK", "prenom": "JONATHAN", "telephone": "06 64 37 69 64", "email": "falkjonathan@yahoo.fr", "profession": "Infirmier", "ville": "VILLE D AVRAY", "cp": "92410", "contrat": "AVIVA D130066837", "montant": 950}, {"nom": "FAMAHA", "prenom": "SILVINE", "telephone": "06 09 37 92 37", "email": "f.sylvine@gmail.com", "profession": "Infirmier", "ville": "AULNAY SOUS BOIS", "cp": "93600", "contrat": "OPTIMUM T00032627", "montant": 350}, {"nom": "FANCIULLI", "prenom": "CAROLE", "telephone": "06 87 11 97 42", "email": "carolefanciulli@gmail.com", "profession": "Infirmiere", "ville": "LE CANNET", "cp": "06110", "contrat": "AVIVA D130053512", "montant": 400}, {"nom": "FANGET", "prenom": "CECILE", "telephone": "06 18 42 61 23", "email": "fanget.cecile@gmail.com", "profession": "Gynecologue", "ville": "ST ETIENNE", "cp": "42100", "contrat": "GENERALIVI 2292105264", "montant": 500}, {"nom": "FARAUT", "prenom": "HUGUES", "telephone": "06 34 07 59 82", "email": "hugues.faraut@gmail.com", "profession": "Psychologue", "ville": "AULNAY SOUS BOIS", "cp": "93600", "contrat": "AVIVA D130086667", "montant": 100}, {"nom": "FARAUX", "prenom": "CORINNE", "telephone": "07 88 47 97 31", "email": "corifaraux@orange.fr", "profession": "Infirmiere", "ville": "LES ABYMES", "cp": "97139", "contrat": "AVIVA D130044835", "montant": 100}, {"nom": "FARCY", "prenom": "ESTELLE", "telephone": "06 14 77 52 60", "email": "cyfar14@hotmail.com", "profession": "Kinesitherapeuthe", "ville": "ST DESIR", "cp": "14100", "contrat": "AVIVA D130078467", "montant": 450}, {"nom": "GAZEAU", "prenom": "CHRISTIAN", "telephone": "06 76 85 26 56", "email": "christiangazeau@free.fr", "profession": "Hotesse De Lair", "ville": "LE RAINCY", "cp": "93340", "contrat": "AVIVA D130046466", "montant": 330}, {"nom": "GBEDO", "prenom": "LORRIS", "telephone": "06 50 09 09 11", "email": "lorris@evolinedigital.com", "profession": "Informaticien", "ville": "ARGENTEUIL", "cp": "95100", "contrat": "AVIVA D130063795", "montant": 800}, {"nom": "GDOWSKI", "prenom": "STEPHANIE", "telephone": "06 71 06 45 51", "email": "gdowskistephanie@yahoo.fr", "profession": "Infirmiere", "ville": "QUINEVILLE", "cp": "50310", "contrat": "AVIVA D130058822", "montant": 150}, {"nom": "GECCHELE", "prenom": "WILFRIED", "telephone": "06 28 61 34 26", "email": "wilfred.gecchele@gmail.com", "profession": "Kinesitherapeuthe", "ville": "LOIRE AUTHION", "cp": "49250", "contrat": "AVIVA D130073483", "montant": 150}, {"nom": "GEHIN", "prenom": "PAULINE", "telephone": "06 58 98 11 09", "email": "gehin.pauline@gmail.com", "profession": "Kinesitherapeuthe", "ville": "URCUIT", "cp": "64990", "contrat": "AVIVA D130055393", "montant": 200}, {"nom": "GELLENONCOURT", "prenom": "LUCIE", "telephone": "07 63 56 23 51", "email": "gellenoncourt.lucie@orange.fr", "profession": "Orthophoniste", "ville": "JEZAINVILLE", "cp": "54700", "contrat": "AVIVA D130077693", "montant": 250}, {"nom": "GEMIEUX", "prenom": "FANNY", "telephone": "06 60 07 24 51", "email": "gemieuxfanny@hotmail.fr", "profession": "Psychologue", "ville": "TOULOUSE", "cp": "31200", "contrat": "AVIVA D130075035", "montant": 500}, {"nom": "GEMIN", "prenom": "FANY", "telephone": "06 73 03 82 24", "email": "f.gemin@hotmail.fr", "profession": "Orthophoniste", "ville": "SEYSSINET PARISET", "cp": "38170", "contrat": "AVIVA D130080234", "montant": 150}, {"nom": "GENCE", "prenom": "AMANDA", "telephone": "06 16 73 39 10", "email": "amanda.gence@gmail.com", "profession": "Infirmier", "ville": "HOULBEC COCHEREL", "cp": "27120", "contrat": "AVIVA D130049083", "montant": 500}, {"nom": "GENDRE", "prenom": "SOPHIE", "telephone": "07 71 05 06 48", "email": "sophieetthierry@orange.fr", "profession": "Infirmier", "ville": "LAYRAC", "cp": "47390", "contrat": "OPTIMUM T00024388", "montant": 250}, {"nom": "GENET", "prenom": "ANGELIQUE", "telephone": "06 73 53 26 69", "email": "angeliquegenet@orange.fr", "profession": "Infirmiere", "ville": "ECOYEUX", "cp": "17770", "contrat": "AVIVA D130059210", "montant": 90}, {"nom": "GENET MINIER", "prenom": "ISABELLE", "telephone": "06 42 28 73 85", "email": "isabelle.minier@icloud.com", "profession": "Infirmier", "ville": "LANNION", "cp": "22300", "contrat": "AVIVA D130084332", "montant": 650}, {"nom": "GENTIL", "prenom": "DOMINIQUE", "telephone": "06 41 71 86 30", "email": "fgdg0699@orange.fr", "profession": "Infirmier", "ville": "PRIMARETTE", "cp": "38270", "contrat": "AVIVA D130052128", "montant": 300}, {"nom": "GENTIL", "prenom": "PRISCILLA", "telephone": "06 62 04 80 11", "email": "priscilla.gentil.psy@gmail.com", "profession": "Psychologue", "ville": "MONTVILLE", "cp": "76710", "contrat": "AVIVA D130080102", "montant": 150}, {"nom": "GENTY", "prenom": "MARIE", "telephone": "06 16 01 57 54", "email": "jacquot.marie@laposte.net", "profession": "Infirmier", "ville": "ST MAURICE AUX FORGES", "cp": "54540", "contrat": "AVIVA C900055430", "montant": 150}, {"nom": "GENY", "prenom": "SOPHIE", "telephone": "06 33 31 58 44", "email": "genysophie@orange.fr", "profession": "Infirmier", "ville": "LIBOURNE", "cp": "33500", "contrat": "AVIVA D130069120", "montant": 150}, {"nom": "GENISSEL", "prenom": "VERONIQUE", "telephone": "07 68 34 21 19", "email": "jumpong@hotmail.fr", "profession": "Infirmier", "ville": "TREMEVEN", "cp": "22290", "contrat": "AVIVA D130077645", "montant": 200}];
+
+const TEAM_DATA = [
+  {nom:"ZEREBECKI",prenom:"GRZEGORZ",profession:"Masseur-kinésithérapeute",telephone:"07 67 26 73 40",ville:"CHATEAU THIERRY",dept:"Aisne",dda:"02/01/2024",statut_prosp:"VALIDÉ"},
+  {nom:"HEYSEN",prenom:"SEBASTIEN",profession:"Infirmier",telephone:"06 09 65 12 12",ville:"TOMBLAINE",dept:"Meurthe et Moselle",dda:"02/01/2024",statut_prosp:"NRP1"},
+  {nom:"BARRIENTOS",prenom:"ANAIS",profession:"Infirmier",telephone:"07 45 26 29 12",ville:"REIMS",dept:"Marne",dda:"01/01/2024",statut_prosp:"KO"},
+  {nom:"DEKOKER",prenom:"CAMILLE",profession:"Masseur-kinésithérapeute",telephone:"02 48 21 02 51",ville:"BOURGES",dept:"Cher",dda:"19/10/2023",statut_prosp:"VALIDÉ"},
+  {nom:"LAIGLE",prenom:"ESTELLE",profession:"Infirmier",telephone:"06 36 08 17 07",ville:"BERTRICHAMPS",dept:"Meurthe et Moselle",dda:"01/09/2023",statut_prosp:"VALIDÉ"},
+  {nom:"FAVRE",prenom:"LISA",profession:"Masseur-kinésithérapeute",telephone:"06 30 52 52 50",ville:"DIVONNE LES BAINS",dept:"Ain",dda:"24/07/2023",statut_prosp:"NRP1"},
+  {nom:"ALLARD",prenom:"GUILLAUME",profession:"Infirmier",telephone:"07 66 03 81 59",ville:"LAY ST CHRISTOPHE",dept:"Meurthe et Moselle",dda:"28/02/2022",statut_prosp:"VALIDÉ"},
+  {nom:"GARNIER",prenom:"CAROLE",profession:"Infirmier",telephone:"07 66 89 85 97",ville:"REIMS",dept:"Marne",dda:"01/02/2023",statut_prosp:"NRP1"},
+  {nom:"PIERPAOLI",prenom:"MARINE",profession:"Sage-femme",telephone:"03 67 47 07 19",ville:"STE RUFFINE",dept:"Moselle",dda:"18/12/2023",statut_prosp:"A RAP"},
+  {nom:"MERCIER",prenom:"SARAH",profession:"Masseur-kinésithérapeute",telephone:"06 68 47 51 72",ville:"HURIEL",dept:"Allier",dda:"07/12/2022",statut_prosp:"NRP1"},
+  {nom:"BERNARD",prenom:"CAROLINE",profession:"Infirmier",telephone:"06 38 20 71 15",ville:"TAISSY",dept:"Marne",dda:"14/03/2022",statut_prosp:"NRP1"},
+  {nom:"PERCHET",prenom:"DAMIEN",profession:"Masseur-kinésithérapeute",telephone:"07 76 33 89 51",ville:"NEYRON",dept:"Ain",dda:"22/09/2021",statut_prosp:"NRP1"},
+];
+
+const OPTI_DATA = [
+  {nom:"VESSIERE",prenom:"JOHANNE",naissance:"17/02/1992",telephone:"06 75 64 62 58",ville:"CROISY SUR ANDELLE",montant:250,statut_contrat:"Renonciation"},
+  {nom:"WARUSFEL",prenom:"CORALINE",naissance:"30/01/1993",telephone:"06 87 06 98 07",ville:"HENIN BEAUMONT",montant:300,statut_contrat:"Renonciation"},
+  {nom:"PAULOS",prenom:"LAETITIA",naissance:"23/04/1993",telephone:"07 67 90 90 21",ville:"MONTEVRAIN",montant:550,statut_contrat:"Renonciation",commentaire:"DEJA RE SIGNÉ ET RE DECOM"},
+  {nom:"RIBO",prenom:"VINCENT",naissance:"02/03/1997",telephone:"07 87 74 52 88",ville:"TOULOUSE",montant:200,statut_contrat:"Renonciation",commentaire:"SIGNÉ SPP95"},
+  {nom:"RICHARD",prenom:"CECILIA",naissance:"16/04/1989",telephone:"07 61 18 59 44",ville:"NICE",montant:400,statut_contrat:"Renonciation"},
+  {nom:"SAY",prenom:"ROMAIN",naissance:"14/03/1993",telephone:"06 92 11 92 44",ville:"LA PETITE ILE",montant:250,statut_contrat:"Renonciation",commentaire:"SIGNÉ SPP95"},
+  {nom:"TOUSSAINT",prenom:"DELPHINE",naissance:"19/08/1993",telephone:"06 81 99 56 74",ville:"SAINT OUEN",montant:250,statut_contrat:"Renonciation"},
+  {nom:"NOUI",prenom:"MELISSA",naissance:"30/01/1994",telephone:"06 15 58 35 21",ville:"MONTPLAISIR",montant:150,statut_contrat:"Renonciation",commentaire:"ANCIENNE CLIENTE BLOQUÉE"},
+  {nom:"MILLET",prenom:"PIERRE ANTOINE",naissance:"15/04/1992",telephone:"06 50 37 03 51",ville:"VIRELADE",montant:0,statut_contrat:"Rachat total",commentaire:"MAUVAIS NUM"},
+  {nom:"THOMIN",prenom:"CAMILLE",naissance:"12/06/1984",telephone:"06 59 20 80 87",ville:"LYON",montant:0,statut_contrat:"Rachat total",commentaire:"SIGNÉ SPP45"},
+  {nom:"VASSEUR",prenom:"MELANIE",naissance:"10/11/1988",telephone:"06 72 30 04 77",ville:"CARNIEN",montant:250,statut_contrat:"Rachat total"},
+  {nom:"SALNOT",prenom:"SEVERINE",naissance:"07/11/1998",telephone:"06 47 00 07 61",ville:"MARSEILLE",montant:150,statut_contrat:"Renonciation",commentaire:"SIGNÉ SPP95"},
+];
+
+// Navigation
+
+// ── SECTIONS COLLAPSIBLES ──
+function toggleSection(id){
+  const sec = document.getElementById('sec-'+id);
+  const chev = document.getElementById('chev-'+id);
+  sec.style.maxHeight = '';
+  sec.classList.toggle('closed');
+  chev.classList.toggle('closed');
+}
+// Init supprimé : la hauteur est gérée en CSS pur (max-height:600px)
+
+// ── NAVIGATION PAR PROFESSION ──
+function goProf(p){
+  prof = p;
+  pg = 1;
+  document.getElementById('plbl') && (document.getElementById('plbl').textContent = PL[p]);
+  showV('prospects');
+  renderHead();
+  loadP();
+}
+
+
+// ── FILTRE GLOBAL (RDV/NRP/KO tous types) ──
+let globalStatut = '', globalPage = 1;
+
+async function loadGlobal(){
+  const tbody = document.getElementById('tb-glob');
+  tbody.innerHTML = '<tr class="empty"><td colspan="6"><span class="spin"></span></td></tr>';
+  try{
+    const q = document.getElementById('srch-glob')?.value.toLowerCase() || '';
+    const p = new URLSearchParams({statut: globalStatut, page: globalPage, per_page: 50});
+    const r = await fetch(`${API}/filtre-global?${p}`);
+    const d = await r.json();
+    let items = d.data;
+    if(q) items = items.filter(c => (c.nom||'').toLowerCase().includes(q) || (c.ville||'').toLowerCase().includes(q));
+
+    document.getElementById('cnt-glob').textContent = d.total.toLocaleString('fr') + ' résultats';
+
+    if(!items.length){ tbody.innerHTML = '<tr class="empty"><td colspan="6">Aucun résultat</td></tr>'; renderPag('glob',0,0,0); return; }
+
+    const ICONS = {sante:'💉', artisans:'🔧', pharmacies:'💊'};
+    tbody.innerHTML = items.map(c => `
+      <tr onclick="openGlobalItem('${c.source_table}',${c.id})">
+        <td><div class="cn">${e(c.nom||'—')}</div></td>
+        <td><span class="badge b-blue">${ICONS[c.source_table]||''} ${e(c.categorie||'—')}</span></td>
+        <td><div>${e(c.ville||'—')}</div><div class="cs">${c.cp||''}</div></td>
+        <td>${c.telephone_direct?`<span class="tok">${e(c.telephone_direct)}</span>`:'<span class="tno">—</span>'}</td>
+        <td><span style="font-size:11px;color:var(--text2)">${e((c.note||'').substring(0,40)||'—')}</span></td>
+        <td>${c.telephone_direct?`<a href="tel:${c.telephone_direct.replace(/\s/g,'')}" class="btn btn-green" style="padding:3px 8px;font-size:11px;text-decoration:none" onclick="event.stopPropagation()">📞</a>`:''}</td>
+      </tr>`).join('');
+
+    renderPag('glob', d.page, d.pages, d.total);
+  }catch(ex){
+    tbody.innerHTML = '<tr class="empty"><td colspan="6">⚠️ Erreur de chargement</td></tr>';
+  }
+}
+
+function openGlobalItem(sourceTable, id){
+  if(sourceTable === 'sante'){ prof='all'; showV('prospects'); setTimeout(()=>openDP(id,'sante'),300); }
+  else if(sourceTable === 'artisans'){ showV('artisans'); setTimeout(()=>openArtDP(id),300); }
+  else if(sourceTable === 'pharmacies'){ showV('pharmacies'); setTimeout(()=>openDP(id,'pharmacies'),300); }
+}
+
+function showV(v){
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
+  document.getElementById('view-'+v)?.classList.add('on');
+  document.querySelectorAll('.sb-item').forEach(x=>x.classList.remove('on'));
+  
+  if(v==='prospects'){
+    const profNav={inf:'nav-inf',kin:'nav-kin',med:'nav-med',den:'nav-den',psy:'nav-psy'};
+    if(profNav[prof])document.getElementById(profNav[prof])?.classList.add('on');
+  } else {
+    const nm={dashboard:'dash',pharmacies:'phr',ro:'ro',arbitrage:'arb',mailing:'mail',artisans:'art'};
+    document.getElementById('nav-'+nm[v])?.classList.add('on');
+  }
+  
+  const PROF_TITLES={
+    inf:['Infirmiers','Professionnels infirmiers libéraux France entière'],
+    kin:['Kinésithérapeutes / Ostéopathes','Praticiens kiné et ostéo'],
+    med:['Médecins','Médecins généralistes et spécialistes'],
+    den:['Dentistes','Chirurgiens-dentistes'],
+    psy:['Psy / Orthophonistes','Psychologues, orthophonistes, sages-femmes'],
+    all:['Professionnels de santé','Toutes professions confondues'],
+  };
+  
+  const GLOB_TITLES={nrp:['📵 Tous les NRP','Infirmiers, artisans et pharmacies en NRP'],rdv:['📅 Tous les RDV','Infirmiers, artisans et pharmacies avec RDV pris'],ko:['❌ Tous les KO','Infirmiers, artisans et pharmacies en KO']};
+  const T={
+    dashboard:['Dashboard','Vue d\u2019ensemble live'],
+    mailing:['Mailing','Compose et envoie des emails depuis Vauban et Evka'],
+    artisans:['Artisans','Plombiers · Serruriers · Electriciens · Peintres · Maçons'],
+    prospects: PROF_TITLES[prof] || ['Infirmiers','Professionnels infirmiers libéraux'],
+    pharmacies:['Pharmacies','25 472 contacts France entière'],
+    ro:['Ancien R&O','Anciens clients AVIVA/OPTIMUM · Team Entibi · Renonciations'],
+    arbitrage:['Arbitrage clients','Suivi bascules Barrière PER et Optimum'],
+    global: GLOB_TITLES[globalStatut] || ['Filtre','Résultats']
+  };
+  const t=T[v]||[v,''];
+  document.getElementById('ttl').textContent=t[0];
+  document.getElementById('tsub').textContent=t[1];
+  if(v==='dashboard') loadDash();
+  if(v==='prospects'){renderHead();loadP();}
+  if(v==='pharmacies') loadPhr();
+  if(v==='ro') renderRO();
+  if(v==='arbitrage'){loadArbFromServer();}
+  if(v==='mailing'){updateMailCount();}
+  if(v==='artisans'){loadArt();}
+  if(v==='global'){loadGlobal();}
+}
+
+// Prof dropdown
+function toggleP(){const m=document.getElementById('pmenu'),a=document.getElementById('parr');if(m&&a){m.classList.toggle('show');a.textContent=m.classList.contains('show')?'▲':'▼';}}
+function selP(p,el){
+  prof=p;pg=1;
+  document.querySelectorAll('.poption').forEach(x=>x.classList.remove('sel'));
+  el?.classList.add('sel');
+  const plbl=document.getElementById('plbl');if(plbl)plbl.textContent=PL[p];
+  const pdot=document.getElementById('pdot');if(pdot)pdot.style.background=PC[p];
+  const pmenu=document.getElementById('pmenu');if(pmenu)pmenu.classList.remove('show');
+  const parr=document.getElementById('parr');if(parr)parr.textContent='▼';
+  renderHead();loadP();
+}
+document.addEventListener('click',e=>{if(!e.target.closest('.prof-wrap')){const pm=document.getElementById('pmenu');if(pm)pm.classList.remove('show');const pa=document.getElementById('parr');if(pa)pa.textContent='▼';}});
+
+function setF(f){
+  flt=f;pg=1;
+  if(f==='avec_tel'){prof='all';setST('avec');showV('prospects');}
+  else if(f==='new_today'){prof='all';setST('new_today');showV('prospects');}
+  else if(f==='nrp'){globalStatut='nrp';globalPage=1;showV('global');}
+  else if(f==='rdv'){globalStatut='rdv';globalPage=1;showV('global');}
+  else if(f==='ko'){globalStatut='ko';globalPage=1;showV('global');}
+  else if(f==='avec_creation'){prof='all';document.getElementById('sel-annee').value='recent3';flt='';showV('prospects');}
+  else{prof='all';flt=f;document.getElementById('sel-st').value=['nouveau'].includes(f)?f:'';showV('prospects');}
+}
+function applyF(){pg=1;loadP();}
+function applyFP(){pgP=1;loadPhr();}
+
+function setST(s){sub=s;pg=1;document.querySelectorAll('#view-prospects .stab').forEach(t=>t.className='stab');const m={all:'st-all',avec:'st-avec',sans:'st-sans',new_today:'st-new'};const el=document.getElementById(m[s]);if(el)el.classList.add(s==='avec'||s==='new_today'?'on-g':'on');loadP();}
+function setSTP(s){subP=s;pgP=1;document.querySelectorAll('#view-pharmacies .stab').forEach(t=>t.className='stab');const m={all:'stp-all',avec:'stp-avec',sans:'stp-sans'};const el=document.getElementById(m[s]);if(el)el.classList.add(s==='avec'?'on-g':'on');loadPhr();}
+
+// Prospects
+
+// ── TRI COLONNES ──
+let sortState = {p:{col:null,dir:'desc'}, phr:{col:null,dir:'desc'}, art:{col:null,dir:'desc'}};
+
+function setSort(type, col){
+  const s = sortState[type];
+  if(s.col === col){
+    s.dir = s.dir === 'asc' ? 'desc' : 'asc';
+  } else {
+    s.col = col;
+    s.dir = 'desc';
+  }
+  if(type==='p'){ renderHead(); pg=1; loadP(); }
+  else if(type==='phr'){ pgP=1; loadPhr(); }
+  else if(type==='art'){ artPage=1; loadArt(); }
+}
+
+function sortArrow(type, col){
+  const s = sortState[type];
+  if(s.col !== col) return ' <span style="opacity:.25">⇅</span>';
+  return s.dir === 'asc' ? ' <span style="color:var(--blue)">▲</span>' : ' <span style="color:var(--blue)">▼</span>';
+}
+
+function renderHead(){
+  document.getElementById('th-p').innerHTML=`<tr>
+    <th class="sortable" onclick="setSort('p','nom')">NOM / PRÉNOM${sortArrow('p','nom')}</th>
+    <th class="sortable" onclick="setSort('p','specialite')">SPÉCIALITÉ${sortArrow('p','specialite')}</th>
+    <th class="sortable" onclick="setSort('p','ville')">VILLE${sortArrow('p','ville')}</th>
+    <th class="sortable" onclick="setSort('p','telephone_direct')">📱 PORTABLE${sortArrow('p','telephone_direct')}</th>
+    <th class="sortable" onclick="setSort('p','telephone')">📞 FIXE${sortArrow('p','telephone')}</th>
+    <th class="sortable" onclick="setSort('p','date_creation')">📅 DATE CRÉATION${sortArrow('p','date_creation')}</th>
+    <th class="sortable" onclick="setSort('p','statut')">STATUT${sortArrow('p','statut')}</th>
+    <th></th>
+  </tr>`;
+}
+
+async function loadP(){
+  const color=PC[prof]||'var(--text2)';
+  const tbody=document.getElementById('tb-p');
+  tbody.innerHTML=`<tr class="empty"><td colspan="8"><span class="spin"></span></td></tr>`;
+  const p=new URLSearchParams({page:pg,per_page:50});
+  const q=document.getElementById('search')?.value||'';
+  const st=document.getElementById('sel-st')?.value||'';
+  const dept=document.getElementById('sel-dept')?.value||'';
+  const annee=document.getElementById('sel-annee')?.value||'';
+  if(q)p.set('search',q);
+  if(st)p.set('statut',st);
+  else if(flt&&['nouveau','contacte','interesse','a-rappeler','client'].includes(flt))p.set('statut',flt);
+  if(dept)p.set('dept',dept);
+  if(annee)p.set('annee',annee);
+  if(sortState.p.col){p.set('sort_col',sortState.p.col);p.set('sort_dir',sortState.p.dir);}
+  if(PS[prof])p.set('specialites',PS[prof].join('|'));
+  if(sub==='avec')p.set('avec_direct','1');
+  else if(sub==='sans')p.set('sans_direct','1');
+  else if(sub==='new_today')p.set('nouveaux','1');
+  try{
+    const r=await fetch(`${API}/sante?${p}`);
+    const d=await r.json();
+    document.getElementById('cnt-p').textContent=d.total.toLocaleString('fr')+' résultats';
+    if(!d.data.length){tbody.innerHTML=`<tr class="empty"><td colspan="8">Aucun résultat</td></tr>`;renderPag('p',0,0,0);return;}
+    tbody.innerHTML=d.data.map(row=>{
+      const ht=row.telephone_direct;
+      const sel=row.id===eid&&etype==='sante'?'sel':'';
+      return`<tr class="${ht?'ht':''} ${sel}" onclick="openDP(${row.id},'sante',this)">
+        <td><div class="cn">${e(row.nom)} ${e(row.prenom||'')}</div><div class="cs">${row.rpps||''}</div></td>
+        <td><span class="spe" style="background:${color}18;color:${color}">${e(row.specialite||'—')}</span></td>
+        <td><div>${e(row.ville||'—')}</div><div class="cs">${row.cp||''}</div></td>
+        <td>${ht?`<span class="tok">${fmt(ht)}</span>`:`<span class="tno">—</span>`}</td>
+        <td>${row.telephone?`<span class="tfix">${fmt(row.telephone)}</span>`:`<span style="color:var(--text3)">—</span>`}</td>
+        <td>${fmtDate(row.date_creation)}</td>
+        <td><span class="badge ${SL[row.statut]||'b-blue'}">${SN[row.statut]||'Nouveau'}</span></td>
+        <td>${ht?`<a href="tel:${ht.replace(/\s/g,'')}" class="btn btn-green" style="padding:3px 8px;font-size:11px;text-decoration:none" onclick="event.stopPropagation()">📞</a>`:''}</td>
+      </tr>`;
+    }).join('');
+    renderPag('p',d.page,d.pages,d.total);
+  }catch(ex){tbody.innerHTML=`<tr class="empty"><td colspan="8">⚠️ Serveur hors ligne — lance python3 app.py</td></tr>`;}
+}
+
+// Pharmacies
+async function loadPhr(){
+  const tbody=document.getElementById('tb-phr');
+  tbody.innerHTML=`<tr class="empty"><td colspan="9"><span class="spin"></span></td></tr>`;
+  const p=new URLSearchParams({page:pgP,per_page:50});
+  const q=document.getElementById('srch-phr')?.value||'';
+  const st=document.getElementById('sel-stp')?.value||'';
+  if(q)p.set('search',q);if(st)p.set('statut',st);
+  if(subP==='avec')p.set('avec_direct','1');
+  else if(subP==='sans')p.set('sans_direct','1');
+  try{
+    const r=await fetch(`${API}/pharmacies?${p}`);
+    const d=await r.json();
+    document.getElementById('cnt-phr').textContent=d.total.toLocaleString('fr')+' pharmacies';
+    if(!d.data.length){tbody.innerHTML=`<tr class="empty"><td colspan="9">Aucun résultat</td></tr>`;renderPag('phr',0,0,0);return;}
+    tbody.innerHTML=d.data.map(row=>{
+      const sel=row.id===eid&&etype==='pharmacies'?'sel':'';
+      return`<tr class="${row.telephone_direct?'ht':''} ${sel}" onclick="openDP(${row.id},'pharmacies',this)">
+        <td><div class="cn">${e(row.nom)}</div><div class="cs">${e((row.forme_juridique||'').substring(0,24))}</div></td>
+        <td>${row.dirigeant?e(row.dirigeant):'<span style="color:var(--text3)">—</span>'}</td>
+        <td><div>${e(row.ville||'—')}</div><div class="cs">${row.cp||''}</div></td>
+        <td style="min-width:150px">${row.telephone?`<span class="tfix">${fmt(row.telephone)}</span>`:`<span style="color:var(--text3)">—</span>`}</td>
+        <td style="min-width:150px">${row.telephone_direct?`<span class="tok">${fmt(row.telephone_direct)}</span>`:`<span class="tno">—</span>`}</td>
+        <td><span style="font-size:11px;color:var(--text2)">${(row.email||'').substring(0,20)||'—'}</span></td>
+        <td>${row.ca?`<span style="font-size:12px;color:var(--text2)">${(row.ca/1000).toFixed(0)}k€</span>`:'—'}</td>
+        <td><span class="badge ${SL[row.statut]||'b-blue'}">${SN[row.statut]||'Nouveau'}</span></td>
+        <td>${row.telephone_direct?`<a href="tel:${row.telephone_direct.replace(/\s/g,'')}" class="btn btn-green" style="padding:3px 8px;font-size:11px;text-decoration:none" onclick="event.stopPropagation()">📞</a>`:''}</td>
+      </tr>`;
+    }).join('');
+    renderPag('phr',d.page,d.pages,d.total);
+  }catch(ex){tbody.innerHTML=`<tr class="empty"><td colspan="9">⚠️ Serveur hors ligne</td></tr>`;}
+}
+
+// Detail panel
+let _openDPToken = 0;
+async function openDP(id,type,tr){
+  eid=id;etype=type;
+  const key=type==='sante'?'p':'phr';
+  document.querySelectorAll(`#view-${type==='sante'?'prospects':'pharmacies'} tbody tr`).forEach(r=>r.classList.remove('sel'));
+  tr?.classList.add('sel');
+  document.getElementById(`dp-${key}`).classList.add('open');
+  const ep=type==='sante'?'sante':'pharmacies';
+  const myToken = ++_openDPToken;
+  try{
+    const r=await fetch(`${API}/${ep}/${id}`);
+    if(myToken !== _openDPToken) return; // un clic plus récent a eu lieu entre temps, on annule
+    const c=await r.json();
+    if(!c||!c.id)return;
+    const isPhr=type==='pharmacies';
+    const color=isPhr?'var(--green)':PC[prof]||'var(--blue)';
+    const av=document.getElementById(`dpav-${key}`);
+    if(!isPhr){
+      av.textContent=(c.nom[0]||'')+(c.prenom?.[0]||'');
+      av.style.background=`${PC[prof]||'#3182CE'}20`;av.style.color=PC[prof]||'var(--blue)';
+    }
+    if(isPhr){
+      document.getElementById(`dpnm-${key}`).textContent=c.nom;
+    } else {
+      const nomView=document.getElementById('dpnm-p-view');
+      if(nomView){
+        nomView.textContent=(c.nom||c.prenom)?`${c.prenom||''} ${c.nom||''}`.trim():'⚠️ Nom inconnu — cliquer pour ajouter';
+        document.getElementById('dpnm-p-prenom').value=c.prenom||'';
+        document.getElementById('dpnm-p-nom').value=c.nom||'';
+        document.getElementById('dpnm-p-view').style.display='block';
+        document.getElementById('dpnm-p-edit').style.display='none';
+      }
+    }
+    document.getElementById(`dpsp-${key}`).textContent=isPhr?`${c.ville||''} · ${c.forme_juridique||''}`:`${c.specialite||''} · ${c.ville||''}`;
+    const tel=c.telephone_direct||c.telephone;
+    const cb=document.getElementById(`dpcall-${key}`);
+    if(tel){cb.style.display='flex';cb.href=`tel:${tel.replace(/\s/g,'')}`;}else cb.style.display='none';
+    const dpEl=document.getElementById(`dp-${key}`);
+    dpEl.querySelectorAll('.dps').forEach(p=>p.classList.remove('ac'));
+    dpEl.querySelector(`.dps[data-s="${c.statut||''}"]`)?.classList.add('ac');
+    if(!isPhr){
+      const days=c.date_debut||c.date_ajout?Math.round((Date.now()-new Date(c.date_debut||c.date_ajout).getTime())/86400000):null;
+      document.getElementById('dpst-p').innerHTML=`
+        <div class="dpst" style="background:var(--blue-light)"><div class="dpst-v" style="color:var(--blue)">${days!==null?days+'j':'—'}</div><div class="dpst-l">Ancienneté</div></div>
+        <div class="dpst" style="background:${c.telephone_direct?'var(--green-light)':'var(--bg)'}"><div class="dpst-v" style="color:${c.telephone_direct?'var(--green)':'var(--text3)'}">${c.telephone_direct?'✓':'✗'}</div><div class="dpst-l">06 Direct</div></div>`;
+      document.getElementById('dpco-p').innerHTML=`
+        <div><div class="dfl">Tél cabinet</div><div class="dfv">${fmt(c.telephone)||'—'}</div></div>
+        <div><div class="dfl">Email</div><div class="dfv em">${c.email||'—'}</div></div>
+        <div><div class="dfl">Adresse</div><div class="dfv">${c.adresse||'—'}</div></div>
+        <div><div class="dfl">Ville</div><div class="dfv">${c.cp||''} ${c.ville||''}</div></div>`;
+      document.getElementById('dppr-p').innerHTML=`
+        <div><div class="dfl">Spécialité</div><div class="dfv">${c.specialite||'—'}</div></div>
+        <div><div class="dfl">Mode exercice</div><div class="dfv">${c.mode_exercice||'—'}</div></div>
+        <div><div class="dfl">RPPS</div><div class="dfv" style="font-family:monospace;font-size:11px">${c.rpps||'—'}</div></div>
+        <div><div class="dfl">Début activité</div><div class="dfv">${c.date_debut||'—'}</div></div>`;
+      const dptelP=document.getElementById('dptel-p');dptelP.value=c.telephone_direct||'';dptelP.dataset.original=c.telephone_direct||'';
+      document.getElementById('dpno-p').value=c.note||'';
+    }else{
+      document.getElementById('dpco-phr').innerHTML=`
+        <div><div class="dfl">Dirigeant</div><div class="dfv">${c.dirigeant||'—'}</div></div>
+        <div><div class="dfl">Tél fixe</div><div class="dfv">${fmt(c.telephone)||'—'}</div></div>
+        <div><div class="dfl">Email</div><div class="dfv em" style="font-size:11px">${c.email||'—'}</div></div>
+        <div><div class="dfl">SIRET</div><div class="dfv" style="font-family:monospace;font-size:11px">${c.siret||'—'}</div></div>
+        <div><div class="dfl">CA</div><div class="dfv">${c.ca?(c.ca/1000).toFixed(0)+'k €':'—'}</div></div>
+        <div><div class="dfl">Effectif</div><div class="dfv">${c.effectif_min?`${c.effectif_min}–${c.effectif_max||'+'}`:' —'}</div></div>`;
+      const dptelPhr=document.getElementById('dptel-phr');dptelPhr.value=c.telephone_direct||'';dptelPhr.dataset.original=c.telephone_direct||'';
+      document.getElementById('dpno-phr').value=c.note||'';
+    }
+  }catch(ex){toast('❌ Erreur','err');}
+}
+
+function closeDp(k){document.getElementById(`dp-${k}`).classList.remove('open');const vmap={p:'prospects',phr:'pharmacies',art:'artisans'};document.querySelectorAll(`#view-${vmap[k]||k} tbody tr`).forEach(r=>r.classList.remove('sel'));if(k==='art')artEid=null;else eid=null;}
+function setDPS(s){
+  const k=etype==='sante'?'p':'phr';
+  document.getElementById(`dp-${k}`).querySelectorAll('.dps').forEach(p=>p.classList.remove('ac'));
+  document.getElementById(`dp-${k}`).querySelector(`.dps[data-s="${s}"]`)?.classList.add('ac');
+  if(s==='rdv'&&eid){
+    // Lire les infos directement depuis la fiche affichée
+    const nom = document.getElementById(`dpnm-${k}`)?.textContent||'';
+    const tel = document.getElementById(`dptel-${k}`)?.value||'';
+    const spec = document.getElementById(`dpsp-${k}`)?.textContent||'';
+    window._rdvContact = {id:eid, nom:nom, prenom:'', telephone_direct:tel, email:'', specialite:spec, ville:''};
+    window._rdvType = etype||'sante';
+    // Essayer de charger plus d'infos
+    const ep=etype==='sante'?'sante':'pharmacies';
+    fetch(`${API}/${ep}/${eid}`).then(r=>r.ok?r.json():null).then(c=>{
+      window.openRDV(c&&c.id?c:window._rdvContact, window._rdvType);
+    }).catch(()=>window.openRDV(window._rdvContact, window._rdvType));
+  }
+}
+function swDPT(id,el){const tabs=el.closest('.dp-tabs');tabs.querySelectorAll('.dptab').forEach(t=>t.classList.remove('ac'));el.classList.add('ac');const prefix=id.endsWith('-p')?'p':'phr';const body=el.closest('.dp').querySelector('.dp-body');body.querySelector(`#ov-${prefix}`).style.display=id.startsWith('ov')?'block':'none';body.querySelector(`#nt-${prefix}`).style.display=id.startsWith('nt')?'block':'none';}
+async function saveDP(type){
+  if(!eid)return;
+  const k=type==='sante'?'p':'phr';
+  const dpEl=document.getElementById(`dp-${k}`);
+  const statut=dpEl.querySelector('.dps.ac')?.dataset.s||'';
+  const telField=document.getElementById(`dptel-${k}`);
+  // Sécurité: si le champ tél a un data-loaded="1" (chargé depuis le serveur) et qu'il est vide alors qu'il ne l'était pas, on ne l'écrase pas par erreur
+  const telVal = telField.value.replace(/\s/g,'');
+  const body={telephone_direct:telVal,statut,note:document.getElementById(`dpno-${k}`).value};
+  if(!telVal && telField.dataset.original){
+    // Le champ a été vidé accidentellement: on garde l'ancienne valeur plutôt que d'écraser
+    delete body.telephone_direct;
+  }
+  try{
+    const r=await fetch(`${API}/${type==='sante'?'sante':'pharmacies'}/${eid}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(r.ok){toast('✅ Sauvegardé','ok');if(type==='sante')loadP();else loadPhr();loadStats();}
+    else toast('❌ Erreur','err');
+  }catch(ex){toast('❌ Serveur hors ligne','err');}
+}
+
+// Dashboard
+async function loadDash(){
+  try{
+    const r=await fetch(API+'/stats');
+    const d=await r.json();
+    const s=d.sante,p=d.pharmacies;
+    document.getElementById('d-sante').textContent=s.total.toLocaleString('fr');
+    document.getElementById('d-tel').textContent=(s.avec_tel||0).toLocaleString('fr');
+    document.getElementById('d-pct').textContent=s.total?`${Math.round((s.avec_tel||0)/s.total*100)}% enrichis`:'';
+    document.getElementById('d-phr').textContent=(p.total||25472).toLocaleString('fr');
+    document.getElementById('d-phrdir').textContent=`${(p.avec_dirigeant||0).toLocaleString('fr')} avec dirigeant`;
+    document.getElementById('d-cli').textContent=((s.statuts?.client||0)+(p.statuts?.client||0));
+    document.getElementById('d-new').textContent=`${s.nouveaux_jour||0} aujourd'hui`;
+    const st=s.statuts||{};
+    const g=d.global||{};
+    document.getElementById('pv-n').textContent=(g.nouveaux_jour||0).toLocaleString('fr');
+    document.getElementById('pv-rdv').textContent=(g.rdv||0).toLocaleString('fr');
+    document.getElementById('pv-r').textContent=(g.nrp||0).toLocaleString('fr');
+    document.getElementById('pv-ko').textContent=(g.ko||0).toLocaleString('fr');
+    document.getElementById('pv-creation').textContent=(s.avec_date_creation||0).toLocaleString('fr');
+    renderBarChart('ch-spe',s.par_specialite||{},{
+      'Infirmier':'#3182CE','Masseur-kinésithérapeute':'#805AD5','Médecin':'#2B6CB0',
+      'Chirurgien-dentiste':'#DD6B20','Dentiste':'#DD6B20','Psychologue':'#D53F8C',
+      'Orthophoniste':'#D69E2E','Ostéopathe':'#38A169','Sage-femme':'#319795',
+    });
+  }catch(ex){}
+}
+
+function renderBarChart(id,data,colors){
+  const el=document.getElementById(id);
+  if(!data||!Object.keys(data).length){el.innerHTML='<div style="color:var(--text3);text-align:center;padding:16px;font-size:12px">Lance le scraping pour voir les données</div>';return;}
+  const entries=Object.entries(data).filter(([k,v])=>k&&v>0).sort((a,b)=>b[1]-a[1]);
+  const max=Math.max(...entries.map(([,v])=>v));
+  el.innerHTML=entries.map(([k,v])=>`
+    <div class="bar-row">
+      <div class="bar-lbl">${e(k)}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.round(v/max*100)}%;background:${colors?.[k]||'var(--blue)'}"></div></div>
+      <div class="bar-v">${v.toLocaleString('fr')}</div>
+    </div>`).join('');
+  if(entries.length>7){ el.style.maxHeight='280px'; el.style.overflowY='auto'; }
+}
+
+async function loadStats(){
+  try{
+    const r=await fetch(API+'/stats');
+    const d=await r.json();
+    const s=d.sante,p=d.pharmacies;
+    const tot=s.total+p.total;
+    document.getElementById('kpi-tot').textContent=tot.toLocaleString('fr');
+    document.getElementById('kpi-tel').textContent=(s.avec_tel||0).toLocaleString('fr');
+    document.getElementById('kpi-cli').textContent=((s.statuts?.client||0)+(p.statuts?.client||0));
+    {const eTot=document.getElementById('sn-tot');if(eTot)eTot.textContent=s.total>999?Math.round(s.total/1000)+'k':s.total||0;}
+    {const e1=document.getElementById('sn-phr');if(e1)e1.textContent=p.total>999?Math.round(p.total/1000)+'k':p.total||0;}
+    {const e3=document.getElementById('sn-new');if(e3)e3.textContent=g.nouveaux_jour||0;}
+    const snNrpEl=document.getElementById('sn-nrp');if(snNrpEl)snNrpEl.textContent=g.nrp||0;
+    const snRdvEl=document.getElementById('sn-rdv');if(snRdvEl)snRdvEl.textContent=g.rdv||0;
+    const snKoEl=document.getElementById('sn-ko');if(snKoEl)snKoEl.textContent=g.ko||0;
+    const sp=s.par_specialite||{};
+    const cnt=keys=>Object.entries(sp).filter(([k])=>keys.some(x=>k.toLowerCase().includes(x.toLowerCase()))).reduce((a,[,v])=>a+v,0);
+    {const e4=document.getElementById('pc-all');if(e4)e4.textContent=s.total||0;}
+    {const e5=document.getElementById('pc-inf');if(e5)e5.textContent=cnt(['Infirmier']);}
+    {const e6=document.getElementById('pc-kin');if(e6)e6.textContent=cnt(['Masseur','Ostéo','Kinési']);}
+    {const e7=document.getElementById('pc-med');if(e7)e7.textContent=cnt(['Médecin','Cardio','Radio']);}
+    {const e8=document.getElementById('pc-den');if(e8)e8.textContent=cnt(['Dentiste']);}
+    {const e9=document.getElementById('pc-psy');if(e9)e9.textContent=cnt(['Psycho','Orthophon']);}
+  }catch(ex){}
+}
+
+// Ancien R&O
+function renderRO(){
+  const q=(document.getElementById('ro-q')?.value||'').toLowerCase();
+  const filter=document.getElementById('ro-f')?.value||'';
+  const body=document.getElementById('ro-body');
+  const secs=[
+    {key:'liste',data:LISTE_DATA,title:'📋 Anciens clients — Contrats AVIVA / OPTIMUM',color:'var(--blue)'},
+    {key:'team',data:TEAM_DATA,title:'👥 Team Entibi — Prospection terrain',color:'var(--purple)'},
+    {key:'opti',data:OPTI_DATA,title:'🔄 Renonciations PER Sérénité 2024',color:'var(--orange)'},
+  ];
+  let html='';let tot=0;
+  for(const sec of secs){
+    if(filter&&filter!==sec.key)continue;
+    let items=sec.data.filter(c=>!q||(c.nom+' '+c.prenom+' '+(c.ville||'')+' '+(c.profession||'')).toLowerCase().includes(q));
+    tot+=items.length;
+    if(!items.length)continue;
+    html+=`<div class="ro-sec-hdr"><div class="ro-sec-ttl">${sec.title}</div><span class="ro-sec-cnt" style="background:${sec.color}18;color:${sec.color}">${items.length} contacts</span></div>`;
+    for(const c of items){
+      const init=(c.nom[0]||'')+(c.prenom?.[0]||'');
+      let badge='';
+      if(c.statut_prosp){const sc={VALIDÉ:`<span class="badge b-green">✓ VALIDÉ</span>`,KO:`<span class="badge b-gray">KO</span>`,NRP1:`<span class="badge b-yellow">NRP1</span>`,'A RAP':`<span class="badge b-blue">À RAP</span>`};badge=sc[c.statut_prosp]||`<span class="badge b-gray">${c.statut_prosp}</span>`;}
+      else if(c.statut_contrat){const sc={Renonciation:`<span class="badge b-purple">Renonciation</span>`,'Rachat total':`<span class="badge b-orange">Rachat total</span>`};badge=sc[c.statut_contrat]||'';}
+      html+=`<div class="rocard" onclick="this.classList.toggle('open')">
+        <div class="rocard-hdr">
+          <div class="ro-ava" style="background:${sec.color}15;color:${sec.color}">${init}</div>
+          <div style="flex:1;min-width:0"><div class="ro-nm">${e(c.nom)} ${e(c.prenom)}</div><div class="ro-mt">${c.profession||c.statut_contrat||''} · ${c.ville||''}</div></div>
+          ${badge}
+          ${c.telephone?`<a href="tel:${c.telephone.replace(/\s/g,'')}" onclick="event.stopPropagation()" class="btn btn-green" style="padding:4px 9px;font-size:11px;text-decoration:none;margin-left:8px">📞</a>`:''}
+          <button onclick="event.stopPropagation();window.openRDV({id:0,nom:e(c.nom)+' '+e(c.prenom),telephone_direct:c.telephone||'',email:c.email||'',specialite:c.profession||'',ville:c.ville||''},'ro')" class="btn btn-blue" style="padding:4px 9px;font-size:11px;margin-left:4px">📅 RDV</button>
+        </div>
+        <div class="rocard-body">
+          <div class="ro-grid">
+            ${c.telephone?`<div><div class="rfl">Téléphone</div><div class="rfv" style="color:var(--green);font-family:monospace;font-weight:700">${c.telephone}</div></div>`:''}
+            ${c.email?`<div><div class="rfl">Email</div><div class="rfv" style="color:var(--blue);font-size:11px">${c.email}</div></div>`:''}
+            ${c.naissance?`<div><div class="rfl">Naissance</div><div class="rfv">${c.naissance}</div></div>`:''}
+            ${c.ville?`<div><div class="rfl">Ville</div><div class="rfv">${c.ville}${c.cp?' ('+c.cp+')':''}</div></div>`:''}
+            ${c.dept?`<div><div class="rfl">Département</div><div class="rfv">${c.dept}</div></div>`:''}
+            ${c.dda?`<div><div class="rfl">Début activité</div><div class="rfv">${c.dda}</div></div>`:''}
+            ${c.montant?`<div><div class="rfl">Montant</div><div class="rfv" style="color:var(--green);font-weight:700">${c.montant}€/mois</div></div>`:''}
+            ${c.commentaire?`<div style="grid-column:span 3"><div class="rfl">Commentaire</div><div class="rfv" style="color:var(--orange)">${e(c.commentaire)}</div></div>`:''}
+          </div>
+          ${c.contrats?`<div style="margin-top:10px">${c.contrats.map(ct=>`<div class="ct-item"><div class="ct-ref">${ct.ref}</div><div class="ct-det">Signé le ${ct.date} · ${ct.montant}€/mois</div></div>`).join('')}</div>`:''}
+        </div>
+      </div>`;
+    }
+  }
+  document.getElementById('ro-cnt').textContent=tot+' contacts';
+  body.innerHTML=html||'<div style="color:var(--text3);text-align:center;padding:44px">Aucun résultat</div>';
+}
+
+// Arbitrage
+function showArb(v){
+  document.querySelectorAll('.arb-section').forEach(x=>x.classList.remove('on'));
+  document.getElementById('arb-'+v).classList.add('on');
+  document.querySelectorAll('.arb-tab').forEach(t=>t.classList.remove('ac'));
+  document.getElementById('arb-t-'+(v==='barriere'?'b':'o')).classList.add('ac');
+}
+
+
+// Pagination
+function renderPag(type,page,pages,total){
+  const info=document.getElementById(`pi-${type}`);
+  const btns=document.getElementById(`pb-${type}`);
+  info.textContent=total?`Page ${page}/${pages} · ${total.toLocaleString('fr')} résultats`:'0 résultat';
+  if(!pages){btns.innerHTML='';return;}
+  let h=`<button class="pgb" onclick="goP('${type}',${page-1})" ${page<=1?'disabled':''}>‹</button>`;
+  const s=Math.max(1,page-2),en=Math.min(pages,page+2);
+  if(s>1)h+=`<button class="pgb" onclick="goP('${type}',1)">1</button>`;
+  if(s>2)h+=`<span style="color:var(--text3);padding:0 3px">…</span>`;
+  for(let i=s;i<=en;i++)h+=`<button class="pgb ${i===page?'ac':''}" onclick="goP('${type}',${i})">${i}</button>`;
+  if(en<pages-1)h+=`<span style="color:var(--text3);padding:0 3px">…</span>`;
+  if(en<pages)h+=`<button class="pgb" onclick="goP('${type}',${pages})">${pages}</button>`;
+  h+=`<button class="pgb" onclick="goP('${type}',${page+1})" ${page>=pages?'disabled':''}>›</button>`;
+  btns.innerHTML=h;
+}
+function goP(t,p){if(t==='p'){pg=p;loadP();}else if(t==='phr'){pgP=p;loadPhr();}else if(t==='art'){artPage=p;loadArt();}else if(t==='glob'){globalPage=p;loadGlobal();}}
+
+// Scraping
+function openScr(){document.getElementById('ov-scr').classList.add('show')}
+function closeScr(){document.getElementById('ov-scr').classList.remove('show')}
+document.querySelectorAll('.scr-src').forEach(s=>s.addEventListener('click',()=>s.classList.toggle('sel')));
+async function launchScr(){
+  const sources=[...document.querySelectorAll('.scr-src.sel')].map(s=>s.dataset.src);
+  if(!sources.length){toast('Sélectionne une source','err');return;}
+  toast('⚡ Scraping lancé','ok');document.getElementById('scr-prog').style.display='block';
+  try{
+    await fetch(API+'/scraping/launch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sources})});
+    if(scrInt)clearInterval(scrInt);
+    scrInt=setInterval(async()=>{
+      try{const r=await fetch(API+'/scraping/status');const s=await r.json();document.getElementById('scr-bar').style.width=s.progress+'%';document.getElementById('scr-msg').textContent=s.message;if(!s.running){clearInterval(scrInt);toast('✅ '+s.message,'ok');loadStats();loadDash();}}catch(ex){clearInterval(scrInt);}
+    },2000);
+  }catch(ex){toast('❌ Serveur hors ligne','err');}
+}
+
+async function doExport(){
+  const ep=document.getElementById('view-pharmacies').classList.contains('on')?'pharmacies':'sante';
+  const p=new URLSearchParams({per_page:9999,page:1});
+  if(PS[prof])p.set('specialites',PS[prof].join('|'));
+  const r=await fetch(`${API}/${ep}?${p}`);
+  const d=await r.json();
+  if(!d.data.length){toast('Rien à exporter','err');return;}
+  const keys=Object.keys(d.data[0]).filter(k=>k!=='id');
+  let csv='\uFEFF'+keys.join(';')+'\n';
+  d.data.forEach(row=>{csv+=keys.map(k=>JSON.stringify(row[k]??'')).join(';')+'\n';});
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download=`crm-${ep}-${new Date().toISOString().slice(0,10)}.csv`;a.click();
+  toast('✅ CSV exporté','ok');
+}
+
+// Helpers
+function e(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function fmt(t){if(!t)return'—';const s=String(t).replace(/\D/g,'');if(s.length===10)return s.replace(/(\d{2})(?=\d)/g,'$1 ').trim();return t}
+function ageBadge(d){if(!d)return'<span class="age ao">—</span>';const diff=(Date.now()-new Date(d).getTime())/86400000;if(isNaN(diff))return'<span class="age ao">—</span>';if(diff<90)return`<span class="age an">🔥 ${Math.round(diff)}j</span>`;if(diff<365)return`<span class="age am">${Math.round(diff/30)}mois</span>`;return`<span class="age ao">${Math.round(diff/365)}an${Math.round(diff/365)>1?'s':''}</span>`;}
+function fmtDate(d){
+  if(!d) return '<span style="color:var(--text3)">—</span>';
+  const date = new Date(d);
+  if(isNaN(date.getTime())) return '<span style="color:var(--text3)">—</span>';
+  const diff = (Date.now()-date.getTime())/86400000;
+  const dateStr = date.toLocaleDateString('fr-FR', {day:'2-digit',month:'2-digit',year:'numeric'});
+  const isRecent = diff < 365;
+  return `<span style="font-weight:600;${isRecent?'color:var(--green)':'color:var(--text2)'}">${isRecent?'🔥 ':''}${dateStr}</span>`;
+}
+function toast(msg,type='ok'){const t=document.createElement('div');t.className='toast '+type;t.textContent=msg;document.getElementById('toasts').appendChild(t);setTimeout(()=>t.remove(),3500);}
+
+
+// ── MAILING ──
+let currentFrom = 'bryan.entibi@vauban-associes.fr';
+
+function selFrom(el, email) {
+  currentFrom = email;
+  document.querySelectorAll('.mail-from-btn').forEach(b => {
+    b.style.borderColor = 'var(--border)';
+    b.style.background = 'var(--white)';
+    b.style.color = 'var(--text2)';
+    b.classList.remove('ac');
+  });
+  el.style.borderColor = 'var(--blue)';
+  el.style.background = 'var(--blue-light)';
+  el.style.color = 'var(--blue)';
+  el.classList.add('ac');
+}
+
+function updateMailCount() {
+  const to = document.getElementById('mail-to')?.value || '';
+  const emails = to.split(/[,;\n]/).map(e => e.trim()).filter(e => e.includes('@'));
+  const el = document.getElementById('mail-count');
+  if (el) el.textContent = emails.length + ' destinataire' + (emails.length > 1 ? 's' : '');
+}
+
+async function importDests(type) {
+  try {
+    let emails = [];
+    if (type === 'liste') {
+      emails = LISTE_DATA.filter(c => c.email).map(c => c.email);
+    } else {
+      const ep = type === 'sante' ? 'sante' : 'pharmacies';
+      const p = type === 'sante' ? '?avec_direct=1&per_page=500' : '?per_page=500';
+      const r = await fetch(`${API}/${ep}${p}`);
+      const d = await r.json();
+      emails = d.data.filter(c => c.email).map(c => c.email);
+    }
+    const ta = document.getElementById('mail-to');
+    const existing = ta.value.split(/[,;\n]/).map(e => e.trim()).filter(e => e);
+    const all = [...new Set([...existing, ...emails])].filter(e => e);
+    ta.value = all.join('\n');
+    updateMailCount();
+    toast('✅ ' + emails.length + ' emails importés', 'ok');
+  } catch(ex) {
+    toast('❌ Erreur import', 'err');
+  }
+}
+
+const TEMPLATES = {
+  per: {
+    subject: "Optimisez votre retraite — Plan Épargne Retraite dédié aux professionnels de santé",
+    body: `Bonjour,
+
+Je me permets de vous contacter en tant que conseiller en gestion de patrimoine spécialisé dans l'accompagnement des professionnels de santé libéraux.
+
+En tant que [profession], vous êtes confronté(e) à une réalité souvent méconnue : votre pension de retraite sera significativement inférieure à votre revenu actuel d'activité. Le Plan Épargne Retraite (PER) est aujourd'hui la solution la plus efficace pour combler cet écart tout en réduisant votre pression fiscale dès maintenant.
+
+✅ Avantages concrets :
+• Déduction fiscale immédiate de vos versements (jusqu'à 10% de votre revenu professionnel)
+• Capital disponible à la retraite ou rente viagère
+• Transmission optimisée en cas de décès
+
+Je vous propose un bilan retraite personnalisé et gratuit, sans engagement, pour évaluer précisément votre situation.
+
+Seriez-vous disponible pour un échange de 20 minutes cette semaine ?
+
+Cordialement,
+Bryan Entibi
+Conseiller en Gestion de Patrimoine
+`
+  },
+  prevoyance: {
+    subject: "Protégez vos revenus en cas d’arrêt maladie — Prévoyance TNS",
+    body: `Bonjour,
+
+Je me permets de vous adresser ce message en tant que conseiller spécialisé dans la protection des professionnels de santé indépendants.
+
+En tant que libéral(e), un arrêt maladie ou une invalidité peut avoir des conséquences financières dramatiques sur votre activité et votre famille. Les indemnités journalières de la CARMF/CARPIMKO sont souvent insuffisantes pour maintenir votre niveau de vie.
+
+🛡️ Une prévoyance adaptée vous protège :
+• Maintien de revenus dès le 1er jour d'arrêt
+• Couverture invalidité totale ou partielle
+• Protection de votre cabinet et de vos charges fixes
+
+Je vous propose une analyse gratuite de votre couverture actuelle et un comparatif des meilleures solutions du marché.
+
+Disponible pour un échange cette semaine ?
+
+Cordialement,
+Bryan Entibi
+Conseiller en Gestion de Patrimoine
+`
+  },
+  audit: {
+    subject: "Bilan patrimonial offert — Optimisez votre fiscalité 2025",
+    body: `Bonjour,
+
+Je me permets de prendre contact avec vous pour vous proposer un audit patrimonial complet et gratuit, sans engagement.
+
+En tant que professionnel(le) libéral(e), vous avez probablement des opportunités d'optimisation fiscale et patrimoniale qui méritent d'être explorées :
+
+📊 Points abordés lors du bilan :
+• Optimisation de votre imposition (PER, PERP, Madelin...)
+• Analyse de votre protection sociale
+• Stratégie d'épargne et de placement
+• Transmission et protection de votre patrimoine
+
+Ce bilan de 45 minutes est offert et sans aucun engagement de votre part.
+
+Je reste à votre disposition pour convenir d'un rendez-vous selon vos disponibilités.
+
+Cordialement,
+Bryan Entibi
+Conseiller en Gestion de Patrimoine — Evka Conseil
+`
+  },
+  relance: {
+    subject: "Bilan annuel de votre contrat — Optimisations disponibles",
+    body: `Bonjour,
+
+Je reviens vers vous dans le cadre du suivi annuel de votre contrat.
+
+L'année écoulée a vu d'importantes évolutions réglementaires et fiscales qui peuvent impacter positivement votre situation. Je souhaite vous proposer un point de 20 minutes pour :
+
+🔄 Points à aborder :
+• Bilan de performance de votre contrat
+• Optimisations possibles suite aux évolutions fiscales 2025
+• Arbitrages éventuels pour améliorer votre rendement
+• Nouvelles opportunités adaptées à votre profil
+
+Seriez-vous disponible prochainement pour cet échange ?
+
+Dans l'attente de vous lire,
+
+Cordialement,
+Bryan Entibi
+Conseiller en Gestion de Patrimoine
+`
+  },
+  arbitrage: {
+    subject: "Proposition d’arbitrage — Améliorez les performances de votre épargne",
+    body: `Bonjour,
+
+Suite à notre dernier échange, je reviens vers vous concernant votre contrat en cours.
+
+Après analyse, je suis en mesure de vous proposer une solution plus avantageuse permettant d'améliorer significativement les performances de votre épargne retraite tout en maintenant le même niveau de protection.
+
+⚖️ Ce que nous pouvons faire ensemble :
+• Arbitrage vers des supports plus performants
+• Révision des conditions contractuelles
+• Optimisation de la fiscalité à la sortie
+• Meilleure adéquation avec vos objectifs actuels
+
+Pourriez-vous me confirmer vos disponibilités pour un rendez-vous téléphonique de 15 minutes ?
+
+Cordialement,
+Bryan Entibi
+Conseiller en Gestion de Patrimoine — Evka Conseil / Vauban Associés
+`
+  }
+};
+
+function loadTpl(key) {
+  const tpl = TEMPLATES[key];
+  if (!tpl) return;
+  document.getElementById('mail-subject').value = tpl.subject;
+  document.getElementById('mail-body').value = tpl.body;
+  toast('✅ Template chargé', 'ok');
+}
+
+function sendMail() {
+  const to = document.getElementById('mail-to')?.value || '';
+  const subject = document.getElementById('mail-subject')?.value || '';
+  const body = document.getElementById('mail-body')?.value || '';
+  
+  if (!to.trim()) { toast('❌ Ajoute des destinataires', 'err'); return; }
+  if (!subject.trim()) { toast('❌ Ajoute un objet', 'err'); return; }
+  
+  const emails = to.split(/[,;\n]/).map(e => e.trim()).filter(e => e.includes('@'));
+  
+  if (emails.length === 1) {
+    // Un seul destinataire: ouvrir Gmail directement
+    const url = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(emails[0])}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(url, '_blank');
+  } else {
+    // Plusieurs: ouvrir avec le premier, afficher les autres
+    const url = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(emails[0])}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(url, '_blank');
+    toast('✅ Gmail ouvert · Pour les ' + (emails.length - 1) + ' autres: copie les emails', 'ok');
+    
+    // Copier tous les emails dans le presse-papier
+    navigator.clipboard?.writeText(emails.join(', ')).then(() => {
+      toast('📋 ' + emails.length + ' emails copiés dans le presse-papier', 'ok');
+    });
+  }
+}
+
+
+const ARB_COLORS_ART = {
+  'rdv':      {bg:'#EBF8FF',border:'#3182CE',text:'#2C5282',label:'📅 RDV Pris'},
+  'signe':    {bg:'#F0FFF4',border:'#38A169',text:'#276749',label:'✅ Signé'},
+  'ko':       {bg:'#FFF5F5',border:'#E53E3E',text:'#C53030',label:'❌ KO'},
+  'rappeler': {bg:'#FFFAF0',border:'#DD6B20',text:'#C05621',label:'🔄 Rappeler'},
+  'nrp':      {bg:'#FFFAF0',border:'#DD6B20',text:'#C05621',label:'📵 NRP'},
+  '':         {bg:'#FFFFFF',border:'#E2E8F0',text:'#4A5568',label:'⭕ À Appeler'},
+};
+
+let artData = [];
+let artPage = 1;
+let artSub = 'all';
+let artEid = null;
+
+function setSTA(s){
+  artSub=s; artPage=1;
+  document.querySelectorAll('#view-artisans .stab').forEach(t=>t.className='stab');
+  const map={'all':'sta-all','Plombier':'sta-plomb','Serrurier':'sta-ser','Electricien':'sta-elec','Peintre':'sta-pein','Macon':'sta-mac','Menuisier':'sta-men','Chauffagiste':'sta-chauf'};
+  const el=document.getElementById(map[s]);
+  if(el)el.classList.add('on');
+  loadArt();
+}
+
+function applyFA(){artPage=1;loadArt();}
+
+async function loadArt(){
+  const tbody=document.getElementById('tb-art');
+  tbody.innerHTML='<tr class="empty"><td colspan="8"><span class="spin"></span></td></tr>';
+  
+  try{
+    const p=new URLSearchParams({page:artPage,per_page:50});
+    const q=document.getElementById('srch-art')?.value||'';
+    const st=document.getElementById('sel-art-st')?.value||'';
+    const prof=document.getElementById('sel-art-prof')?.value||'';
+    const annee=document.getElementById('sel-art-annee')?.value||'';
+    if(q)p.set('search',q);
+    if(st)p.set('statut',st);
+    if(prof)p.set('profession',prof);
+    if(annee)p.set('annee',annee);
+    if(artSub&&artSub!=='all')p.set('profession',artSub);
+    if(sortState.art.col){p.set('sort_col',sortState.art.col);p.set('sort_dir',sortState.art.dir);}
+    
+    const r=await fetch(`${API}/artisans?${p}`);
+    const d=await r.json();
+    
+    document.getElementById('cnt-art').textContent=d.total.toLocaleString('fr')+' artisans';
+    ['nom','profession','ville','telephone_direct','date_creation','statut'].forEach(c=>{
+      const el=document.getElementById('sa-'+c);
+      if(el)el.innerHTML=sortState.art.col===c?(sortState.art.dir==='asc'?' <span style="color:var(--blue)">▲</span>':' <span style="color:var(--blue)">▼</span>'):' <span style="opacity:.25">⇅</span>';
+    });
+    {const e2=document.getElementById('sn-art');if(e2)e2.textContent=d.total>999?Math.round(d.total/1000)+'k':d.total;}
+    
+    if(!d.data.length){tbody.innerHTML='<tr class="empty"><td colspan="8">Aucun résultat</td></tr>';renderPag('art',0,0,0);return;}
+    
+    tbody.innerHTML=d.data.map(row=>{
+      const col=ARB_COLORS_ART[row.statut||'']||ARB_COLORS_ART[''];
+      const sel=row.id===artEid?'sel':'';
+      return`<tr class="${sel}" style="background:${col.bg};border-left:3px solid ${col.border}" onclick="openArtDP(${row.id},this)">
+        <td><div class="cn" style="color:${col.text}">${e(row.nom||'—')}</div></td>
+        <td><span class="badge b-orange" style="font-size:10px">${e(row.profession||'—')}</span></td>
+        <td><div>${e(row.ville||'—')}</div><div class="cs">${row.cp||''}</div></td>
+        <td><span class="tok">${e(row.telephone_direct||'—')}</span></td>
+        <td>${fmtDate(row.date_creation)}</td>
+        <td><span class="badge" style="background:${col.bg};color:${col.text};border:1px solid ${col.border}">${col.label}</span></td>
+        <td><span style="font-size:11px;color:var(--text2)">${e((row.note||'').substring(0,25)||'—')}</span></td>
+        <td>${row.telephone_direct?`<a href="tel:${row.telephone_direct.replace(/\s/g,'')}" class="btn btn-green" style="padding:3px 8px;font-size:11px;text-decoration:none" onclick="event.stopPropagation()">📞</a>`:''}</td>
+      </tr>`;
+    }).join('');
+    renderPag('art',d.page,d.pages,d.total);
+  }catch(ex){
+    tbody.innerHTML='<tr class="empty"><td colspan="8">⚠️ Serveur hors ligne</td></tr>';
+  }
+}
+
+async function openArtDP(id,tr){
+  artEid=id;
+  document.querySelectorAll('#view-artisans tbody tr').forEach(r=>r.classList.remove('sel'));
+  tr?.classList.add('sel');
+  document.getElementById('dp-art').classList.add('open');
+  
+  try{
+    const r=await fetch(`${API}/artisans?per_page=9999`);
+    const d=await r.json();
+    const c=d.data.find(x=>x.id===id);
+    if(!c)return;
+    
+    const col=ARB_COLORS_ART[c.statut||'']||ARB_COLORS_ART[''];
+    const icons={'Plombier':'🔧','Serrurier':'🔑','Electricien':'⚡','Peintre':'🖌️','Macon':'🧱','Menuisier':'🪚','Chauffagiste':'🌡️','Carreleur':'🪵'};
+    
+    document.getElementById('dpav-art').textContent=icons[c.profession]||'🔧';
+    document.getElementById('dpnm-art').textContent=c.nom||'—';
+    document.getElementById('dpsp-art').textContent=`${c.profession||''} · ${c.ville||''}`;
+    
+    const tel=c.telephone_direct;
+    const cb=document.getElementById('dpcall-art');
+    if(tel){cb.style.display='flex';cb.href=`tel:${tel.replace(/\s/g,'')}`;}else cb.style.display='none';
+    
+    document.getElementById('dp-art-pipe').querySelectorAll('.dps').forEach(p=>p.classList.remove('ac'));
+    document.getElementById('dp-art-pipe').querySelector(`.dps[data-s="${c.statut||''}"]`)?.classList.add('ac');
+    
+    document.getElementById('dpco-art').innerHTML=`
+      <div><div class="dfl">Téléphone</div><div class="dfv" style="color:var(--green);font-family:monospace;font-weight:700">${c.telephone_direct||'—'}</div></div>
+      <div><div class="dfl">Ville</div><div class="dfv">${c.ville||'—'} ${c.cp||''}</div></div>
+      <div><div class="dfl">Adresse</div><div class="dfv" style="font-size:11px">${c.adresse||'—'}</div></div>
+      <div><div class="dfl">Source</div><div class="dfv">${c.source||'—'}</div></div>
+    `;
+    document.getElementById('dptel-art').value=c.telephone_direct||'';
+    document.getElementById('dpno-art').value=c.note||'';
+  }catch(ex){}
+}
+
+function setDPSA(s){
+  document.getElementById('dp-art-pipe').querySelectorAll('.dps').forEach(p=>p.classList.remove('ac'));
+  document.getElementById('dp-art-pipe').querySelector(`.dps[data-s="${s}"]`)?.classList.add('ac');
+  if(s==='rdv'&&artEid){
+    const nom = document.getElementById('dpnm-art')?.textContent||'';
+    const tel = document.getElementById('dptel-art')?.value||'';
+    window._rdvContact = {id:artEid, nom:nom, telephone_direct:tel, profession:'', ville:''};
+    fetch(`${API}/artisans/${artEid}`).then(r=>r.ok?r.json():null).then(c=>{
+      window.openRDV(c&&c.id?c:window._rdvContact,'artisans');
+    }).catch(()=>window.openRDV(window._rdvContact,'artisans'));
+  }
+}
+async function saveArt(){
+  if(!artEid)return;
+  const pipe=document.getElementById('dp-art-pipe');
+  const statut=pipe.querySelector('.dps.ac')?.dataset.s||'';
+  const body={
+    telephone_direct:document.getElementById('dptel-art').value.replace(/\s/g,''),
+    statut,
+    note:document.getElementById('dpno-art').value
+  };
+  try{
+    const r=await fetch(`${API}/artisans/${artEid}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(r.ok){toast('✅ Sauvegardé','ok');loadArt();loadStats();}
+    else toast('❌ Erreur','err');
+  }catch(ex){toast('❌ Serveur hors ligne','err');}
+}
+
+
+// ── LOGIN ──
+let authToken = localStorage.getItem('crm_token') || '';
+
+async function doLogin() {
+  const user = document.getElementById('login-user').value.trim();
+  const pwd = document.getElementById('login-pwd').value;
+  const btn = document.getElementById('login-btn');
+  const err = document.getElementById('login-err');
+  
+  if(!user || !pwd) { showErr('Remplis tous les champs'); return; }
+  
+  btn.textContent = 'Connexion...';
+  btn.disabled = true;
+  err.style.display = 'none';
+  
+  try {
+    const r = await fetch(`${API}/login`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({username: user, password: pwd})
+    });
+    const d = await r.json();
+    if(r.ok) {
+      authToken = d.token;
+      localStorage.setItem('crm_token', authToken);
+      document.getElementById('login-page').style.display = 'none';
+      document.querySelector('.sidebar').style.display = 'flex';
+      document.querySelector('.main').style.display = 'flex';
+      applyRestrictions(d.restricted || []);
+      toast('✅ Bienvenue ' + d.nom, 'ok');
+      loadStats();
+      loadDash();
+    } else {
+      showErr(d.error || 'Identifiants incorrects');
+    }
+  } catch(ex) {
+    showErr('Erreur de connexion');
+  }
+  btn.textContent = 'Se connecter';
+  btn.disabled = false;
+}
+
+function showErr(msg) {
+  const err = document.getElementById('login-err');
+  err.textContent = msg;
+  err.style.display = 'block';
+}
+
+async function checkLogin() {
+  const token = localStorage.getItem('crm_token');
+  if(!token) { showLogin(); return; }
+  try {
+    const r = await fetch(`${API}/me`, {headers: {'X-Auth-Token': token}});
+    if(r.ok) {
+      const user = await r.json();
+      authToken = token;
+      document.getElementById('login-page').style.display = 'none';
+      document.querySelector('.sidebar').style.display = 'flex';
+      document.querySelector('.main').style.display = 'flex';
+      // Appliquer restrictions
+      applyRestrictions(user.restricted || []);
+    } else {
+      localStorage.removeItem('crm_token');
+      showLogin();
+    }
+  } catch(ex) {
+    showLogin();
+  }
+}
+
+function applyRestrictions(restricted) {
+  // Cacher les onglets restreints
+  const map = {
+    'arbitrage': 'nav-arb',
+    'ro': 'nav-ro',
+    'mailing': 'nav-mail',
+    'artisans': 'nav-art',
+    'export': 'nav-export',
+  };
+  for(const [key, navId] of Object.entries(map)) {
+    const el = document.getElementById(navId);
+    if(el) {
+      el.style.display = restricted.includes(key) ? 'none' : 'flex';
+    }
+  }
+}
+
+function showLogin() {
+  document.getElementById('login-page').style.display = 'flex';
+  document.querySelector('.sidebar').style.display = 'none';
+  document.querySelector('.main').style.display = 'none';
+}
+
+async function doLogout() {
+  try { await fetch(`${API}/logout`, {method:'POST', headers:{'X-Auth-Token': authToken}}); } catch(ex) {}
+  localStorage.removeItem('crm_token');
+  authToken = '';
+  showLogin();
+  toast('✅ Déconnecté', 'ok');
+}
+
+// Ajouter X-Auth-Token à tous les fetch
+const _origFetch = window.fetch;
+window.fetch = function(url, opts={}) {
+  if(authToken && typeof url === 'string' && url.includes('/api/')) {
+    opts.headers = opts.headers || {};
+    opts.headers['X-Auth-Token'] = authToken;
+  }
+  return _origFetch(url, opts);
+};
+
+
+// ── EDITION NOM/PRENOM MANUELLE ──
+window.toggleNameEdit = function(key){
+  const viewEl=document.getElementById(`dpnm-${key}-view`);
+  const editEl=document.getElementById(`dpnm-${key}-edit`);
+  if(!viewEl||!editEl)return;
+  viewEl.style.display='none';
+  editEl.style.display='flex';
+  document.getElementById(`dpnm-${key}-prenom`)?.focus();
+};
+
+window.saveNomPrenom = async function(key){
+  if(!eid)return;
+  const prenom=document.getElementById(`dpnm-${key}-prenom`).value.trim();
+  const nom=document.getElementById(`dpnm-${key}-nom`).value.trim();
+  if(!nom&&!prenom){toast('❌ Renseigne au moins un nom','err');return;}
+  try{
+    const r=await fetch(`${API}/sante/${eid}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({nom,prenom})});
+    if(r.ok){
+      toast('✅ Nom enregistré','ok');
+      document.getElementById(`dpnm-${key}-view`).textContent=`${prenom} ${nom}`.trim();
+      document.getElementById(`dpnm-${key}-view`).style.display='block';
+      document.getElementById(`dpnm-${key}-edit`).style.display='none';
+      loadP();
+    } else toast('❌ Erreur sauvegarde','err');
+  }catch(ex){toast('❌ Serveur hors ligne','err');}
+};
+
+(async()=>{
+  // Cacher sidebar/main au départ
+  document.querySelector(".sidebar").style.display="none";
+  document.querySelector(".main").style.display="none";
+  await checkLogin();
+  await loadStats();loadDash();setInterval(loadStats,5*60*1000);
+// ── MODAL RDV ──
+window.openRDV = function(contact, type) {
+  rdvContactId = contact.id;
+  rdvContactType = type;
+  const nom = type === 'sante' ? ((contact.nom||'')+' '+(contact.prenom||'')).trim() : (contact.nom||'');
+  document.getElementById('rdv-nom').value = nom;
+  document.getElementById('rdv-tel').value = contact.telephone_direct || contact.telephone || '';
+  document.getElementById('rdv-email').value = contact.email || '';
+  document.getElementById('rdv-subtitle').textContent = nom + ' · ' + (contact.specialite||contact.profession||'') + ' · ' + (contact.ville||'');
+  document.getElementById('rdv-assurance').value = '';
+  document.getElementById('rdv-rcp').value = '';
+  document.getElementById('rdv-mutuelle').value = '';
+  document.getElementById('rdv-per').value = '';
+  document.getElementById('rdv-notes').value = '';
+  document.getElementById('rdv-err').style.display = 'none';
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setHours(10,0,0,0);
+  document.getElementById('rdv-date').value = tomorrow.toISOString().slice(0,16);
+  document.getElementById('modal-rdv').style.display = 'flex';
+}
+
+let rdvContactId = null;
+let rdvContactType = null;
+
+window.closeRDV = function() {
+  document.getElementById('modal-rdv').style.display = 'none';
+}
+
+window.saveRDV = async function() {
+  const nom = document.getElementById('rdv-nom').value.trim();
+  const tel = document.getElementById('rdv-tel').value.trim();
+  const email = document.getElementById('rdv-email').value.trim();
+  const date = document.getElementById('rdv-date').value;
+  const assurance = document.getElementById('rdv-assurance').value.trim();
+  const rcp = document.getElementById('rdv-rcp').value;
+  const mutuelle = document.getElementById('rdv-mutuelle').value;
+  const per = document.getElementById('rdv-per').value;
+  const notes = document.getElementById('rdv-notes').value.trim();
+  
+  if(!nom||!date){document.getElementById('rdv-err').textContent='Nom et date obligatoires';document.getElementById('rdv-err').style.display='block';return;}
+  
+  const btn = document.getElementById('rdv-btn');
+  btn.textContent = '⏳ Création...'; btn.disabled = true;
+  
+  const desc = `Nom Prénom : ${nom}\nNuméro de tél : ${tel||'—'}\nAdresse mail : ${email||'—'}\n\nAssurance en place : ${assurance||'—'}\nRCP : ${rcp||'—'}\nMutuelle : ${mutuelle||'—'}\nPER : ${per||'—'}\n\nNotes : ${notes||'—'}\n\n— Bryan CGP CRM`;
+  
+  const startDate = new Date(date);
+  const endDate = new Date(startDate.getTime() + 60*60*1000);
+  
+  // Ouvrir Google Calendar avec tout pré-rempli
+  const title = encodeURIComponent('RDV - ' + nom);
+  const details = encodeURIComponent(desc);
+  const start = startDate.toISOString().replace(/[-:.]/g,'').slice(0,15)+'Z';
+  const end = endDate.toISOString().replace(/[-:.]/g,'').slice(0,15)+'Z';
+  const calUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${details}&dates=${start}/${end}`;
+  window.open(calUrl, '_blank');
+  
+  // Sauvegarder dans le CRM
+  if(rdvContactId) {
+    const ep = rdvContactType==='sante'?'sante':rdvContactType==='artisans'?'artisans':'pharmacies';
+    const noteRDV = `[RDV ${new Date(date).toLocaleDateString('fr-FR')}] Assurance: ${assurance||'—'} | RCP: ${rcp||'—'} | Mutuelle: ${mutuelle||'—'} | PER: ${per||'—'}${notes?' | '+notes:''}`;
+    await fetch(`${API}/${ep}/${rdvContactId}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({statut:'rdv',note:noteRDV})});
+  }
+  
+  toast('📅 RDV ajouté à Google Calendar !', 'ok');
+  closeRDV();
+  if(rdvContactType==='sante') loadP();
+  else if(rdvContactType==='artisans') loadArt();
+  else loadPhr();
+  loadStats();
+  
+  btn.textContent = '📅 Ajouter à Google Calendar'; btn.disabled = false;
+}
+
+document.addEventListener('click', function(e){if(e.target.id==='modal-rdv')closeRDV();});
+
+})();
+</script>
+
+<!-- MODAL RDV -->
+<div id="modal-rdv" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:10000;align-items:center;justify-content:center">
+  <div style="background:white;border-radius:20px;padding:32px;width:520px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 25px 80px rgba(0,0,0,0.3)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
+      <div>
+        <div style="font-size:20px;font-weight:800;color:#1A202C">📅 Nouveau RDV</div>
+        <div style="font-size:13px;color:#718096;margin-top:2px" id="rdv-subtitle">—</div>
+      </div>
+      <button onclick="window.closeRDV()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#718096;line-height:1">✕</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div style="grid-column:1/-1">
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#718096;display:block;margin-bottom:5px">👤 Nom Prénom</label>
+        <input id="rdv-nom" type="text" style="width:100%;border:1.5px solid #E2E8F0;border-radius:8px;padding:10px 12px;font-size:14px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none" placeholder="Nom Prénom">
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#718096;display:block;margin-bottom:5px">📱 Numéro de tél</label>
+        <input id="rdv-tel" type="text" style="width:100%;border:1.5px solid #E2E8F0;border-radius:8px;padding:10px 12px;font-size:14px;font-family:monospace;box-sizing:border-box;outline:none" placeholder="06 XX XX XX XX">
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#718096;display:block;margin-bottom:5px">📧 Adresse mail</label>
+        <input id="rdv-email" type="email" style="width:100%;border:1.5px solid #E2E8F0;border-radius:8px;padding:10px 12px;font-size:14px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none" placeholder="email@exemple.fr">
+      </div>
+      <div style="grid-column:1/-1">
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#718096;display:block;margin-bottom:5px">📅 Date &amp; heure du RDV</label>
+        <input id="rdv-date" type="datetime-local" style="width:100%;border:1.5px solid #E2E8F0;border-radius:8px;padding:10px 12px;font-size:14px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none">
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#718096;display:block;margin-bottom:5px">🏥 Assurance en place</label>
+        <input id="rdv-assurance" type="text" style="width:100%;border:1.5px solid #E2E8F0;border-radius:8px;padding:10px 12px;font-size:14px;font-family:Inter,sans-serif;box-sizing:border-box;outline:none" placeholder="AXA, MAIF...">
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#718096;display:block;margin-bottom:5px">⚕️ RCP</label>
+        <select id="rdv-rcp" style="width:100%;border:1.5px solid #E2E8F0;border-radius:8px;padding:10px 12px;font-size:14px;font-family:Inter,sans-serif;box-sizing:border-box;background:white;outline:none">
+          <option value="">— Non renseigné</option><option value="Oui">✅ Oui</option><option value="Non">❌ Non</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#718096;display:block;margin-bottom:5px">💊 Mutuelle</label>
+        <select id="rdv-mutuelle" style="width:100%;border:1.5px solid #E2E8F0;border-radius:8px;padding:10px 12px;font-size:14px;font-family:Inter,sans-serif;box-sizing:border-box;background:white;outline:none">
+          <option value="">— Non renseigné</option><option value="Oui">✅ Oui</option><option value="Non">❌ Non</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#718096;display:block;margin-bottom:5px">💰 PER</label>
+        <select id="rdv-per" style="width:100%;border:1.5px solid #E2E8F0;border-radius:8px;padding:10px 12px;font-size:14px;font-family:Inter,sans-serif;box-sizing:border-box;background:white;outline:none">
+          <option value="">— Non renseigné</option><option value="Oui">✅ Oui</option><option value="Non">❌ Non</option>
+        </select>
+      </div>
+      <div style="grid-column:1/-1">
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#718096;display:block;margin-bottom:5px">📝 Notes</label>
+        <textarea id="rdv-notes" rows="3" style="width:100%;border:1.5px solid #E2E8F0;border-radius:8px;padding:10px 12px;font-size:13px;font-family:Inter,sans-serif;box-sizing:border-box;resize:vertical;outline:none" placeholder="Informations complémentaires..."></textarea>
+      </div>
+    </div>
+    <div id="rdv-err" style="display:none;background:#FFF5F5;border:1px solid #FEB2B2;border-radius:8px;padding:10px;font-size:13px;color:#C53030;margin-top:14px"></div>
+    <div style="display:flex;gap:10px;margin-top:20px">
+      <button onclick="window.closeRDV()" style="flex:1;padding:12px;border:1.5px solid #E2E8F0;border-radius:10px;background:white;font-size:13px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif">Annuler</button>
+      <button onclick="window.saveRDV()" id="rdv-btn" style="flex:2;padding:12px;background:#38A169;border:none;border-radius:10px;color:white;font-size:14px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif">
+        📅 Ajouter à Google Calendar
+      </button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
