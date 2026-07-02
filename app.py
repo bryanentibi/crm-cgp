@@ -2,6 +2,11 @@ from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 import json, os
 from datetime import datetime, date
+from zoneinfo import ZoneInfo
+
+def paris_today():
+    """Date du jour en heure française (Railway tourne en UTC)"""
+    return datetime.now(ZoneInfo("Europe/Paris")).strftime('%Y-%m-%d')
 
 
 import hashlib, secrets
@@ -72,7 +77,7 @@ def stats():
         total_sante = cur.fetchone()['total']
         cur.execute("SELECT COUNT(*) as total FROM sante WHERE telephone_direct IS NOT NULL AND telephone_direct != ''")
         avec_tel = cur.fetchone()['total']
-        cur.execute("SELECT COUNT(*) as total FROM sante WHERE date_ajout = CURRENT_DATE::text")
+        cur.execute("SELECT COUNT(*) as total FROM sante WHERE date_ajout LIKE %s", [paris_today() + '%'])
         nouveaux = cur.fetchone()['total']
         cur.execute("SELECT specialite, COUNT(*) as cnt FROM sante GROUP BY specialite ORDER BY cnt DESC")
         par_spe = {r['specialite']: r['cnt'] for r in cur.fetchall() if r['specialite']}
@@ -100,7 +105,7 @@ def stats():
         # Nouveaux du jour tous types confondus (sante + artisans)
         global_nouveaux_jour = nouveaux
         try:
-            cur.execute("SELECT COUNT(*) as total FROM artisans WHERE date_ajout = CURRENT_DATE::text")
+            cur.execute("SELECT COUNT(*) as total FROM artisans WHERE date_ajout LIKE %s", [paris_today() + '%'])
             global_nouveaux_jour += cur.fetchone()['total']
         except:
             conn.rollback()
@@ -115,7 +120,7 @@ def stats():
     else:
         sante = load_json('professionnels_sante.json')
         pharmacies = load_json('pharmacies.json')
-        today = date.today().isoformat()
+        today = paris_today()
         par_spe = {}
         statuts_s = {}
         avec_tel = 0
@@ -174,7 +179,8 @@ def api_sante():
         if sans_direct:
             where.append("(telephone_direct IS NULL OR telephone_direct = '')")
         if nouveaux:
-            where.append("date_ajout = CURRENT_DATE::text")
+            where.append("date_ajout LIKE %s")
+            params.append(paris_today() + '%')
         if annee == 'recent':
             where.append("date_creation IS NOT NULL AND date_creation != '' AND date_creation::date > (CURRENT_DATE - INTERVAL '1 year')")
         elif annee == 'recent3':
@@ -550,8 +556,15 @@ def filtre_global():
     cur = conn.cursor()
     results = []
 
+    # Mode "Nouveaux du jour" : filtre par date d'ajout (heure Paris) au lieu du statut
+    nouveaux_mode = (statut == 'new_today')
+    today_like = paris_today() + '%'
+
     # Infirmiers / sante
-    cur.execute("SELECT id, nom, prenom, specialite, telephone_direct, telephone, ville, cp, statut, note, date_creation FROM sante WHERE statut = %s", [statut])
+    if nouveaux_mode:
+        cur.execute("SELECT id, nom, prenom, specialite, telephone_direct, telephone, ville, cp, statut, note, date_creation FROM sante WHERE date_ajout LIKE %s", [today_like])
+    else:
+        cur.execute("SELECT id, nom, prenom, specialite, telephone_direct, telephone, ville, cp, statut, note, date_creation FROM sante WHERE statut = %s", [statut])
     for r in cur.fetchall():
         results.append({
             'source_table': 'sante', 'id': r['id'],
@@ -564,7 +577,10 @@ def filtre_global():
         })
 
     # Artisans
-    cur.execute("SELECT id, nom, profession, telephone_direct, ville, cp, statut, note, date_creation FROM artisans WHERE statut = %s", [statut])
+    if nouveaux_mode:
+        cur.execute("SELECT id, nom, profession, telephone_direct, ville, cp, statut, note, date_creation FROM artisans WHERE date_ajout LIKE %s", [today_like])
+    else:
+        cur.execute("SELECT id, nom, profession, telephone_direct, ville, cp, statut, note, date_creation FROM artisans WHERE statut = %s", [statut])
     for r in cur.fetchall():
         results.append({
             'source_table': 'artisans', 'id': r['id'],
@@ -576,18 +592,19 @@ def filtre_global():
             'date_creation': r['date_creation'] or ''
         })
 
-    # Pharmacies
-    cur.execute("SELECT id, nom, dirigeant, telephone_direct, telephone, ville, cp, statut, note FROM pharmacies WHERE statut = %s", [statut])
-    for r in cur.fetchall():
-        results.append({
-            'source_table': 'pharmacies', 'id': r['id'],
-            'nom': r['dirigeant'] or r['nom'] or '',
-            'categorie': 'Pharmacie',
-            'telephone_direct': r['telephone_direct'] or r['telephone'] or '',
-            'ville': r['ville'] or '', 'cp': r['cp'] or '',
-            'statut': r['statut'], 'note': r['note'] or '',
-            'date_creation': ''
-        })
+    # Pharmacies (pas comptées dans les nouveaux du jour)
+    if not nouveaux_mode:
+        cur.execute("SELECT id, nom, dirigeant, telephone_direct, telephone, ville, cp, statut, note FROM pharmacies WHERE statut = %s", [statut])
+        for r in cur.fetchall():
+            results.append({
+                'source_table': 'pharmacies', 'id': r['id'],
+                'nom': r['dirigeant'] or r['nom'] or '',
+                'categorie': 'Pharmacie',
+                'telephone_direct': r['telephone_direct'] or r['telephone'] or '',
+                'ville': r['ville'] or '', 'cp': r['cp'] or '',
+                'statut': r['statut'], 'note': r['note'] or '',
+                'date_creation': ''
+            })
 
     conn.close()
 

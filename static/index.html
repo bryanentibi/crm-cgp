@@ -1179,7 +1179,7 @@ function showV(v){
     all:['Professionnels de santé','Toutes professions confondues'],
   };
   
-  const GLOB_TITLES={nrp:['📵 Tous les NRP','Infirmiers, artisans et pharmacies en NRP'],rdv:['📅 Tous les RDV','Infirmiers, artisans et pharmacies avec RDV pris'],ko:['❌ Tous les KO','Infirmiers, artisans et pharmacies en KO']};
+  const GLOB_TITLES={nrp:['📵 Tous les NRP','Infirmiers, artisans et pharmacies en NRP'],rdv:['📅 Tous les RDV','Infirmiers, artisans et pharmacies avec RDV pris'],ko:['❌ Tous les KO','Infirmiers, artisans et pharmacies en KO'],new_today:['🆕 Nouveaux du jour','Prospects santé et artisans scrappés aujourd\'hui']};
   const T={
     dashboard:['Dashboard','Vue d\u2019ensemble live'],
     mailing:['Mailing','Compose et envoie des emails depuis Vauban et Evka'],
@@ -1220,7 +1220,7 @@ document.addEventListener('click',e=>{if(!e.target.closest('.prof-wrap')){const 
 function setF(f){
   flt=f;pg=1;
   if(f==='avec_tel'){prof='all';setST('avec');showV('prospects');}
-  else if(f==='new_today'){prof='all';setST('new_today');showV('prospects');}
+  else if(f==='new_today'){globalStatut='new_today';globalPage=1;showV('global');}
   else if(f==='nrp'){globalStatut='nrp';globalPage=1;showV('global');}
   else if(f==='rdv'){globalStatut='rdv';globalPage=1;showV('global');}
   else if(f==='ko'){globalStatut='ko';globalPage=1;showV('global');}
