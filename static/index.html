@@ -699,7 +699,7 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
               style="width:100%;padding:14px;background:var(--blue);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;box-shadow:0 4px 12px rgba(49,130,206,.3);transition:all .2s">
               📧 Ouvrir dans Gmail
             </button>
-            <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:8px">Ouvre Gmail avec le mail pré-rempli · Pour envoi en masse utilise Gmail directement</div>
+            <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:8px">Tous les destinataires en Cci · Envoi par paquets de 100 · L'expéditeur choisi doit être connecté dans Chrome</div>
           </div>
 
           <!-- Colonne droite: Templates -->
@@ -707,23 +707,23 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
             <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:18px;box-shadow:var(--shadow)">
               <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--text3);margin-bottom:14px">⚡ TEMPLATES</div>
               <div id="mail-templates">
-                <div class="mail-tpl" onclick="loadTpl('per')" style="border:1px solid var(--border);border-radius:9px;padding:12px;margin-bottom:10px;cursor:pointer;transition:all .15s" onmouseenter="this.style.borderColor='var(--blue)';this.style.background='var(--blue-light)'" onmouseleave="this.style.borderColor='var(--border)';this.style.background='white'">
+                <div class="mail-tpl" onclick="loadTpl('per')" style="border:1px solid var(--border);border-radius:9px;padding:12px;margin-bottom:10px;cursor:pointer;transition:all .15s" onmouseenter="this.style.borderColor='var(--blue)';this.style.background='var(--blue-light)'" onmouseleave="this.style.borderColor='var(--border)';this.style.background='var(--white)'">
                   <div style="font-size:12.5px;font-weight:700;color:var(--blue);margin-bottom:4px">🏦 PER — Retraite complémentaire</div>
                   <div style="font-size:11px;color:var(--text2)">Présentation Plan Épargne Retraite pour professionnels de santé libéraux</div>
                 </div>
-                <div class="mail-tpl" onclick="loadTpl('prevoyance')" style="border:1px solid var(--border);border-radius:9px;padding:12px;margin-bottom:10px;cursor:pointer;transition:all .15s" onmouseenter="this.style.borderColor='var(--green)';this.style.background='var(--green-light)'" onmouseleave="this.style.borderColor='var(--border)';this.style.background='white'">
+                <div class="mail-tpl" onclick="loadTpl('prevoyance')" style="border:1px solid var(--border);border-radius:9px;padding:12px;margin-bottom:10px;cursor:pointer;transition:all .15s" onmouseenter="this.style.borderColor='var(--green)';this.style.background='var(--green-light)'" onmouseleave="this.style.borderColor='var(--border)';this.style.background='var(--white)'">
                   <div style="font-size:12.5px;font-weight:700;color:var(--green);margin-bottom:4px">🛡️ Prévoyance TNS</div>
                   <div style="font-size:11px;color:var(--text2)">Protection revenu, arrêt maladie, invalidité pour indépendants</div>
                 </div>
-                <div class="mail-tpl" onclick="loadTpl('audit')" style="border:1px solid var(--border);border-radius:9px;padding:12px;margin-bottom:10px;cursor:pointer;transition:all .15s" onmouseenter="this.style.borderColor='var(--purple)';this.style.background='var(--purple-light)'" onmouseleave="this.style.borderColor='var(--border)';this.style.background='white'">
+                <div class="mail-tpl" onclick="loadTpl('audit')" style="border:1px solid var(--border);border-radius:9px;padding:12px;margin-bottom:10px;cursor:pointer;transition:all .15s" onmouseenter="this.style.borderColor='var(--purple)';this.style.background='var(--purple-light)'" onmouseleave="this.style.borderColor='var(--border)';this.style.background='var(--white)'">
                   <div style="font-size:12.5px;font-weight:700;color:var(--purple);margin-bottom:4px">📊 Audit patrimonial offert</div>
                   <div style="font-size:11px;color:var(--text2)">Bilan complet gratuit pour optimiser votre situation fiscale et patrimoniale</div>
                 </div>
-                <div class="mail-tpl" onclick="loadTpl('relance')" style="border:1px solid var(--border);border-radius:9px;padding:12px;margin-bottom:10px;cursor:pointer;transition:all .15s" onmouseenter="this.style.borderColor='var(--orange)';this.style.background='var(--orange-light)'" onmouseleave="this.style.borderColor='var(--border)';this.style.background='white'">
+                <div class="mail-tpl" onclick="loadTpl('relance')" style="border:1px solid var(--border);border-radius:9px;padding:12px;margin-bottom:10px;cursor:pointer;transition:all .15s" onmouseenter="this.style.borderColor='var(--orange)';this.style.background='var(--orange-light)'" onmouseleave="this.style.borderColor='var(--border)';this.style.background='var(--white)'">
                   <div style="font-size:12.5px;font-weight:700;color:var(--orange);margin-bottom:4px">🔄 Relance ancien client</div>
                   <div style="font-size:11px;color:var(--text2)">Prise de contact pour bilan annuel ou optimisation de contrat existant</div>
                 </div>
-                <div class="mail-tpl" onclick="loadTpl('arbitrage')" style="border:1px solid var(--border);border-radius:9px;padding:12px;cursor:pointer;transition:all .15s" onmouseenter="this.style.borderColor='#D69E2E';this.style.background='#FFFFF0'" onmouseleave="this.style.borderColor='var(--border)';this.style.background='white'">
+                <div class="mail-tpl" onclick="loadTpl('arbitrage')" style="border:1px solid var(--border);border-radius:9px;padding:12px;cursor:pointer;transition:all .15s" onmouseenter="this.style.borderColor='#D69E2E';this.style.background='#FFFFF0'" onmouseleave="this.style.borderColor='var(--border)';this.style.background='var(--white)'">
                   <div style="font-size:12.5px;font-weight:700;color:#D69E2E;margin-bottom:4px">⚖️ Arbitrage / Bascule contrat</div>
                   <div style="font-size:11px;color:var(--text2)">Proposition de bascule Barrière PER ou Optimum vers meilleure offre</div>
                 </div>
@@ -960,17 +960,17 @@ function renderBarriere(){
       <input type="checkbox" style="cursor:pointer;width:15px;height:15px;accent-color:${col.border}" ${c.checked?'checked':''} onchange="bState[${ri}].checked=this.checked;saveArbField('b',bState[${ri}].id,'checked',this.checked)">
       <input type="text" value="${e(c.nom||'')}" placeholder="Nom..."
         style="border:none;background:transparent;font-weight:600;color:${col.text};font-size:13px;font-family:Inter,sans-serif;outline:none;padding:2px 4px;border-radius:4px;width:100%"
-        onfocus="this.style.background='white';this.style.border='1px solid '+'${col.border}'"
+        onfocus="this.style.background='var(--white)';this.style.border='1px solid '+'${col.border}'"
         onblur="this.style.background='transparent';this.style.border='none'"
         onchange="bState[${ri}].nom=this.value;saveArbField('b',bState[${ri}].id,'nom',this.value);toast('✅ Nom sauvegardé','ok')">
       <input type="number" value="${c.montant||0}"
         style="border:1px solid transparent;background:transparent;color:var(--green);font-weight:700;font-family:monospace;outline:none;padding:2px 4px;border-radius:4px;width:75px"
-        onfocus="this.style.background='white';this.style.borderColor='${col.border}'"
+        onfocus="this.style.background='var(--white)';this.style.borderColor='${col.border}'"
         onblur="this.style.background='transparent';this.style.borderColor='transparent'"
         onchange="bState[${ri}].montant=parseFloat(this.value)||0;saveArbField('b',bState[${ri}].id,'montant',bState[${ri}].montant);toast('✅ Montant sauvegardé','ok')">€
       <input type="text" value="${e(c.note||'')}" placeholder="Note..."
         style="border:none;background:transparent;color:var(--text2);font-size:11px;font-family:Inter,sans-serif;outline:none;padding:2px 4px;border-radius:4px;width:100%"
-        onfocus="this.style.background='white';this.style.border='1px solid '+'${col.border}'"
+        onfocus="this.style.background='var(--white)';this.style.border='1px solid '+'${col.border}'"
         onblur="this.style.background='transparent';this.style.border='none'"
         onchange="bState[${ri}].note=this.value;saveArbField('b',bState[${ri}].id,'note',this.value);toast('✅ Note sauvegardée','ok')">
       <input type="text" value="${e(c.commentaire||'')}" placeholder="Note libre..."
@@ -1018,17 +1018,17 @@ function renderOptimum(){
       <input type="checkbox" style="cursor:pointer;width:15px;height:15px;accent-color:${col.border}" ${c.checked?'checked':''} onchange="oState[${ri}].checked=this.checked;saveArbField('o',oState[${ri}].id,'checked',this.checked)">
       <input type="text" value="${e(c.nom||'')}" placeholder="Nom..."
         style="border:none;background:transparent;font-weight:600;color:${col.text};font-size:13px;font-family:Inter,sans-serif;outline:none;padding:2px 4px;border-radius:4px;width:100%"
-        onfocus="this.style.background='white';this.style.border='1px solid '+'${col.border}'"
+        onfocus="this.style.background='var(--white)';this.style.border='1px solid '+'${col.border}'"
         onblur="this.style.background='transparent';this.style.border='none'"
         onchange="oState[${ri}].nom=this.value;saveArbField('o',oState[${ri}].id,'nom',this.value);toast('✅ Nom sauvegardé','ok')">
       <input type="text" value="${e(c.date||'')}" placeholder="Date..."
         style="border:none;background:transparent;color:var(--text2);font-size:11px;font-family:Inter,sans-serif;outline:none;padding:2px 4px;border-radius:4px;width:100%"
-        onfocus="this.style.background='white';this.style.border='1px solid '+'${col.border}'"
+        onfocus="this.style.background='var(--white)';this.style.border='1px solid '+'${col.border}'"
         onblur="this.style.background='transparent';this.style.border='none'"
         onchange="oState[${ri}].date=this.value;saveArbField('o',oState[${ri}].id,'date',this.value);toast('✅ Date sauvegardée','ok')">
       <input type="number" value="${c.versement||0}"
         style="border:1px solid transparent;background:transparent;color:var(--green);font-weight:700;font-family:monospace;outline:none;padding:2px 4px;border-radius:4px;width:75px"
-        onfocus="this.style.background='white';this.style.borderColor='${col.border}'"
+        onfocus="this.style.background='var(--white)';this.style.borderColor='${col.border}'"
         onblur="this.style.background='transparent';this.style.borderColor='transparent'"
         onchange="oState[${ri}].versement=parseFloat(this.value)||0;saveArbField('o',oState[${ri}].id,'versement',oState[${ri}].versement);toast('✅ Versement sauvegardé','ok')">€
       <input type="text" value="${e(c.commentaire||'')}" placeholder="Note libre..."
@@ -1820,29 +1820,33 @@ function loadTpl(key) {
 }
 
 function sendMail() {
-  const to = document.getElementById('mail-to')?.value || '';
+  const toEl = document.getElementById('mail-to');
+  const to = toEl?.value || '';
   const subject = document.getElementById('mail-subject')?.value || '';
   const body = document.getElementById('mail-body')?.value || '';
-  
+
   if (!to.trim()) { toast('❌ Ajoute des destinataires', 'err'); return; }
   if (!subject.trim()) { toast('❌ Ajoute un objet', 'err'); return; }
-  
+
   const emails = to.split(/[,;\n]/).map(e => e.trim()).filter(e => e.includes('@'));
-  
-  if (emails.length === 1) {
-    // Un seul destinataire: ouvrir Gmail directement
-    const url = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(emails[0])}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.open(url, '_blank');
+  if (!emails.length) { toast('❌ Aucun email valide', 'err'); return; }
+
+  // Envoi par paquets de 100 max (limite de longueur d'URL Gmail)
+  const BATCH = 100;
+  const batch = emails.slice(0, BATCH);
+  const reste = emails.slice(BATCH);
+
+  // Tous les destinataires en Cci (copie cachée) = mailing de masse propre
+  // authuser force Gmail à utiliser le compte choisi (Vauban ou Evka)
+  const url = `https://mail.google.com/mail/?authuser=${encodeURIComponent(currentFrom)}&view=cm&fs=1&bcc=${encodeURIComponent(batch.join(','))}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  window.open(url, '_blank');
+
+  if (reste.length) {
+    toEl.value = reste.join(', ');
+    updateMailCount();
+    toast(`✅ ${batch.length} destinataires envoyés vers Gmail · Reste ${reste.length} — reclique sur Envoyer`, 'ok');
   } else {
-    // Plusieurs: ouvrir avec le premier, afficher les autres
-    const url = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(emails[0])}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.open(url, '_blank');
-    toast('✅ Gmail ouvert · Pour les ' + (emails.length - 1) + ' autres: copie les emails', 'ok');
-    
-    // Copier tous les emails dans le presse-papier
-    navigator.clipboard?.writeText(emails.join(', ')).then(() => {
-      toast('📋 ' + emails.length + ' emails copiés dans le presse-papier', 'ok');
-    });
+    toast(`✅ ${batch.length} destinataire${batch.length>1?'s':''} en Cci · Vérifie l'expéditeur puis clique Envoyer dans Gmail`, 'ok');
   }
 }
 
