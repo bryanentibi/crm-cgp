@@ -1839,9 +1839,16 @@ function sendMail() {
   const reste = emails.slice(BATCH);
 
   // À = ta propre adresse (propre et pro) · Cci = tous les destinataires (invisibles entre eux)
-  // /u/{email}/ force Gmail à ouvrir le compte choisi (Vauban ou Evka)
-  const url = `https://mail.google.com/mail/u/${encodeURIComponent(currentFrom)}/?view=cm&fs=1&to=${encodeURIComponent(currentFrom)}&bcc=${encodeURIComponent(batch.join(','))}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  window.open(url, '_blank');
+  const url = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(currentFrom)}&bcc=${encodeURIComponent(batch.join(','))}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+  if (currentFrom.includes('vauban')) {
+    // Le compte Vauban est dans un autre profil Chrome : on copie le lien à coller là-bas
+    navigator.clipboard.writeText(url).then(() => {
+      toast('📋 Lien copié ! Va sur ta fenêtre Chrome VAUBAN, colle-le dans la barre d\'adresse (Cmd+V) et fais Entrée', 'ok');
+    });
+  } else {
+    window.open(url, '_blank');
+  }
 
   if (reste.length) {
     toEl.value = reste.join(', ');
