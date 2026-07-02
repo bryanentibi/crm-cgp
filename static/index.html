@@ -313,7 +313,7 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
 .collapsible:hover{color:var(--blue)}
 .sb-chevron{font-size:10px;transition:transform .2s}
 .sb-chevron.closed{transform:rotate(-90deg)}
-.sb-section{overflow:hidden;transition:max-height .25s ease}
+.sb-section{overflow:hidden;max-height:600px;transition:max-height .25s ease}
 .sb-section.closed{max-height:0!important}
 </style>
 </head>
@@ -1099,21 +1099,11 @@ const OPTI_DATA = [
 function toggleSection(id){
   const sec = document.getElementById('sec-'+id);
   const chev = document.getElementById('chev-'+id);
-  const isClosed = sec.classList.contains('closed');
-  if(isClosed){
-    sec.classList.remove('closed');
-    chev.classList.remove('closed');
-    sec.style.maxHeight = sec.scrollHeight + 'px';
-  } else {
-    sec.classList.add('closed');
-    chev.classList.add('closed');
-    sec.style.maxHeight = '0px';
-  }
+  sec.style.maxHeight = '';
+  sec.classList.toggle('closed');
+  chev.classList.toggle('closed');
 }
-// Init max-height au chargement
-window.addEventListener('load', ()=>{
-  document.querySelectorAll('.sb-section').forEach(s=>{ s.style.maxHeight = s.scrollHeight + 'px'; });
-});
+// Init supprimé : la hauteur est gérée en CSS pur (max-height:600px)
 
 // ── NAVIGATION PAR PROFESSION ──
 function goProf(p){
