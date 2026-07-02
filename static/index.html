@@ -797,9 +797,9 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
         </table>
       </div>
       <div class="dp" id="dp-art">
-        <div class="dp-hdr" style="background:linear-gradient(135deg,#FFFAF0,#F0FFF4)">
+        <div class="dp-hdr" style="background:linear-gradient(135deg,var(--orange-light),var(--green-light))">
           <div class="dp-x" onclick="closeDp('art')">✕</div>
-          <div class="dp-ava" id="dpav-art" style="background:#FFFAF0;color:var(--orange);font-size:20px">🔧</div>
+          <div class="dp-ava" id="dpav-art" style="background:var(--orange-light);color:var(--orange);font-size:20px">🔧</div>
           <div class="dp-name" id="dpnm-art">—</div>
           <div class="dp-spec" id="dpsp-art">—</div>
           <div class="dp-acts">
@@ -1848,12 +1848,12 @@ function sendMail() {
 
 
 const ARB_COLORS_ART = {
-  'rdv':      {bg:'#EBF8FF',border:'#3182CE',text:'#2C5282',label:'📅 RDV Pris'},
-  'signe':    {bg:'#F0FFF4',border:'#38A169',text:'#276749',label:'✅ Signé'},
-  'ko':       {bg:'#FFF5F5',border:'#E53E3E',text:'#C53030',label:'❌ KO'},
-  'rappeler': {bg:'#FFFAF0',border:'#DD6B20',text:'#C05621',label:'🔄 Rappeler'},
-  'nrp':      {bg:'#FFFAF0',border:'#DD6B20',text:'#C05621',label:'📵 NRP'},
-  '':         {bg:'#FFFFFF',border:'#E2E8F0',text:'#4A5568',label:'⭕ À Appeler'},
+  'rdv':      {bg:'var(--blue-light)',border:'var(--blue)',text:'var(--blue)',label:'📅 RDV Pris'},
+  'signe':    {bg:'var(--green-light)',border:'var(--green)',text:'var(--green)',label:'✅ Signé'},
+  'ko':       {bg:'var(--red-light)',border:'var(--red)',text:'var(--red)',label:'❌ KO'},
+  'rappeler': {bg:'var(--orange-light)',border:'var(--orange)',text:'var(--orange)',label:'🔄 Rappeler'},
+  'nrp':      {bg:'var(--orange-light)',border:'var(--orange)',text:'var(--orange)',label:'📵 NRP'},
+  '':         {bg:'var(--white)',border:'var(--border2)',text:'var(--text)',label:'⭕ À Appeler'},
 };
 
 let artData = [];
