@@ -93,12 +93,14 @@ def stats():
         statuts_p = {(r['statut'] or ''): r['cnt'] for r in cur.fetchall()}
 
         # Compteurs globaux NRP/RDV/KO sur les 3 tables (sante + artisans + pharmacies)
+        # Les 'rappeler' sont comptés avec les 'nrp' (carte "À rappeler" du dashboard)
         global_counts = {'nrp': 0, 'rdv': 0, 'ko': 0}
         for table in ['sante', 'artisans', 'pharmacies']:
             try:
-                cur.execute(f"SELECT statut, COUNT(*) as cnt FROM {table} WHERE statut IN ('nrp','rdv','ko') GROUP BY statut")
+                cur.execute(f"SELECT statut, COUNT(*) as cnt FROM {table} WHERE statut IN ('nrp','rdv','ko','rappeler') GROUP BY statut")
                 for r in cur.fetchall():
-                    global_counts[r['statut']] = global_counts.get(r['statut'], 0) + r['cnt']
+                    key = 'nrp' if r['statut'] == 'rappeler' else r['statut']
+                    global_counts[key] = global_counts.get(key, 0) + r['cnt']
             except:
                 conn.rollback()
 
@@ -560,11 +562,14 @@ def filtre_global():
     nouveaux_mode = (statut == 'new_today')
     today_like = paris_today() + '%'
 
+    # Le filtre NRP inclut aussi les 'À rappeler'
+    statuts = ['nrp', 'rappeler'] if statut == 'nrp' else [statut]
+
     # Infirmiers / sante
     if nouveaux_mode:
         cur.execute("SELECT id, nom, prenom, specialite, telephone_direct, telephone, ville, cp, statut, note, date_creation FROM sante WHERE date_ajout LIKE %s", [today_like])
     else:
-        cur.execute("SELECT id, nom, prenom, specialite, telephone_direct, telephone, ville, cp, statut, note, date_creation FROM sante WHERE statut = %s", [statut])
+        cur.execute("SELECT id, nom, prenom, specialite, telephone_direct, telephone, ville, cp, statut, note, date_creation FROM sante WHERE statut = ANY(%s)", [statuts])
     for r in cur.fetchall():
         results.append({
             'source_table': 'sante', 'id': r['id'],
@@ -580,7 +585,7 @@ def filtre_global():
     if nouveaux_mode:
         cur.execute("SELECT id, nom, profession, telephone_direct, ville, cp, statut, note, date_creation FROM artisans WHERE date_ajout LIKE %s", [today_like])
     else:
-        cur.execute("SELECT id, nom, profession, telephone_direct, ville, cp, statut, note, date_creation FROM artisans WHERE statut = %s", [statut])
+        cur.execute("SELECT id, nom, profession, telephone_direct, ville, cp, statut, note, date_creation FROM artisans WHERE statut = ANY(%s)", [statuts])
     for r in cur.fetchall():
         results.append({
             'source_table': 'artisans', 'id': r['id'],
@@ -594,7 +599,7 @@ def filtre_global():
 
     # Pharmacies (pas comptées dans les nouveaux du jour)
     if not nouveaux_mode:
-        cur.execute("SELECT id, nom, dirigeant, telephone_direct, telephone, ville, cp, statut, note FROM pharmacies WHERE statut = %s", [statut])
+        cur.execute("SELECT id, nom, dirigeant, telephone_direct, telephone, ville, cp, statut, note FROM pharmacies WHERE statut = ANY(%s)", [statuts])
         for r in cur.fetchall():
             results.append({
                 'source_table': 'pharmacies', 'id': r['id'],

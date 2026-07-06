@@ -221,6 +221,7 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
 .dps:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-light)}
 .dps[data-s=""].ac,.dps[data-s=nouveau].ac{background:var(--white);border-color:var(--border2);color:var(--text)}
 .dps[data-s=nrp].ac{background:var(--orange-light);border-color:var(--orange);color:var(--orange)}
+.dps[data-s=rappeler].ac{background:var(--yellow-light);border-color:var(--yellow);color:var(--yellow)}
 .dps[data-s=rdv].ac{background:var(--green-light);border-color:var(--green);color:var(--green)}
 .dps[data-s=ko].ac{background:var(--red-light);border-color:var(--red);color:var(--red)}
 .dps[data-s=client].ac{background:var(--green-light);border-color:var(--green);color:var(--green)}
@@ -517,6 +518,7 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
         <div class="dp-pipe">
           <div class="dps" data-s="" onclick="setDPS('')">⭕ Nouveau</div>
           <div class="dps" data-s="nrp" onclick="setDPS('nrp')">📵 NRP</div>
+          <div class="dps" data-s="rappeler" onclick="setDPS('rappeler')">🔄 Rappeler</div>
           <div class="dps" data-s="rdv" onclick="setDPS('rdv')">📅 RDV</div>
           <div class="dps" data-s="ko" onclick="setDPS('ko')">❌ KO</div>
         </div>
@@ -573,6 +575,7 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
         <div class="dp-pipe">
           <div class="dps" data-s="" onclick="setDPS('')">⭕ Nouveau</div>
           <div class="dps" data-s="nrp" onclick="setDPS('nrp')">📵 NRP</div>
+          <div class="dps" data-s="rappeler" onclick="setDPS('rappeler')">🔄 Rappeler</div>
           <div class="dps" data-s="rdv" onclick="setDPS('rdv')">📅 RDV</div>
           <div class="dps" data-s="ko" onclick="setDPS('ko')">❌ KO</div>
         </div>
@@ -812,6 +815,7 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
         <div class="dp-pipe" id="dp-art-pipe">
           <div class="dps" data-s="" onclick="setDPSA('')">⭕ Nouveau</div>
           <div class="dps" data-s="nrp" onclick="setDPSA('nrp')">📵 NRP</div>
+          <div class="dps" data-s="rappeler" onclick="setDPSA('rappeler')">🔄 Rappeler</div>
           <div class="dps" data-s="rdv" onclick="setDPSA('rdv')">📅 RDV</div>
           <div class="dps" data-s="ko" onclick="setDPSA('ko')">❌ KO</div>
         </div>
@@ -874,7 +878,7 @@ const PC={all:'var(--text2)',inf:'#3182CE',kin:'#805AD5',med:'#2B6CB0',den:'#DD6
 const PS={inf:['Infirmier','Infirmière'],kin:['Masseur','Kinési','Ostéo'],med:['Médecin','Cardio','Radio','Chirur','Gynéco','Pédiatre','Dermato'],den:['Dentiste','Chirurgien-dentiste'],psy:['Psycho','Orthophon','Pédicure','Sage-femme']};
 const PL={all:'Toutes professions',inf:'Infirmiers',kin:'Kiné / Ostéo',med:'Médecins',den:'Dentistes',psy:'Psy / Ortho'};
 const SL={'':'b-gray',nouveau:'b-gray',nrp:'b-orange',rdv:'b-green',ko:'b-red','contacte':'b-blue','interesse':'b-purple','a-rappeler':'b-orange','client':'b-green','sans-suite':'b-gray'};
-const SN={'':'Nouveau',nouveau:'Nouveau',nrp:'📵 NRP',rdv:'📅 RDV',ko:'❌ KO','contacte':'Contacté','interesse':'Intéressé','a-rappeler':'À rappeler','client':'Client','sans-suite':'Sans suite'};
+const SN={'':'Nouveau',nouveau:'Nouveau',nrp:'📵 NRP',rappeler:'🔄 À rappeler',rdv:'📅 RDV',ko:'❌ KO','contacte':'Contacté','interesse':'Intéressé','a-rappeler':'À rappeler','client':'Client','sans-suite':'Sans suite'};
 
 let prof='inf',pg=1,pgP=1,sub='all',subP='all',flt='',eid=null,etype=null,scrInt=null;
 
