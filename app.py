@@ -18,12 +18,6 @@ USERS = {
         "role": "admin",
         "nom": "Bryan Entibi",
         "restricted": []
-    },
-    "stagiaire": {
-        "password_hash": "a936b535b48aa89df65d8b6973a37f1130a6d083214fa37e4485aad56bbd69bf",
-        "role": "user",
-        "nom": "Stagiaire",
-        "restricted": ["arbitrage", "ro"]
     }
 }
 

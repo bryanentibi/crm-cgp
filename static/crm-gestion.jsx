@@ -182,7 +182,7 @@ async function downloadFile(fileId, fallbackName) {
 
 const emptyRow = () => ({
   id: uid(), dateCreation: "", nom: "", type: "", compagnie: "", frais: "", ref: "",
-  commentaire: "", apporteur: "", volume: "", remuneration: "", statut: "En attente",
+  commentaire: "", apporteur: "", versement: "", volume: "", remuneration: "", statut: "En attente",
 });
 const emptyMonthData = (users) => {
   const out = {};
@@ -397,7 +397,7 @@ function App() {
     ["dash", "📊 Tableau de bord"],
     ["clients", "👥 Clients"],
     ["prospection", "🎯 Prospection"],
-    ["ventes", "📈 Ventes équipe"],
+    ["ventes", "📈 Ventes"],
     ["paye", "💶 Ma rémunération"],
     ["docs", "📁 Documents"],
     ["decom", "🔻 Décommissionnés"],
@@ -419,12 +419,10 @@ function App() {
             </button>
           ))}
         </nav>
-        <button
-          onClick={() => { window.location.href = "/"; }}
-          style={{ margin: "0 10px 12px", textAlign: "left", background: "rgba(201,162,75,.18)", border: "none", borderLeft: "3px solid #C9A24B", color: "#fff", padding: "11px 14px", borderRadius: 8, cursor: "pointer", fontSize: 14, display: "flex", gap: 10, alignItems: "center", fontFamily: "inherit" }}
-        >
-          🎯 CRM Prospection
-        </button>
+        <div style={{ display: "flex", gap: 4, margin: "0 10px 12px", background: "#13315C", border: "1px solid rgba(255,255,255,.12)", borderRadius: 10, padding: 4 }}>
+          <div onClick={() => { window.location.href = "/"; }} style={{ flex: 1, textAlign: "center", padding: "8px 4px", borderRadius: 7, fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,.6)", cursor: "pointer" }}>🎯 Prospection</div>
+          <div style={{ flex: 1, textAlign: "center", padding: "8px 4px", borderRadius: 7, fontSize: 12, fontWeight: 700, background: "#C9A24B", color: "#0B2545", cursor: "default" }}>📁 Gestion</div>
+        </div>
         <GlobalSearch
           clients={clients} prospection={prospection} me={me} users={users}
           goClient={(id) => { setPage("clients"); setOpenClient(id); }}
@@ -718,7 +716,7 @@ function Dashboard({ clients: allClients, users, view, me, sales, saveClients, g
         ))}
       </div>
 
-      <Leaderboard sales={sales} users={users} />
+      <VentesJour sales={sales} users={users} clients={clients} goClient={goClient} />
     </div>
   );
 }
@@ -1150,12 +1148,12 @@ function SalesPage({ sales, saveSales, users, objectifs, saveObjectifs, me }) {
     users.forEach((u) => {
       (((md0[u.id] || {}).rows) || []).forEach((r) => {
         if (!(r.nom || "").trim()) return;
-        rows.push([`${u.prenom} ${u.nom}`, fmtDate(r.dateCreation), r.nom, r.type, r.compagnie, r.frais, r.ref, r.commentaire, r.apporteur, r.volume, r.remuneration, r.statut]);
+        rows.push([`${u.prenom} ${u.nom}`, fmtDate(r.dateCreation), r.nom, r.type, r.compagnie, r.frais, r.ref, r.commentaire, r.apporteur, r.versement || "", r.volume, r.remuneration, r.statut]);
       });
     });
     downloadCSV(
       `ELYON_ventes_${month}.csv`,
-      ["Commercial", "Date de création", "Client", "Type de contrat", "Compagnie", "Frais", "Réf. contrat", "Commentaires", "Apporteur", "Volume", "Rémunération", "Statut"],
+      ["Commercial", "Date de création", "Client", "Type de contrat", "Compagnie", "Frais", "Réf. contrat", "Commentaires", "Apporteur", "Versement mensuel", "Volume", "Rémunération", "Statut"],
       rows
     );
   };
@@ -1307,6 +1305,7 @@ function SalesPage({ sales, saveSales, users, objectifs, saveObjectifs, me }) {
                   <th>Réf. contrat</th>
                   <th style={{ width: "14%" }}>Commentaires</th>
                   <th>Apporteur</th>
+                  <th>Versement/mois</th>
                   <th>Volume</th>
                   <th>Rémunération</th>
                   <th>Statut</th>
@@ -1333,6 +1332,7 @@ function SalesPage({ sales, saveSales, users, objectifs, saveObjectifs, me }) {
                     <td><input value={r.ref} onChange={(e) => updateCell(u.id, r.id, "ref", e.target.value)} /></td>
                     <td><input value={r.commentaire} onChange={(e) => updateCell(u.id, r.id, "commentaire", e.target.value)} /></td>
                     <td><input value={r.apporteur} onChange={(e) => updateCell(u.id, r.id, "apporteur", e.target.value)} /></td>
+                    <td><input value={r.versement || ""} onChange={(e) => updateCell(u.id, r.id, "versement", e.target.value)} placeholder="€/mois" /></td>
                     <td><input value={r.volume} onChange={(e) => updateCell(u.id, r.id, "volume", e.target.value)} placeholder="€" /></td>
                     <td><input value={r.remuneration} onChange={(e) => updateCell(u.id, r.id, "remuneration", e.target.value)} placeholder="€" /></td>
                     <td>
@@ -1447,7 +1447,7 @@ function PayePage({ view, sales, bordereaux, saveBordereaux }) {
 function DocsPage({ docs, saveDocs }) {
   const [newName, setNewName] = useState("");
   const addFolder = () => {
-    if (!newName.trim()) return;
+    if (!newName.trim()) { alert("Tape d'abord un nom de dossier dans le champ à gauche du bouton (ex : Modèles MMA), puis clique sur + Créer un dossier."); return; }
     saveDocs([...docs, { id: uid(), name: newName.trim(), files: [] }]);
     setNewName("");
   };
@@ -2277,6 +2277,45 @@ function TrashPage({ trash, saveTrash, users, restoreClient, restoreProspect }) 
   );
 }
 
+
+/* ================= VENTES AUJOURD'HUI (dashboard) ================= */
+function VentesJour({ sales, users, clients, goClient }) {
+  const today = todayISO();
+  const mk = today.slice(0, 7);
+  const items = [];
+  Object.entries(sales[mk] || {}).forEach(([uidK, data]) => {
+    const u = users.find((x) => x.id === uidK);
+    (data.rows || []).forEach((r) => {
+      if ((r.nom || "").trim() && r.dateCreation === today) items.push({ r, u });
+    });
+  });
+  const openFiche = (r) => {
+    const cl = clients.find((c) => (r.nom || "").toUpperCase().includes((c.nom || "").toUpperCase()) && c.nom);
+    if (cl && goClient) goClient(cl);
+  };
+  return (
+    <div className="card" style={{ marginTop: 20 }}>
+      <h2 style={{ fontSize: 18, marginBottom: 14 }}>💰 Ventes aujourd'hui <span style={{ color: "#8593a8", fontSize: 13, fontWeight: 400 }}>· {items.length} contrat(s) signé(s)</span></h2>
+      {items.length === 0 && <div style={{ color: "#8593a8", fontSize: 13.5 }}>Aucun contrat signé aujourd'hui pour l'instant. Au travail ! 💪</div>}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))", gap: 12 }}>
+        {items.map(({ r, u }, i) => (
+          <div key={i} onClick={() => openFiche(r)} style={{ background: "#fff", border: "1px solid #E3E9F1", borderLeft: "4px solid #C9A24B", borderRadius: 10, padding: "13px 15px", cursor: "pointer", boxShadow: "0 1px 3px rgba(11,37,69,.05)" }}>
+            <b style={{ fontSize: 14 }}>{r.nom}</b>
+            <div style={{ fontSize: 12.5, color: "#44536B", marginTop: 3 }}>{r.type}{r.compagnie ? " · " + r.compagnie : ""}</div>
+            <div style={{ fontSize: 12.5, color: "#44536B" }}>
+              {r.versement ? `${r.versement} €/mois · ` : ""}Volume : {r.volume ? fmtEUR(parseNum(r.volume)) : "—"}
+            </div>
+            <div style={{ fontSize: 12.5, marginTop: 4 }}>
+              <span style={{ color: "#7A5C17", fontWeight: 700 }}>Commission : {r.remuneration ? fmtEUR(parseNum(r.remuneration)) : "—"}</span>
+              <span className={"badge " + (r.statut === "Payé" ? "b-green" : r.statut === "Annulé" ? "b-red" : "b-gold")} style={{ marginLeft: 8 }}>{r.statut}</span>
+            </div>
+            <div style={{ fontSize: 11, color: "#8593a8", marginTop: 4 }}>Signé par {u ? u.prenom : "?"} · {r.commentaire || ""}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 /* ================= PAGE DÉCOMMISSIONNÉS ================= */
 function DecomPage({ clients, saveClients, goClient }) {
