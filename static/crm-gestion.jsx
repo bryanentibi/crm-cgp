@@ -645,13 +645,7 @@ function Dashboard({ clients: allClients, users, view, me, sales, saveClients, g
     (c.alertes || []).filter((a) => !a.done).forEach((a) => {
       if (a.date <= today) alerts.push({ kind: "alerte", client: c, alerte: a, date: a.date });
     });
-    (c.contrats || []).forEach((k) => {
-      const nf = nextFollowUp(k.dateSignature);
-      if (nf) {
-        const d = daysUntil(nf);
-        if (d <= 7) alerts.push({ kind: "suivi", client: c, contrat: k, date: nf.toISOString().slice(0, 10), days: d });
-      }
-    });
+    /* Rappels 4 mois automatiques désactivés — utiliser les alertes manuelles */
     /* 🎂 Anniversaire client dans les 7 prochains jours */
     const bd = nextBirthday(c.dateNaissance);
     if (bd) {
@@ -781,6 +775,7 @@ function Leaderboard({ sales, users }) {
 function ClientsPage({ clients, saveClients, me, users, openClient }) {
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState("alpha");
   const [ownerFilter, setOwnerFilter] = useState("all");
 
   /* Cloisonnement : un commercial ne voit QUE son portefeuille. Le manager voit tout. */
@@ -793,6 +788,17 @@ function ClientsPage({ clients, saveClients, me, users, openClient }) {
     !c.decom &&
     (c.nom + " " + c.prenom + " " + (c.profession || "")).toLowerCase().includes(search.toLowerCase())
   );
+  const lastSig = (c) => (c.contrats || []).reduce((m, k) => (k.dateSignature > m ? k.dateSignature : m), "");
+  const totMontant = (c) => (c.contrats || []).reduce((s, k) => s + parseNum(k.montant), 0);
+  const firstType = (c) => ((c.contrats || [])[0]?.type) || "";
+  const firstComp = (c) => ((c.contrats || [])[0]?.compagnie) || "";
+  const sorted = [...filtered].sort((a, b) => {
+    if (sortBy === "date") return lastSig(b).localeCompare(lastSig(a));
+    if (sortBy === "montant") return totMontant(b) - totMontant(a);
+    if (sortBy === "type") return firstType(a).localeCompare(firstType(b)) || a.nom.localeCompare(b.nom);
+    if (sortBy === "compagnie") return firstComp(a).localeCompare(firstComp(b)) || a.nom.localeCompare(b.nom);
+    return a.nom.localeCompare(b.nom);
+  });
   const ownerName = (c) => {
     const u = users.find((x) => x.id === ownerOf(c));
     return u ? `${u.prenom} ${u.nom}` : "—";
@@ -816,13 +822,20 @@ function ClientsPage({ clients, saveClients, me, users, openClient }) {
               {users.map((u) => <option key={u.id} value={u.id}>{u.prenom} {u.nom}</option>)}
             </select>
           )}
+          <select className="sel" style={{ width: 190 }} value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+            <option value="alpha">Tri : A → Z</option>
+            <option value="date">Tri : date de signature</option>
+            <option value="montant">Tri : montant signé</option>
+            <option value="type">Tri : type de contrat</option>
+            <option value="compagnie">Tri : compagnie</option>
+          </select>
           <input className="in" style={{ width: 220 }} placeholder="Rechercher un client…" value={search} onChange={(e) => setSearch(e.target.value)} />
           <button className="btn gold" onClick={() => setShowForm(true)}>+ Nouvelle fiche client</button>
         </div>
       </div>
 
       <div className="grid">
-        {filtered.map((c) => (
+        {sorted.map((c) => (
           <div className="clientcard" key={c.id} onClick={() => openClient(c.id)}>
             <div>
               <b style={{ fontSize: 15 }}>{c.nom.toUpperCase()} {c.prenom}</b>
@@ -838,7 +851,7 @@ function ClientsPage({ clients, saveClients, me, users, openClient }) {
             </div>
           </div>
         ))}
-        {filtered.length === 0 && <div className="card" style={{ color: "#8593a8" }}>Aucun client. Créez la première fiche pour démarrer.</div>}
+        {sorted.length === 0 && <div className="card" style={{ color: "#8593a8" }}>Aucun client. Créez la première fiche pour démarrer.</div>}
       </div>
 
       {showForm && (
@@ -1014,7 +1027,7 @@ function ContractCard({ contract: k, onEdit, onDelete, onFiles, onFileDelete }) 
         {k.type === "PER" && (
           <> · <b>Transfert interne :</b> {k.transfertInterne === "oui" ? `Oui${k.fraisTransfert === "oui" ? " (avec frais)" : " (sans frais)"}` : "Non"}</>
         )}
-        {nf && <> · <b>Prochain rappel (4 mois) :</b> <span style={{ color: GOLD, fontWeight: 600 }}>{nf.toLocaleDateString("fr-FR")}</span></>}
+
         {k.commentaire && <div style={{ marginTop: 4, fontStyle: "italic" }}>💬 {k.commentaire}</div>}
       </div>
       <div style={{ marginTop: 10 }}>
