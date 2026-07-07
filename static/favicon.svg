@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#13315C"/>
+      <stop offset="1" stop-color="#0B2545"/>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="96" height="96" rx="22" fill="url(#bg)"/>
+  <rect x="7" y="7" width="86" height="86" rx="18" fill="none" stroke="#8a7a4d" stroke-width="1.6"/>
+  <text x="50" y="66" font-family="Georgia, 'Times New Roman', serif" font-size="46" font-weight="bold" fill="#C9A24B" text-anchor="middle" letter-spacing="1">BE</text>
+</svg>
