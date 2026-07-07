@@ -314,6 +314,7 @@ function FileList({ files, onDelete }) {
 
 /* ================= APPLICATION ================= */
 function App() {
+  const [clientTypeFilter, setClientTypeFilter] = useState("");
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState(DEFAULT_USERS);
   const [clients, setClients] = useState([]);
@@ -336,9 +337,17 @@ function App() {
         sGet("crm-users"), sGet("crm-clients"), sGet("crm-sales"), sGet("crm-docs"), sGet("crm-bordereaux"),
         sGet("crm-prospection"), sGet("crm-objectifs"), sGet("crm-trash"),
       ]);
-      const loadedUsers = u && u.length ? u : DEFAULT_USERS;
+      let loadedUsers = u && u.length ? u : DEFAULT_USERS;
+      /* Réinitialisation des mots de passe demandée le 07/07/2026 (une seule fois) */
+      try {
+        await sGet("crm-pwd-reset-0707");
+      } catch {
+        loadedUsers = loadedUsers.map((x) => ({ ...x, password: "1425" }));
+        await sSet("crm-users", loadedUsers);
+        await sSet("crm-pwd-reset-0707", true);
+      }
       setUsers(loadedUsers);
-      if (!u) await sSet("crm-users", DEFAULT_USERS);
+      if (!u) await sSet("crm-users", loadedUsers);
       setClients(c || []);
       let salesData = s || {};
       let changed = false;
@@ -412,6 +421,10 @@ function App() {
           <b>BRYAN <span style={{ color: GOLD }}>·</span> CGP</b>
           <span>Gestion de patrimoine</span>
         </div>
+        <div style={{ display: "flex", gap: 4, margin: "0 10px 12px", background: "#13315C", border: "1px solid rgba(255,255,255,.12)", borderRadius: 10, padding: 4 }}>
+          <div onClick={() => { window.location.href = "/"; }} style={{ flex: 1, textAlign: "center", padding: "8px 4px", borderRadius: 7, fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,.6)", cursor: "pointer" }}>🎯 Prospection</div>
+          <div style={{ flex: 1, textAlign: "center", padding: "8px 4px", borderRadius: 7, fontSize: 12, fontWeight: 700, background: "#C9A24B", color: "#0B2545", cursor: "default" }}>📁 Gestion</div>
+        </div>
         <nav className="nav">
           {NAV.map(([k, l]) => (
             <button key={k} className={page === k ? "on" : ""} onClick={() => { setPage(k); setOpenClient(null); }}>
@@ -419,10 +432,6 @@ function App() {
             </button>
           ))}
         </nav>
-        <div style={{ display: "flex", gap: 4, margin: "0 10px 12px", background: "#13315C", border: "1px solid rgba(255,255,255,.12)", borderRadius: 10, padding: 4 }}>
-          <div onClick={() => { window.location.href = "/"; }} style={{ flex: 1, textAlign: "center", padding: "8px 4px", borderRadius: 7, fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,.6)", cursor: "pointer" }}>🎯 Prospection</div>
-          <div style={{ flex: 1, textAlign: "center", padding: "8px 4px", borderRadius: 7, fontSize: 12, fontWeight: 700, background: "#C9A24B", color: "#0B2545", cursor: "default" }}>📁 Gestion</div>
-        </div>
         <GlobalSearch
           clients={clients} prospection={prospection} me={me} users={users}
           goClient={(id) => { setPage("clients"); setOpenClient(id); }}
@@ -501,7 +510,7 @@ function App() {
 
       <main className="main">
         {page === "decom" && <DecomPage clients={clients} saveClients={saveClients} goClient={(id) => { setPage("clients"); setOpenClient(id); }} />}
-        {page === "dash" && <Dashboard clients={clients} users={users} view={view} me={me} sales={sales} saveClients={saveClients} goClient={(c) => { setOpenClient(c.id); setPage("clients"); }} />}
+        {page === "dash" && <Dashboard clients={clients} users={users} view={view} me={me} sales={sales} saveClients={saveClients} goClient={(c) => { setOpenClient(c.id); setPage("clients"); }} goClients={(t) => { setClientTypeFilter(t || ""); setOpenClient(null); setPage("clients"); }} />}
         {page === "prospection" && (
           <ProspectionPage
             prospection={prospection} saveProspection={saveProspection} me={me} users={users} toTrash={toTrash}
@@ -510,7 +519,7 @@ function App() {
           />
         )}
         {page === "clients" && !openClient && (
-          <ClientsPage clients={clients} saveClients={saveClients} me={me} users={users} openClient={(id) => setOpenClient(id)} />
+          <ClientsPage clients={clients} saveClients={saveClients} me={me} users={users} openClient={(id) => setOpenClient(id)} typeFilter={clientTypeFilter} clearTypeFilter={() => setClientTypeFilter("")} />
         )}
         {page === "clients" && openClient && (
           <ClientDetail
@@ -621,7 +630,7 @@ function Login({ users, onLogin, onSetPassword }) {
 }
 
 /* ================= TABLEAU DE BORD ================= */
-function Dashboard({ clients: allClients, users, view, me, sales, saveClients, goClient }) {
+function Dashboard({ clients: allClients, users, view, me, sales, saveClients, goClient, goClients }) {
   /* Cloisonnement : un commercial ne voit que ses clients.
      Le manager voit tout depuis son espace, ou le portefeuille du conseiller consulté. */
   const clients = useMemo(() => {
@@ -669,14 +678,14 @@ function Dashboard({ clients: allClients, users, view, me, sales, saveClients, g
       </div>
 
       <div className="kpis" style={{ marginBottom: 20 }}>
-        <div className="kpi"><div className="n">{stats.clients}</div><div className="l">Clients actifs</div></div>
-        <div className="kpi"><div className="n">{stats.contrats}</div><div className="l">Contrats</div></div>
-        <div className="kpi"><div className="n">{stats.PER}</div><div className="l">PER</div></div>
-        <div className="kpi"><div className="n">{stats["Assurance vie"]}</div><div className="l">Assurances vie</div></div>
-        <div className="kpi"><div className="n">{stats["Prévoyance"]}</div><div className="l">Prévoyances</div></div>
-        <div className="kpi"><div className="n">{stats["Protection juridique"]}</div><div className="l">Protections juridiques</div></div>
-        <div className="kpi"><div className="n">{stats["Mutuelle"]}</div><div className="l">Mutuelles</div></div>
-        <div className="kpi"><div className="n">{stats["Transfert"]}</div><div className="l">Transferts</div></div>
+        <div className="kpi" style={{ cursor: "pointer" }} onClick={() => goClients("")}><div className="n">{stats.clients}</div><div className="l">Clients actifs</div></div>
+        <div className="kpi" style={{ cursor: "pointer" }} onClick={() => goClients("")}><div className="n">{stats.contrats}</div><div className="l">Contrats</div></div>
+        <div className="kpi" style={{ cursor: "pointer" }} onClick={() => goClients("PER")}><div className="n">{stats.PER}</div><div className="l">PER</div></div>
+        <div className="kpi" style={{ cursor: "pointer" }} onClick={() => goClients("Assurance vie")}><div className="n">{stats["Assurance vie"]}</div><div className="l">Assurances vie</div></div>
+        <div className="kpi" style={{ cursor: "pointer" }} onClick={() => goClients("Prévoyance")}><div className="n">{stats["Prévoyance"]}</div><div className="l">Prévoyances</div></div>
+        <div className="kpi" style={{ cursor: "pointer" }} onClick={() => goClients("Protection juridique")}><div className="n">{stats["Protection juridique"]}</div><div className="l">Protections juridiques</div></div>
+        <div className="kpi" style={{ cursor: "pointer" }} onClick={() => goClients("Mutuelle")}><div className="n">{stats["Mutuelle"]}</div><div className="l">Mutuelles</div></div>
+        <div className="kpi" style={{ cursor: "pointer" }} onClick={() => goClients("Transfert")}><div className="n">{stats["Transfert"]}</div><div className="l">Transferts</div></div>
       </div>
 
       <div className="card">
@@ -770,7 +779,7 @@ function Leaderboard({ sales, users }) {
 }
 
 /* ================= CLIENTS ================= */
-function ClientsPage({ clients, saveClients, me, users, openClient }) {
+function ClientsPage({ clients, saveClients, me, users, openClient, typeFilter, clearTypeFilter }) {
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("alpha");
@@ -784,6 +793,7 @@ function ClientsPage({ clients, saveClients, me, users, openClient }) {
     : myPortfolio;
   const filtered = scoped.filter((c) =>
     !c.decom &&
+    (!typeFilter || (c.contrats || []).some((k) => k.type === typeFilter)) &&
     (c.nom + " " + c.prenom + " " + (c.profession || "")).toLowerCase().includes(search.toLowerCase())
   );
   const lastSig = (c) => (c.contrats || []).reduce((m, k) => (k.dateSignature > m ? k.dateSignature : m), "");
@@ -819,6 +829,11 @@ function ClientsPage({ clients, saveClients, me, users, openClient }) {
               <option value="all">Tous les conseillers</option>
               {users.map((u) => <option key={u.id} value={u.id}>{u.prenom} {u.nom}</option>)}
             </select>
+          )}
+          {typeFilter && (
+            <span className="badge b-gold" style={{ cursor: "pointer", fontSize: 13, padding: "7px 12px" }} onClick={clearTypeFilter} title="Cliquer pour retirer le filtre">
+              Filtre : {typeFilter} ✕
+            </span>
           )}
           <select className="sel" style={{ width: 190 }} value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
             <option value="alpha">Tri : A → Z</option>

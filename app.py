@@ -14,7 +14,7 @@ from functools import wraps
 
 USERS = {
     "bryanentibi": {
-        "password_hash": "9ed259ce4511a7a0adef99a70475d2f2e3cb90c2aa8f7f8c5d37d941849ca9ba",
+        "password_hash": "27bb63ed6f711388cd6e7b053728de769515945977022b6414ecc9ca546a0889",
         "role": "admin",
         "nom": "Bryan Entibi",
         "restricted": []
