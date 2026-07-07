@@ -400,6 +400,7 @@ function App() {
     ["ventes", "📈 Ventes équipe"],
     ["paye", "💶 Ma rémunération"],
     ["docs", "📁 Documents"],
+    ["decom", "🔻 Décommissionnés"],
     ...(me.isManager ? [["equipe", "🧑‍💼 Mon équipe"], ["corbeille", "🗑️ Corbeille"]] : []),
   ];
 
@@ -501,6 +502,7 @@ function App() {
       </aside>
 
       <main className="main">
+        {page === "decom" && <DecomPage clients={clients} saveClients={saveClients} goClient={(id) => { setPage("clients"); setOpenClient(id); }} />}
         {page === "dash" && <Dashboard clients={clients} users={users} view={view} me={me} sales={sales} saveClients={saveClients} goClient={(c) => { setOpenClient(c.id); setPage("clients"); }} />}
         {page === "prospection" && (
           <ProspectionPage
@@ -788,6 +790,7 @@ function ClientsPage({ clients, saveClients, me, users, openClient }) {
     ? myPortfolio.filter((c) => ownerOf(c) === ownerFilter)
     : myPortfolio;
   const filtered = scoped.filter((c) =>
+    !c.decom &&
     (c.nom + " " + c.prenom + " " + (c.profession || "")).toLowerCase().includes(search.toLowerCase())
   );
   const ownerName = (c) => {
@@ -2261,6 +2264,49 @@ function TrashPage({ trash, saveTrash, users, restoreClient, restoreProspect }) 
   );
 }
 
+
+/* ================= PAGE DÉCOMMISSIONNÉS ================= */
+function DecomPage({ clients, saveClients, goClient }) {
+  const [search, setSearch] = useState("");
+  const decoms = clients
+    .filter((c) => c.decom)
+    .filter((c) => (c.nom + " " + c.prenom).toLowerCase().includes(search.toLowerCase()))
+    .sort((a, b) => a.nom.localeCompare(b.nom));
+
+  const rebasculer = (c) => {
+    if (!confirm(`Rebasculer ${c.civilite || ""} ${c.nom} en client actif ?`)) return;
+    saveClients(clients.map((x) => (x.id === c.id ? { ...x, decom: false } : x)));
+  };
+
+  return (
+    <div>
+      <div className="ph">
+        <div>
+          <h1>🔻 Décommissionnés</h1>
+          <div className="sub">{decoms.length} client(s) dont tous les contrats ont été décommissionnés — à rappeler pour les reconquérir</div>
+        </div>
+        <input className="in" style={{ width: 220 }} placeholder="Rechercher…" value={search} onChange={(e) => setSearch(e.target.value)} />
+      </div>
+      <div className="grid">
+        {decoms.map((c) => (
+          <div className="clientcard" key={c.id} style={{ borderLeft: "4px solid #B3261E" }}>
+            <div style={{ cursor: "pointer" }} onClick={() => goClient(c.id)}>
+              <b style={{ fontSize: 15 }}>{c.civilite ? c.civilite + " " : ""}{c.nom.toUpperCase()} {c.prenom}</b>
+              <div style={{ fontSize: 12.5, color: "#5b6b82" }}>
+                {(c.contrats || []).length} contrat(s) décommissionné(s) · {c.telephone || "téléphone à renseigner"}
+              </div>
+            </div>
+            <div className="row">
+              <span className="badge b-red">Décommissionné</span>
+              <button className="btn gold sm" onClick={() => rebasculer(c)}>♻️ Rebasculer en client</button>
+            </div>
+          </div>
+        ))}
+        {decoms.length === 0 && <div className="card" style={{ color: "#8593a8" }}>Aucun client décommissionné. 👌</div>}
+      </div>
+    </div>
+  );
+}
 
 /* ================= ADAPTATEUR STORAGE (API Flask/PostgreSQL) ================= */
 window.storage = {
