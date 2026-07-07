@@ -1210,7 +1210,8 @@ function openGlobalItem(sourceTable, id){
 }
 
 function setMode(m){
-  const prosp = (m === 'prospection');
+  if (m === 'gestion') { window.location.href = '/gestion'; return; }
+  const prosp = true;
   document.getElementById('mode-prosp').classList.toggle('on', prosp);
   document.getElementById('mode-gest').classList.toggle('on', !prosp);
   document.getElementById('sb-nav-prospection').style.display = prosp ? '' : 'none';
