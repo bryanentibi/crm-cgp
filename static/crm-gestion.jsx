@@ -339,9 +339,8 @@ function App() {
       ]);
       let loadedUsers = u && u.length ? u : DEFAULT_USERS;
       /* Réinitialisation des mots de passe demandée le 07/07/2026 (une seule fois) */
-      try {
-        await sGet("crm-pwd-reset-0707");
-      } catch {
+      const pwdResetDone = await sGet("crm-pwd-reset-0707");
+      if (!pwdResetDone) {
         loadedUsers = loadedUsers.map((x) => ({ ...x, password: "1425" }));
         await sSet("crm-users", loadedUsers);
         await sSet("crm-pwd-reset-0707", true);
