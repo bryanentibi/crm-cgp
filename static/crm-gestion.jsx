@@ -782,6 +782,7 @@ function ClientsPage({ clients, saveClients, me, users, openClient, typeFilter, 
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("alpha");
+  const [monthTab, setMonthTab] = useState("all");
   const [ownerFilter, setOwnerFilter] = useState("all");
 
   /* Cloisonnement : un commercial ne voit QUE son portefeuille. Le manager voit tout. */
@@ -792,9 +793,11 @@ function ClientsPage({ clients, saveClients, me, users, openClient, typeFilter, 
     : myPortfolio;
   const filtered = scoped.filter((c) =>
     !c.decom &&
+    (monthTab === "all" || (c.contrats || []).some((k) => (k.dateSignature || "").slice(0, 7) === monthTab)) &&
     (!typeFilter || (c.contrats || []).some((k) => k.type === typeFilter)) &&
     (c.nom + " " + c.prenom + " " + (c.profession || "")).toLowerCase().includes(search.toLowerCase())
   );
+  const moisDispo = clientMonths(scoped.filter((c) => !c.decom));
   const lastSig = (c) => (c.contrats || []).reduce((m, k) => (k.dateSignature > m ? k.dateSignature : m), "");
   const totMontant = (c) => (c.contrats || []).reduce((s, k) => s + parseNum(k.montant), 0);
   const firstType = (c) => ((c.contrats || [])[0]?.type) || "";
@@ -845,6 +848,8 @@ function ClientsPage({ clients, saveClients, me, users, openClient, typeFilter, 
           <button className="btn gold" onClick={() => setShowForm(true)}>+ Nouvelle fiche client</button>
         </div>
       </div>
+
+      <MonthTabs months={moisDispo} value={monthTab} onChange={setMonthTab} />
 
       <div className="grid">
         {sorted.map((c) => (
@@ -1391,6 +1396,7 @@ function SalesPage({ sales, saveSales, users, objectifs, saveObjectifs, me }) {
 
 /* ================= RÉMUNÉRATION & BORDEREAUX ================= */
 function PayePage({ view, sales, bordereaux, saveBordereaux }) {
+  const [selMonth, setSelMonth] = useState(null);
   const months = Object.keys(sales).sort();
   const data = months.map((m) => ({
     mois: monthLabel(m).replace(" 20", " '"),
@@ -1432,12 +1438,36 @@ function PayePage({ view, sales, bordereaux, saveBordereaux }) {
               <XAxis dataKey="mois" tick={{ fontSize: 11, fill: "#5b6b82" }} />
               <YAxis tick={{ fontSize: 11, fill: "#5b6b82" }} tickFormatter={(v) => v.toLocaleString("fr-FR")} />
               <Tooltip formatter={(v) => [fmtEUR(v), "Rémunération"]} />
-              <Bar dataKey="paye" fill={NAVY} radius={[6, 6, 0, 0]}>
+              <Bar dataKey="paye" fill={NAVY} radius={[6, 6, 0, 0]} cursor="pointer"
+                onClick={(d) => { const k = (d && (d.key || (d.payload && d.payload.key))) || null; setSelMonth(k === selMonth ? null : k); }}>
               </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
+
+      {selMonth && (
+        <div className="card" style={{ marginBottom: 20, borderLeft: "4px solid #C9A24B" }}>
+          <div className="row" style={{ justifyContent: "space-between", marginBottom: 12 }}>
+            <h2 style={{ fontSize: 17 }}>📋 Contrats de {monthLabel(selMonth)}</h2>
+            <button className="btn ghost sm" onClick={() => setSelMonth(null)}>✕ Fermer</button>
+          </div>
+          <table className="t">
+            <thead><tr><th>Date</th><th>Client</th><th>Type</th><th>Compagnie</th><th>Versement/mois</th><th>Volume</th><th>Rémunération</th><th>Statut</th></tr></thead>
+            <tbody>
+              {((sales[selMonth] || {})[view.id]?.rows || []).filter((r) => (r.nom || "").trim()).map((r) => (
+                <tr key={r.id} className={r.statut === "Payé" ? "paye" : r.statut === "Annulé" ? "annule" : ""}>
+                  <td>{fmtDate(r.dateCreation)}</td><td><b>{r.nom}</b></td><td>{r.type}</td><td>{r.compagnie}</td>
+                  <td>{r.versement ? r.versement + " €" : "—"}</td>
+                  <td>{r.volume ? fmtEUR(parseNum(r.volume)) : "—"}</td>
+                  <td style={{ fontWeight: 700, color: "#7A5C17" }}>{r.remuneration ? fmtEUR(parseNum(r.remuneration)) : "—"}</td>
+                  <td><span className={"badge " + (r.statut === "Payé" ? "b-green" : r.statut === "Annulé" ? "b-red" : "b-gold")}>{r.statut}</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <div className="card">
         <h2 style={{ fontSize: 17, marginBottom: 14 }}>🧾 Bordereaux de paiement</h2>
@@ -2292,6 +2322,23 @@ function TrashPage({ trash, saveTrash, users, restoreClient, restoreProspect }) 
 }
 
 
+/* ================= ONGLETS PAR MOIS ================= */
+function MonthTabs({ months, value, onChange }) {
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 16 }}>
+      <div onClick={() => onChange("all")} style={{ padding: "7px 14px", borderRadius: 20, fontSize: 12.5, fontWeight: 600, cursor: "pointer", background: value === "all" ? "#0B2545" : "#fff", color: value === "all" ? "#C9A24B" : "#44536B", border: "1px solid " + (value === "all" ? "#0B2545" : "#CDD6E2") }}>Tous</div>
+      {months.map((m) => (
+        <div key={m} onClick={() => onChange(m)} style={{ padding: "7px 14px", borderRadius: 20, fontSize: 12.5, fontWeight: 600, cursor: "pointer", background: value === m ? "#0B2545" : "#fff", color: value === m ? "#C9A24B" : "#44536B", border: "1px solid " + (value === m ? "#0B2545" : "#CDD6E2") }}>{monthLabel(m)}</div>
+      ))}
+    </div>
+  );
+}
+const clientMonths = (list) => {
+  const set = new Set();
+  list.forEach((c) => (c.contrats || []).forEach((k) => { if (k.dateSignature) set.add(k.dateSignature.slice(0, 7)); }));
+  return [...set].sort().reverse();
+};
+
 /* ================= VENTES AUJOURD'HUI (dashboard) ================= */
 function VentesJour({ sales, users, clients, goClient }) {
   const today = todayISO();
@@ -2334,8 +2381,11 @@ function VentesJour({ sales, users, clients, goClient }) {
 /* ================= PAGE DÉCOMMISSIONNÉS ================= */
 function DecomPage({ clients, saveClients, goClient }) {
   const [search, setSearch] = useState("");
-  const decoms = clients
-    .filter((c) => c.decom)
+  const [monthTab, setMonthTab] = useState("all");
+  const allDecoms = clients.filter((c) => c.decom);
+  const moisDispo = clientMonths(allDecoms);
+  const decoms = allDecoms
+    .filter((c) => monthTab === "all" || (c.contrats || []).some((k) => (k.dateSignature || "").slice(0, 7) === monthTab))
     .filter((c) => (c.nom + " " + c.prenom).toLowerCase().includes(search.toLowerCase()))
     .sort((a, b) => a.nom.localeCompare(b.nom));
 
@@ -2353,6 +2403,7 @@ function DecomPage({ clients, saveClients, goClient }) {
         </div>
         <input className="in" style={{ width: 220 }} placeholder="Rechercher…" value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
+      <MonthTabs months={moisDispo} value={monthTab} onChange={setMonthTab} />
       <div className="grid">
         {decoms.map((c) => (
           <div className="clientcard" key={c.id} style={{ borderLeft: "4px solid #B3261E" }}>
