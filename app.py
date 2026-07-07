@@ -68,6 +68,58 @@ def save_json(filename, data):
 def index():
     return send_from_directory('static', 'index.html')
 
+# ================= CRM GESTION (base Elyon) =================
+@app.route('/gestion')
+def gestion_page():
+    if not check_session(request):
+        return send_from_directory('static', 'index.html')  # pas connecté -> login du CRM
+    return send_from_directory('static', 'gestion.html')
+
+def kv_conn():
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("CREATE TABLE IF NOT EXISTS kv_store (k TEXT PRIMARY KEY, v TEXT)")
+    conn.commit()
+    return conn, cur
+
+@app.route('/api/storage', methods=['GET'])
+def kv_list():
+    if not check_session(request):
+        return jsonify({'error': 'unauthorized'}), 401
+    prefix = request.args.get('prefix', '')
+    conn, cur = kv_conn()
+    cur.execute("SELECT k FROM kv_store WHERE k LIKE %s", [prefix + '%'])
+    keys = [r['k'] for r in cur.fetchall()]
+    cur.close(); conn.close()
+    return jsonify({'keys': keys})
+
+@app.route('/api/storage/<path:key>', methods=['GET', 'PUT', 'DELETE'])
+def kv_item(key):
+    if not check_session(request):
+        return jsonify({'error': 'unauthorized'}), 401
+    conn, cur = kv_conn()
+    try:
+        if request.method == 'GET':
+            cur.execute("SELECT v FROM kv_store WHERE k = %s", [key])
+            row = cur.fetchone()
+            if not row:
+                return jsonify({'error': 'not found'}), 404
+            return jsonify({'key': key, 'value': json.loads(row['v'])})
+        elif request.method == 'PUT':
+            value = (request.get_json(silent=True) or {}).get('value')
+            cur.execute(
+                "INSERT INTO kv_store (k, v) VALUES (%s, %s) ON CONFLICT (k) DO UPDATE SET v = EXCLUDED.v",
+                [key, json.dumps(value)]
+            )
+            conn.commit()
+            return jsonify({'key': key, 'value': value})
+        else:  # DELETE
+            cur.execute("DELETE FROM kv_store WHERE k = %s", [key])
+            conn.commit()
+            return jsonify({'key': key, 'deleted': True})
+    finally:
+        cur.close(); conn.close()
+
 @app.route('/api/stats')
 def stats():
     if USE_DB:
