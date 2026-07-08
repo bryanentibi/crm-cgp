@@ -193,11 +193,11 @@ const rateFor = (r) => {
   if (!isNaN(t) && t > 0) return t;
   return RATE_COMP[r.compagnie] ?? RATE_TYPE[r.type] ?? 0.10;
 };
-/* Volume = mensuel × 12 + annuel · Commission = volume × taux */
+/* Volume = (mensuel + annuel) × 12 · Commission = volume × taux */
 function recalcRow(r, field) {
   if (["versement", "versementAnnuel", "type", "compagnie", "volume", "taux"].includes(field)) {
     const m = parseNum(r.versement), a = parseNum(r.versementAnnuel);
-    if (field !== "volume" && (m || a)) r = { ...r, volume: String(Math.round(m * 12 + a)) };
+    if (field !== "volume" && (m || a)) r = { ...r, volume: String(Math.round((m + a) * 12)) };
     const vol = parseNum(r.volume);
     if (vol) r = { ...r, remuneration: String(Math.round(vol * rateFor(r) * 100) / 100) };
   }
@@ -1390,9 +1390,11 @@ function SalesPage({ sales, saveSales, users, objectifs, saveObjectifs, me }) {
                     <td><input value={r.remuneration} onChange={(e) => updateCell(u.id, r.id, "remuneration", e.target.value)} placeholder="€"
                       title={"Taux appliqué : " + (rateFor(r) * 100).toFixed(1) + "% · Double-clic pour le changer"}
                       onDoubleClick={() => {
-                        const cur = (rateFor(r) * 100).toFixed(1);
-                        const p = prompt("Taux de commission (%) pour cette ligne :", cur);
-                        if (p !== null && !isNaN(parseFloat(p.replace(",", ".")))) updateCell(u.id, r.id, "taux", String(parseFloat(p.replace(",", ".")) / 100));
+                        const cur = (rateFor(r) * 100).toFixed(2).replace(".", ",");
+                        const p = prompt("Taux de commission en % (ex : 2,5 pour 2,5% · 0,25 pour 0,25%) :", cur);
+                        if (p === null) return;
+                        const v = parseFloat(p.replace(",", "."));
+                        if (!isNaN(v) && v > 0) updateCell(u.id, r.id, "taux", String(v / 100));
                       }} /></td>
                     <td>
                       <select value={r.statut} onChange={(e) => updateCell(u.id, r.id, "statut", e.target.value)}>
