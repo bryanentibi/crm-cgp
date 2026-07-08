@@ -497,10 +497,10 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
           <div class="chart-ttl">Pipeline de prospection</div>
           <div class="pipe-row" style="grid-template-columns:repeat(5,1fr)">
             <div class="pipe-box" style="background:var(--blue-light);border-color:var(--blue)" onclick="setF('new_today')"><div class="pipe-v" style="color:var(--blue)" id="pv-n">—</div><div class="pipe-lbl" style="color:var(--blue)">🆕 Nouveaux scrappés</div></div>
-            <div class="pipe-box" style="background:var(--green-light);border-color:var(--green)" onclick="setF('rdv')"><div class="pipe-v" style="color:var(--green)" id="pv-rdv">—</div><div class="pipe-lbl" style="color:var(--green)">📅 RDV pris</div></div>
-            <div class="pipe-box" style="background:var(--orange-light);border-color:var(--orange)" onclick="setF('nrp')"><div class="pipe-v" style="color:var(--orange)" id="pv-r">—</div><div class="pipe-lbl" style="color:var(--orange)">📵 À rappeler</div></div>
-            <div class="pipe-box" style="background:var(--red-light);border-color:var(--red)" onclick="setF('ko')"><div class="pipe-v" style="color:var(--red)" id="pv-ko">—</div><div class="pipe-lbl" style="color:var(--red)">❌ KO</div></div>
-            <div class="pipe-box" style="background:var(--purple-light);border-color:#D6BCFA" onclick="setF('avec_creation')"><div class="pipe-v" style="color:var(--purple)" id="pv-creation">—</div><div class="pipe-lbl" style="color:var(--purple)">📅 Avec date création</div></div>
+            <div class="pipe-box" style="background:var(--green-light);border-color:var(--green)" onclick="setF('rdv')"><div class="pipe-v" style="color:var(--green)" id="pv-rdv">—</div><div class="pipe-lbl" style="color:var(--green)">RDV pris</div></div>
+            <div class="pipe-box" style="background:var(--orange-light);border-color:var(--orange)" onclick="setF('nrp')"><div class="pipe-v" style="color:var(--orange)" id="pv-r">—</div><div class="pipe-lbl" style="color:var(--orange)">À rappeler</div></div>
+            <div class="pipe-box" style="background:var(--red-light);border-color:var(--red)" onclick="setF('ko')"><div class="pipe-v" style="color:var(--red)" id="pv-ko">—</div><div class="pipe-lbl" style="color:var(--red)">KO</div></div>
+            <div class="pipe-box" style="background:var(--purple-light);border-color:#D6BCFA" onclick="setF('avec_creation')"><div class="pipe-v" style="color:var(--purple)" id="pv-creation">—</div><div class="pipe-lbl" style="color:var(--purple)">Avec date création</div></div>
           </div>
         </div>
       </div>
@@ -516,15 +516,15 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
     </div>
     <div class="toolbar">
       <div class="sw"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M11 11l3 3"/></svg><input type="text" id="search" placeholder="Nom, ville..." oninput="applyF()"></div>
-      <select class="fs" id="sel-st" onchange="applyF()"><option value="">Tous statuts</option><option value="nrp">📵 NRP</option><option value="rdv">📅 RDV</option><option value="ko">❌ KO</option><option value="nouveau">Nouveau</option></select>
+      <select class="fs" id="sel-st" onchange="applyF()"><option value="">Tous statuts</option><option value="nrp">NRP</option><option value="rdv">RDV</option><option value="ko">KO</option><option value="nouveau">Nouveau</option></select>
       <select class="fs" id="sel-dept" onchange="applyF()"><option value="">Tous dép.</option></select>
       <select class="fs" id="sel-annee" onchange="applyF()">
         <option value="">Toute date</option>
-        <option value="2026">📅 Installés 2026</option>
-        <option value="2025">📅 Installés 2025</option>
-        <option value="2024">📅 Installés 2024</option>
-        <option value="2023">📅 Installés 2023</option>
-        <option value="2022">📅 Installés 2022</option>
+        <option value="2026">Installés 2026</option>
+        <option value="2025">Installés 2025</option>
+        <option value="2024">Installés 2024</option>
+        <option value="2023">Installés 2023</option>
+        <option value="2022">Installés 2022</option>
         <option value="recent">🔥 Moins de 1 an</option>
         <option value="recent3">🔥 Moins de 3 ans</option>
       </select>
@@ -549,11 +549,11 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
           </div>
         </div>
         <div class="dp-pipe">
-          <div class="dps" data-s="" onclick="setDPS('')">⭕ Nouveau</div>
-          <div class="dps" data-s="nrp" onclick="setDPS('nrp')">📵 NRP</div>
-          <div class="dps" data-s="rappeler" onclick="setDPS('rappeler')">🔄 Rappeler</div>
-          <div class="dps" data-s="rdv" onclick="setDPS('rdv')">📅 RDV</div>
-          <div class="dps" data-s="ko" onclick="setDPS('ko')">❌ KO</div>
+          <div class="dps" data-s="" onclick="setDPS('')">Nouveau</div>
+          <div class="dps" data-s="nrp" onclick="setDPS('nrp')">NRP</div>
+          <div class="dps" data-s="rappeler" onclick="setDPS('rappeler')">Rappeler</div>
+          <div class="dps" data-s="rdv" onclick="setDPS('rdv')">RDV</div>
+          <div class="dps" data-s="ko" onclick="setDPS('ko')">KO</div>
         </div>
         <div class="dp-tabs"><div class="dptab ac" onclick="swDPT('ov-p',this)">Infos</div><div class="dptab" onclick="swDPT('nt-p',this)">Notes</div></div>
         <div class="dp-body">
@@ -606,11 +606,11 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
           </div>
         </div>
         <div class="dp-pipe">
-          <div class="dps" data-s="" onclick="setDPS('')">⭕ Nouveau</div>
-          <div class="dps" data-s="nrp" onclick="setDPS('nrp')">📵 NRP</div>
-          <div class="dps" data-s="rappeler" onclick="setDPS('rappeler')">🔄 Rappeler</div>
-          <div class="dps" data-s="rdv" onclick="setDPS('rdv')">📅 RDV</div>
-          <div class="dps" data-s="ko" onclick="setDPS('ko')">❌ KO</div>
+          <div class="dps" data-s="" onclick="setDPS('')">Nouveau</div>
+          <div class="dps" data-s="nrp" onclick="setDPS('nrp')">NRP</div>
+          <div class="dps" data-s="rappeler" onclick="setDPS('rappeler')">Rappeler</div>
+          <div class="dps" data-s="rdv" onclick="setDPS('rdv')">RDV</div>
+          <div class="dps" data-s="ko" onclick="setDPS('ko')">KO</div>
         </div>
         <div class="dp-tabs"><div class="dptab ac" onclick="swDPT('ov-phr',this)">Infos</div><div class="dptab" onclick="swDPT('nt-phr',this)">Notes</div></div>
         <div class="dp-body">
@@ -626,7 +626,7 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
   <div class="view" id="view-ro">
     <div class="toolbar">
       <div class="sw"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M11 11l3 3"/></svg><input type="text" id="ro-q" placeholder="Nom, ville, profession..." oninput="renderRO()"></div>
-      <select class="fs" id="ro-f" onchange="renderRO()"><option value="">Toutes sources</option><option value="liste">📋 Anciens clients AVIVA/OPTIMUM</option><option value="team">👥 Team Entibi</option><option value="opti">🔄 Renonciations PER</option></select>
+      <select class="fs" id="ro-f" onchange="renderRO()"><option value="">Toutes sources</option><option value="liste">Anciens clients AVIVA/OPTIMUM</option><option value="team">Team Entibi</option><option value="opti">Renonciations PER</option></select>
       <span class="chip" id="ro-cnt">—</span>
     </div>
     <div class="ro-body-wrap" id="ro-body"></div>
@@ -758,7 +758,7 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
                   <div style="font-size:11px;color:var(--text2)">Bilan complet gratuit pour optimiser votre situation fiscale et patrimoniale</div>
                 </div>
                 <div class="mail-tpl" onclick="loadTpl('relance')" style="border:1px solid var(--border);border-radius:9px;padding:12px;margin-bottom:10px;cursor:pointer;transition:all .15s" onmouseenter="this.style.borderColor='var(--orange)';this.style.background='var(--orange-light)'" onmouseleave="this.style.borderColor='var(--border)';this.style.background='var(--white)'">
-                  <div style="font-size:12.5px;font-weight:700;color:var(--orange);margin-bottom:4px">🔄 Relance ancien client</div>
+                  <div style="font-size:12.5px;font-weight:700;color:var(--orange);margin-bottom:4px">Relance ancien client</div>
                   <div style="font-size:11px;color:var(--text2)">Prise de contact pour bilan annuel ou optimisation de contrat existant</div>
                 </div>
                 <div class="mail-tpl" onclick="loadTpl('arbitrage')" style="border:1px solid var(--border);border-radius:9px;padding:12px;cursor:pointer;transition:all .15s" onmouseenter="this.style.borderColor='#D69E2E';this.style.background='#FFFFF0'" onmouseleave="this.style.borderColor='var(--border)';this.style.background='var(--white)'">
@@ -790,11 +790,11 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
       <div class="sw"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M11 11l3 3"/></svg><input type="text" id="srch-art" placeholder="Nom, ville..." oninput="applyFA()"></div>
       <select class="fs" id="sel-art-st" onchange="applyFA()">
         <option value="">Tous statuts</option>
-        <option value="rdv">📅 RDV Pris</option>
+        <option value="rdv">RDV pris</option>
         <option value="signe">✅ Signé</option>
-        <option value="ko">❌ KO</option>
-        <option value="rappeler">🔄 À Rappeler</option>
-        <option value="nrp">📵 NRP</option>
+        <option value="ko">KO</option>
+        <option value="rappeler">À rappeler</option>
+        <option value="nrp">NRP</option>
       </select>
       <select class="fs" id="sel-art-prof" onchange="applyFA()">
         <option value="">Toutes professions</option>
@@ -809,11 +809,11 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
       </select>
       <select class="fs" id="sel-art-annee" onchange="applyFA()">
         <option value="">Toute date</option>
-        <option value="2026">📅 Installés 2026</option>
-        <option value="2025">📅 Installés 2025</option>
-        <option value="2024">📅 Installés 2024</option>
-        <option value="2023">📅 Installés 2023</option>
-        <option value="2022">📅 Installés 2022</option>
+        <option value="2026">Installés 2026</option>
+        <option value="2025">Installés 2025</option>
+        <option value="2024">Installés 2024</option>
+        <option value="2023">Installés 2023</option>
+        <option value="2022">Installés 2022</option>
         <option value="recent">🔥 Moins de 1 an</option>
         <option value="recent3">🔥 Moins de 3 ans</option>
       </select>
@@ -827,7 +827,7 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
   <th class="sortable" onclick="setSort('art','profession')">PROFESSION<span id="sa-profession"></span></th>
   <th class="sortable" onclick="setSort('art','ville')">VILLE<span id="sa-ville"></span></th>
   <th class="sortable" onclick="setSort('art','telephone_direct')">📱 06 DIRECT<span id="sa-telephone_direct"></span></th>
-  <th class="sortable" onclick="setSort('art','date_creation')">📅 DATE CRÉATION<span id="sa-date_creation"></span></th>
+  <th class="sortable" onclick="setSort('art','date_creation')">DATE CRÉATION<span id="sa-date_creation"></span></th>
   <th class="sortable" onclick="setSort('art','statut')">STATUT<span id="sa-statut"></span></th>
   <th>NOTE</th><th></th>
 </tr></thead>
@@ -846,11 +846,11 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
           </div>
         </div>
         <div class="dp-pipe" id="dp-art-pipe">
-          <div class="dps" data-s="" onclick="setDPSA('')">⭕ Nouveau</div>
-          <div class="dps" data-s="nrp" onclick="setDPSA('nrp')">📵 NRP</div>
-          <div class="dps" data-s="rappeler" onclick="setDPSA('rappeler')">🔄 Rappeler</div>
-          <div class="dps" data-s="rdv" onclick="setDPSA('rdv')">📅 RDV</div>
-          <div class="dps" data-s="ko" onclick="setDPSA('ko')">❌ KO</div>
+          <div class="dps" data-s="" onclick="setDPSA('')">Nouveau</div>
+          <div class="dps" data-s="nrp" onclick="setDPSA('nrp')">NRP</div>
+          <div class="dps" data-s="rappeler" onclick="setDPSA('rappeler')">Rappeler</div>
+          <div class="dps" data-s="rdv" onclick="setDPSA('rdv')">RDV</div>
+          <div class="dps" data-s="ko" onclick="setDPSA('ko')">KO</div>
         </div>
         <div class="dp-body">
           <div class="dp-sec">Coordonnées</div>
@@ -924,7 +924,7 @@ const PC={all:'var(--text2)',inf:'#3182CE',kin:'#805AD5',med:'#2B6CB0',den:'#DD6
 const PS={inf:['Infirmier','Infirmière'],kin:['Masseur','Kinési','Ostéo'],med:['Médecin','Cardio','Radio','Chirur','Gynéco','Pédiatre','Dermato'],den:['Dentiste','Chirurgien-dentiste'],psy:['Psycho','Orthophon','Pédicure','Sage-femme']};
 const PL={all:'Toutes professions',inf:'Infirmiers',kin:'Kiné / Ostéo',med:'Médecins',den:'Dentistes',psy:'Psy / Ortho'};
 const SL={'':'b-gray',nouveau:'b-gray',nrp:'b-orange',rdv:'b-green',ko:'b-red','contacte':'b-blue','interesse':'b-purple','a-rappeler':'b-orange','client':'b-green','sans-suite':'b-gray'};
-const SN={'':'Nouveau',nouveau:'Nouveau',nrp:'📵 NRP',rappeler:'🔄 À rappeler',rdv:'📅 RDV',ko:'❌ KO','contacte':'Contacté','interesse':'Intéressé','a-rappeler':'À rappeler','client':'Client','sans-suite':'Sans suite'};
+const SN={'':'Nouveau',nouveau:'Nouveau',nrp:'NRP',rappeler:'À rappeler',rdv:'RDV',ko:'KO','contacte':'Contacté','interesse':'Intéressé','a-rappeler':'À rappeler','client':'Client','sans-suite':'Sans suite'};
 
 let prof='inf',pg=1,pgP=1,sub='all',subP='all',flt='',eid=null,etype=null,scrInt=null;
 
@@ -967,12 +967,12 @@ async function saveArbField(table, id, field, value) {
 }
 
 const ARB_COLORS = {
-  'rdv':      {bg:'var(--blue-light)',border:'var(--blue)',text:'var(--blue)',label:'\uD83D\uDCC5 RDV Pris'},
-  'signe':    {bg:'var(--green-light)',border:'var(--green)',text:'var(--green)',label:'\u2705 Sign\u00e9'},
-  'ko':       {bg:'var(--red-light)',border:'var(--red)',text:'var(--red)',label:'\u274C KO'},
-  'rappeler': {bg:'var(--orange-light)',border:'var(--orange)',text:'var(--orange)',label:'\uD83D\uDD04 \u00c0 Rappeler'},
-  'nrp':      {bg:'var(--orange-light)',border:'var(--orange)',text:'var(--orange)',label:'\uD83D\uDCF5 NRP'},
-  '':         {bg:'var(--white)',border:'var(--border2)',text:'var(--text)',label:'\u2B55 \u00c0 Appeler'},
+  'rdv':      {bg:'var(--blue-light)',border:'var(--blue)',text:'var(--blue)',label:'RDV pris'},
+  'signe':    {bg:'var(--green-light)',border:'var(--green)',text:'var(--green)',label:'Sign\u00e9'},
+  'ko':       {bg:'var(--red-light)',border:'var(--red)',text:'var(--red)',label:'KO'},
+  'rappeler': {bg:'var(--orange-light)',border:'var(--orange)',text:'var(--orange)',label:'\u00c0 rappeler'},
+  'nrp':      {bg:'var(--orange-light)',border:'var(--orange)',text:'var(--orange)',label:'NRP'},
+  '':         {bg:'var(--white)',border:'var(--border2)',text:'var(--text)',label:'\u00c0 appeler'},
 };
 function arbColor(s){return ARB_COLORS[s]||ARB_COLORS[''];}
 
@@ -1005,37 +1005,37 @@ function renderBarriere(){
     <div class="arb-stat" style="cursor:pointer;background:var(--orange-light)" onclick="document.getElementById('arb-b-f').value='rappeler';renderBarriere()"><div class="arb-stat-val" style="color:var(--orange)">${rap}</div><div class="arb-stat-lbl">\u00c0 Rappeler</div></div>`;
   const tbl=document.getElementById('arb-b-table');
   if(!items.length){tbl.innerHTML='<div style="padding:24px;text-align:center;color:var(--text3)">Aucun r\u00e9sultat</div>';return;}
-  tbl.innerHTML=`<div style="display:grid;grid-template-columns:32px 2fr 80px 130px 1fr 185px;padding:10px 16px;background:var(--bg);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--text3);border-bottom:1px solid var(--border)"><span></span><span>NOM</span><span>MONTANT</span><span>NOTE</span><span>COMMENTAIRE</span><span>STATUT</span></div>`+
+  tbl.innerHTML=`<div style="display:grid;grid-template-columns:32px 2fr 80px 130px 1fr 185px;padding:9px 14px;background:var(--navy);font-size:11px;font-weight:600;letter-spacing:.4px;color:#fff;border-radius:8px 8px 0 0"><span></span><span>NOM</span><span>MONTANT</span><span>NOTE</span><span>COMMENTAIRE</span><span>STATUT</span></div>`+
   items.map(c=>{
     const col=arbColor(c.statut),ri=bState.indexOf(c);
-    return`<div style="display:grid;grid-template-columns:32px 2fr 80px 130px 1fr 185px;align-items:center;padding:9px 16px;border-bottom:1px solid var(--border);background:${col.bg};border-left:4px solid ${col.border}">
+    return`<div style="display:grid;grid-template-columns:32px 2fr 80px 130px 1fr 185px;align-items:center;padding:4px 14px;border-bottom:1px solid #edf1f6;background:${col.bg}">
       <input type="checkbox" style="cursor:pointer;width:15px;height:15px;accent-color:${col.border}" ${c.checked?'checked':''} onchange="bState[${ri}].checked=this.checked;saveArbField('b',bState[${ri}].id,'checked',this.checked)">
       <input type="text" value="${e(c.nom||'')}" placeholder="Nom..."
-        style="border:none;background:transparent;font-weight:600;color:${col.text};font-size:13px;font-family:'Segoe UI','Helvetica Neue',Arial,sans-serif;outline:none;padding:2px 4px;border-radius:4px;width:100%"
-        onfocus="this.style.background='var(--white)';this.style.border='1px solid '+'${col.border}'"
+        style="border:none;background:transparent;font-weight:600;color:var(--text);font-size:13px;font-family:'Segoe UI','Helvetica Neue',Arial,sans-serif;outline:none;padding:2px 4px;border-radius:4px;width:100%"
+        onfocus="this.style.background='var(--white)';this.style.border='1px solid #C9A24B'"
         onblur="this.style.background='transparent';this.style.border='none'"
         onchange="bState[${ri}].nom=this.value;saveArbField('b',bState[${ri}].id,'nom',this.value);toast('✅ Nom sauvegardé','ok')">
       <input type="number" value="${c.montant||0}"
         style="border:1px solid transparent;background:transparent;color:var(--green);font-weight:700;font-family:monospace;outline:none;padding:2px 4px;border-radius:4px;width:75px"
-        onfocus="this.style.background='var(--white)';this.style.borderColor='${col.border}'"
+        onfocus="this.style.background='var(--white)';this.style.borderColor='#C9A24B'"
         onblur="this.style.background='transparent';this.style.borderColor='transparent'"
         onchange="bState[${ri}].montant=parseFloat(this.value)||0;saveArbField('b',bState[${ri}].id,'montant',bState[${ri}].montant);toast('✅ Montant sauvegardé','ok')">€
       <input type="text" value="${e(c.note||'')}" placeholder="Note..."
         style="border:none;background:transparent;color:var(--text2);font-size:11px;font-family:'Segoe UI','Helvetica Neue',Arial,sans-serif;outline:none;padding:2px 4px;border-radius:4px;width:100%"
-        onfocus="this.style.background='var(--white)';this.style.border='1px solid '+'${col.border}'"
+        onfocus="this.style.background='var(--white)';this.style.border='1px solid #C9A24B'"
         onblur="this.style.background='transparent';this.style.border='none'"
         onchange="bState[${ri}].note=this.value;saveArbField('b',bState[${ri}].id,'note',this.value);toast('✅ Note sauvegardée','ok')">
       <input type="text" value="${e(c.commentaire||'')}" placeholder="Note libre..."
-        style="border:1px solid ${col.border};border-radius:5px;padding:4px 8px;font-size:11px;width:95%;background:var(--white);color:var(--text);font-family:'Segoe UI','Helvetica Neue',Arial,sans-serif;outline:none"
+        style="border:1px solid #cdd6e2;border-radius:6px;padding:3px 8px;font-size:11.5px;width:95%;background:var(--white);color:var(--text);font-family:inherit;outline:none"
         onchange="bState[${ri}].commentaire=this.value;saveArbField('b',bState[${ri}].id,'commentaire',this.value);toast('\u2705 Sauvegard\u00e9','ok')">
       <select onchange="bState[${ri}].statut=this.value;saveArbField('b',bState[${ri}].id,'statut',this.value);if(this.value==='signe')openSign(bState[${ri}].nom||'',bState[${ri}].montant||0);renderBarriere();toast('\u2705 Statut mis \u00e0 jour','ok')"
-        style="border:2px solid ${col.border};border-radius:6px;padding:5px 8px;font-size:11px;font-weight:600;background:${col.bg};color:${col.text};cursor:pointer;font-family:'Segoe UI','Helvetica Neue',Arial,sans-serif;outline:none;width:100%">
-        <option value="" ${!c.statut?'selected':''}>\u2B55 \u00c0 Appeler</option>
-        <option value="rdv" ${c.statut==='rdv'?'selected':''}>\uD83D\uDCC5 RDV Pris</option>
-        <option value="signe" ${c.statut==='signe'?'selected':''}>\u2705 Sign\u00e9</option>
-        <option value="ko" ${c.statut==='ko'?'selected':''}>\u274C KO</option>
-        <option value="rappeler" ${c.statut==='rappeler'?'selected':''}>\uD83D\uDD04 \u00c0 Rappeler</option>
-        <option value="nrp" ${c.statut==='nrp'?'selected':''}>\uD83D\uDCF5 NRP</option>
+        style="border:1px solid #cdd6e2;border-radius:8px;padding:6px 10px;font-size:12px;background:var(--white);color:var(--text);cursor:pointer;font-family:inherit;outline:none;width:100%">
+        <option value="" ${!c.statut?'selected':''}>\u00c0 appeler</option>
+        <option value="rdv" ${c.statut==='rdv'?'selected':''}>RDV pris</option>
+        <option value="signe" ${c.statut==='signe'?'selected':''}>Sign\u00e9</option>
+        <option value="ko" ${c.statut==='ko'?'selected':''}>KO</option>
+        <option value="rappeler" ${c.statut==='rappeler'?'selected':''}>\u00c0 rappeler</option>
+        <option value="nrp" ${c.statut==='nrp'?'selected':''}>NRP</option>
       </select>
     </div>`;
   }).join('');
@@ -1063,37 +1063,37 @@ function renderOptimum(){
     <div class="arb-stat" style="cursor:pointer;background:var(--orange-light)" onclick="document.getElementById('arb-o-f').value='rappeler';renderOptimum()"><div class="arb-stat-val" style="color:var(--orange)">${rap}</div><div class="arb-stat-lbl">\u00c0 Rappeler</div></div>`;
   const tbl=document.getElementById('arb-o-table');
   if(!items.length){tbl.innerHTML='<div style="padding:24px;text-align:center;color:var(--text3)">Aucun r\u00e9sultat</div>';return;}
-  tbl.innerHTML=`<div style="display:grid;grid-template-columns:32px 2fr 100px 100px 1fr 185px;padding:10px 16px;background:var(--bg);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--text3);border-bottom:1px solid var(--border)"><span></span><span>NOM</span><span>DATE</span><span>VERSEMENT</span><span>COMMENTAIRE</span><span>STATUT</span></div>`+
+  tbl.innerHTML=`<div style="display:grid;grid-template-columns:32px 2fr 100px 100px 1fr 185px;padding:9px 14px;background:var(--navy);font-size:11px;font-weight:600;letter-spacing:.4px;color:#fff;border-radius:8px 8px 0 0"><span></span><span>NOM</span><span>DATE</span><span>VERSEMENT</span><span>COMMENTAIRE</span><span>STATUT</span></div>`+
   items.map(c=>{
     const col=arbColor(c.statut),ri=oState.indexOf(c);
-    return`<div style="display:grid;grid-template-columns:32px 2fr 100px 100px 1fr 185px;align-items:center;padding:9px 16px;border-bottom:1px solid var(--border);background:${col.bg};border-left:4px solid ${col.border}">
+    return`<div style="display:grid;grid-template-columns:32px 2fr 100px 100px 1fr 185px;align-items:center;padding:4px 14px;border-bottom:1px solid #edf1f6;background:${col.bg}">
       <input type="checkbox" style="cursor:pointer;width:15px;height:15px;accent-color:${col.border}" ${c.checked?'checked':''} onchange="oState[${ri}].checked=this.checked;saveArbField('o',oState[${ri}].id,'checked',this.checked)">
       <input type="text" value="${e(c.nom||'')}" placeholder="Nom..."
-        style="border:none;background:transparent;font-weight:600;color:${col.text};font-size:13px;font-family:'Segoe UI','Helvetica Neue',Arial,sans-serif;outline:none;padding:2px 4px;border-radius:4px;width:100%"
-        onfocus="this.style.background='var(--white)';this.style.border='1px solid '+'${col.border}'"
+        style="border:none;background:transparent;font-weight:600;color:var(--text);font-size:13px;font-family:'Segoe UI','Helvetica Neue',Arial,sans-serif;outline:none;padding:2px 4px;border-radius:4px;width:100%"
+        onfocus="this.style.background='var(--white)';this.style.border='1px solid #C9A24B'"
         onblur="this.style.background='transparent';this.style.border='none'"
         onchange="oState[${ri}].nom=this.value;saveArbField('o',oState[${ri}].id,'nom',this.value);toast('✅ Nom sauvegardé','ok')">
       <input type="text" value="${e(c.date||'')}" placeholder="Date..."
         style="border:none;background:transparent;color:var(--text2);font-size:11px;font-family:'Segoe UI','Helvetica Neue',Arial,sans-serif;outline:none;padding:2px 4px;border-radius:4px;width:100%"
-        onfocus="this.style.background='var(--white)';this.style.border='1px solid '+'${col.border}'"
+        onfocus="this.style.background='var(--white)';this.style.border='1px solid #C9A24B'"
         onblur="this.style.background='transparent';this.style.border='none'"
         onchange="oState[${ri}].date=this.value;saveArbField('o',oState[${ri}].id,'date',this.value);toast('✅ Date sauvegardée','ok')">
       <input type="number" value="${c.versement||0}"
         style="border:1px solid transparent;background:transparent;color:var(--green);font-weight:700;font-family:monospace;outline:none;padding:2px 4px;border-radius:4px;width:75px"
-        onfocus="this.style.background='var(--white)';this.style.borderColor='${col.border}'"
+        onfocus="this.style.background='var(--white)';this.style.borderColor='#C9A24B'"
         onblur="this.style.background='transparent';this.style.borderColor='transparent'"
         onchange="oState[${ri}].versement=parseFloat(this.value)||0;saveArbField('o',oState[${ri}].id,'versement',oState[${ri}].versement);toast('✅ Versement sauvegardé','ok')">€
       <input type="text" value="${e(c.commentaire||'')}" placeholder="Note libre..."
-        style="border:1px solid ${col.border};border-radius:5px;padding:4px 8px;font-size:11px;width:95%;background:var(--white);color:var(--text);font-family:'Segoe UI','Helvetica Neue',Arial,sans-serif;outline:none"
+        style="border:1px solid #cdd6e2;border-radius:6px;padding:3px 8px;font-size:11.5px;width:95%;background:var(--white);color:var(--text);font-family:inherit;outline:none"
         onchange="oState[${ri}].commentaire=this.value;saveArbField('o',oState[${ri}].id,'commentaire',this.value);toast('\u2705 Sauvegard\u00e9','ok')">
       <select onchange="oState[${ri}].statut=this.value;saveArbField('o',oState[${ri}].id,'statut',this.value);if(this.value==='signe')openSign(oState[${ri}].nom||'',oState[${ri}].versement||0);renderOptimum();toast('\u2705 Statut mis \u00e0 jour','ok')"
-        style="border:2px solid ${col.border};border-radius:6px;padding:5px 8px;font-size:11px;font-weight:600;background:${col.bg};color:${col.text};cursor:pointer;font-family:'Segoe UI','Helvetica Neue',Arial,sans-serif;outline:none;width:100%">
-        <option value="" ${!c.statut?'selected':''}>\u2B55 \u00c0 Appeler</option>
-        <option value="rdv" ${c.statut==='rdv'?'selected':''}>\uD83D\uDCC5 RDV Pris</option>
-        <option value="signe" ${c.statut==='signe'?'selected':''}>\u2705 Sign\u00e9</option>
-        <option value="ko" ${c.statut==='ko'?'selected':''}>\u274C KO</option>
-        <option value="rappeler" ${c.statut==='rappeler'?'selected':''}>\uD83D\uDD04 \u00c0 Rappeler</option>
-        <option value="nrp" ${c.statut==='nrp'?'selected':''}>\uD83D\uDCF5 NRP</option>
+        style="border:1px solid #cdd6e2;border-radius:8px;padding:6px 10px;font-size:12px;background:var(--white);color:var(--text);cursor:pointer;font-family:inherit;outline:none;width:100%">
+        <option value="" ${!c.statut?'selected':''}>\u00c0 appeler</option>
+        <option value="rdv" ${c.statut==='rdv'?'selected':''}>RDV pris</option>
+        <option value="signe" ${c.statut==='signe'?'selected':''}>Sign\u00e9</option>
+        <option value="ko" ${c.statut==='ko'?'selected':''}>KO</option>
+        <option value="rappeler" ${c.statut==='rappeler'?'selected':''}>\u00c0 rappeler</option>
+        <option value="nrp" ${c.statut==='nrp'?'selected':''}>NRP</option>
       </select>
     </div>`;
   }).join('');
@@ -1243,7 +1243,7 @@ function showV(v){
     all:['Professionnels de santé','Toutes professions confondues'],
   };
   
-  const GLOB_TITLES={nrp:['📵 Tous les NRP','Infirmiers, artisans et pharmacies en NRP'],rdv:['📅 Tous les RDV','Infirmiers, artisans et pharmacies avec RDV pris'],ko:['❌ Tous les KO','Infirmiers, artisans et pharmacies en KO'],new_today:['🆕 Nouveaux du jour','Prospects santé et artisans scrappés aujourd\'hui']};
+  const GLOB_TITLES={nrp:['Tous les NRP','Infirmiers, artisans et pharmacies en NRP'],rdv:['Tous les RDV','Infirmiers, artisans et pharmacies avec RDV pris'],ko:['Tous les KO','Infirmiers, artisans et pharmacies en KO'],new_today:['Nouveaux du jour','Prospects santé et artisans scrappés aujourd\'hui']};
   const T={
     dashboard:['Dashboard','Vue d\u2019ensemble live'],
     mailing:['Mailing','Compose et envoie des emails depuis Vauban et Evka'],
@@ -1329,7 +1329,7 @@ function renderHead(){
     <th class="sortable" onclick="setSort('p','ville')">VILLE${sortArrow('p','ville')}</th>
     <th class="sortable" onclick="setSort('p','telephone_direct')">📱 PORTABLE${sortArrow('p','telephone_direct')}</th>
     <th class="sortable" onclick="setSort('p','telephone')">📞 FIXE${sortArrow('p','telephone')}</th>
-    <th class="sortable" onclick="setSort('p','date_creation')">📅 DATE CRÉATION${sortArrow('p','date_creation')}</th>
+    <th class="sortable" onclick="setSort('p','date_creation')">DATE CRÉATION${sortArrow('p','date_creation')}</th>
     <th class="sortable" onclick="setSort('p','statut')">STATUT${sortArrow('p','statut')}</th>
     <th></th>
   </tr>`;
@@ -1620,7 +1620,7 @@ function renderRO(){
           <div style="flex:1;min-width:0"><div class="ro-nm">${e(c.nom)} ${e(c.prenom)}</div><div class="ro-mt">${c.profession||c.statut_contrat||''} · ${c.ville||''}</div></div>
           ${badge}
           ${c.telephone?`<a href="tel:${c.telephone.replace(/\s/g,'')}" onclick="event.stopPropagation()" class="btn btn-green" style="padding:4px 9px;font-size:11px;text-decoration:none;margin-left:8px">📞</a>`:''}
-          <button onclick="event.stopPropagation();window.openRDV({id:0,nom:e(c.nom)+' '+e(c.prenom),telephone_direct:c.telephone||'',email:c.email||'',specialite:c.profession||'',ville:c.ville||''},'ro')" class="btn btn-blue" style="padding:4px 9px;font-size:11px;margin-left:4px">📅 RDV</button>
+          <button onclick="event.stopPropagation();window.openRDV({id:0,nom:e(c.nom)+' '+e(c.prenom),telephone_direct:c.telephone||'',email:c.email||'',specialite:c.profession||'',ville:c.ville||''},'ro')" class="btn btn-blue" style="padding:4px 9px;font-size:11px;margin-left:4px">RDV</button>
         </div>
         <div class="rocard-body">
           <div class="ro-grid">
@@ -1926,12 +1926,12 @@ function sendMail() {
 
 
 const ARB_COLORS_ART = {
-  'rdv':      {bg:'var(--blue-light)',border:'var(--blue)',text:'var(--blue)',label:'📅 RDV Pris'},
-  'signe':    {bg:'var(--green-light)',border:'var(--green)',text:'var(--green)',label:'✅ Signé'},
-  'ko':       {bg:'var(--red-light)',border:'var(--red)',text:'var(--red)',label:'❌ KO'},
-  'rappeler': {bg:'var(--orange-light)',border:'var(--orange)',text:'var(--orange)',label:'🔄 Rappeler'},
-  'nrp':      {bg:'var(--orange-light)',border:'var(--orange)',text:'var(--orange)',label:'📵 NRP'},
-  '':         {bg:'var(--white)',border:'var(--border2)',text:'var(--text)',label:'⭕ À Appeler'},
+  'rdv':      {bg:'var(--blue-light)',border:'var(--blue)',text:'var(--blue)',label:'RDV pris'},
+  'signe':    {bg:'var(--green-light)',border:'var(--green)',text:'var(--green)',label:'Signé'},
+  'ko':       {bg:'var(--red-light)',border:'var(--red)',text:'var(--red)',label:'KO'},
+  'rappeler': {bg:'var(--orange-light)',border:'var(--orange)',text:'var(--orange)',label:'À rappeler'},
+  'nrp':      {bg:'var(--orange-light)',border:'var(--orange)',text:'var(--orange)',label:'NRP'},
+  '':         {bg:'var(--white)',border:'var(--border2)',text:'var(--text)',label:'À appeler'},
 };
 
 let artData = [];
