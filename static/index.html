@@ -193,24 +193,31 @@ thead th{background:var(--navy);padding:10px 14px;text-align:left;font-size:11px
 thead th:first-child{border-radius:8px 0 0 0}
 thead th:last-child{border-radius:0 8px 0 0}
 thead th:hover{color:var(--gold)}
-tbody tr{border-bottom:1px solid var(--border);cursor:pointer;transition:background .08s}
+tbody tr{border-bottom:1px solid #edf1f6;cursor:pointer;transition:background .08s}
 tbody tr:hover{background:var(--blue-light)}
 tbody tr.sel{background:var(--blue-light)!important;border-left:3px solid var(--blue)}
-tbody tr.ht{background:var(--green-light)}
-tbody tr.ht:hover{background:#D6EBDD}
-tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
-.cn{font-weight:600;font-size:13px;color:var(--text)}.cs{font-size:11px;color:var(--text3);margin-top:1px}
+tbody tr.st-rdv td{background:#C9F2D5}
+tbody tr.st-rdv:hover td{background:#B4EBC5}
+tbody tr.st-nrp td{background:#FFE0A8}
+tbody tr.st-nrp:hover td{background:#FFD48A}
+tbody tr.st-ko td{background:#FFC9C2}
+tbody tr.st-ko:hover td{background:#FFB5AB}
+tbody tr.st-rappeler td{background:#FFF0B3}
+tbody tr.st-rappeler:hover td{background:#FFE98F}
+tbody td{padding:5px 12px;font-size:13px;vertical-align:middle}
+.cn{font-weight:700;font-size:13px;color:var(--navy)}.cs{font-size:11px;color:var(--text3);margin-top:1px}
 .tok{color:var(--green);font-weight:700;font-family:monospace;font-size:13px;white-space:nowrap}
 .tfix{color:var(--text2);font-family:monospace;font-size:12px;white-space:nowrap}
 .tno{color:var(--text3);font-size:11px}
 .spe{display:inline-flex;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600}
 .badge{display:inline-flex;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
 .b-blue{background:var(--blue-light);color:var(--blue)}
-.b-green{background:var(--green-light);color:var(--green)}
-.b-orange{background:var(--orange-light);color:var(--orange)}
-.b-yellow{background:var(--yellow-light);color:var(--yellow)}
+.b-green{background:#16A34A;color:#fff}
+.b-orange{background:#F97316;color:#fff}
+.b-red{background:#DC2626;color:#fff}
+.b-yellow{background:#EAB308;color:#fff}
 .b-purple{background:var(--purple-light);color:var(--purple)}
-.b-gray{background:var(--bg);color:var(--text3)}
+.b-gray{background:#fff;border:1px solid #cdd6e2;color:#44536B}
 .age{display:inline-flex;padding:2px 7px;border-radius:20px;font-size:11px;font-weight:700}
 .an{background:var(--green-light);color:var(--green);border:1px solid var(--green)}
 .am{background:var(--yellow-light);color:var(--yellow);border:1px solid #FEFCBF}
@@ -923,6 +930,7 @@ const API='https://web-production-66741.up.railway.app/api';
 const PC={all:'var(--text2)',inf:'#3182CE',kin:'#805AD5',med:'#2B6CB0',den:'#DD6B20',psy:'#D53F8C'};
 const PS={inf:['Infirmier','Infirmière'],kin:['Masseur','Kinési','Ostéo'],med:['Médecin','Cardio','Radio','Chirur','Gynéco','Pédiatre','Dermato'],den:['Dentiste','Chirurgien-dentiste'],psy:['Psycho','Orthophon','Pédicure','Sage-femme']};
 const PL={all:'Toutes professions',inf:'Infirmiers',kin:'Kiné / Ostéo',med:'Médecins',den:'Dentistes',psy:'Psy / Ortho'};
+function stCls(s){return {rdv:'st-rdv',client:'st-rdv',nrp:'st-nrp','a-rappeler':'st-rappeler',rappeler:'st-rappeler',ko:'st-ko'}[s]||'';}
 const SL={'':'b-gray',nouveau:'b-gray',nrp:'b-orange',rdv:'b-green',ko:'b-red','contacte':'b-blue','interesse':'b-purple','a-rappeler':'b-orange','client':'b-green','sans-suite':'b-gray'};
 const SN={'':'Nouveau',nouveau:'Nouveau',nrp:'NRP',rappeler:'À rappeler',rdv:'RDV',ko:'KO','contacte':'Contacté','interesse':'Intéressé','a-rappeler':'À rappeler','client':'Client','sans-suite':'Sans suite'};
 
@@ -967,11 +975,11 @@ async function saveArbField(table, id, field, value) {
 }
 
 const ARB_COLORS = {
-  'rdv':      {bg:'var(--blue-light)',border:'var(--blue)',text:'var(--blue)',label:'RDV pris'},
+  'rdv':      {bg:'#C9F2D5',border:'#16A34A',text:'#15803D',label:'RDV pris'},
   'signe':    {bg:'var(--green-light)',border:'var(--green)',text:'var(--green)',label:'Sign\u00e9'},
-  'ko':       {bg:'var(--red-light)',border:'var(--red)',text:'var(--red)',label:'KO'},
+  'ko':       {bg:'#FFC9C2',border:'#DC2626',text:'#B91C1C',label:'KO'},
   'rappeler': {bg:'var(--orange-light)',border:'var(--orange)',text:'var(--orange)',label:'\u00c0 rappeler'},
-  'nrp':      {bg:'var(--orange-light)',border:'var(--orange)',text:'var(--orange)',label:'NRP'},
+  'nrp':      {bg:'#FFE0A8',border:'#F97316',text:'#C2410C',label:'NRP'},
   '':         {bg:'var(--white)',border:'var(--border2)',text:'var(--text)',label:'\u00c0 appeler'},
 };
 function arbColor(s){return ARB_COLORS[s]||ARB_COLORS[''];}
@@ -1188,7 +1196,7 @@ async function loadGlobal(){
 
     const ICONS = {sante:'💉', artisans:'🔧', pharmacies:'💊'};
     tbody.innerHTML = items.map(c => `
-      <tr onclick="openGlobalItem('${c.source_table}',${c.id})">
+      <tr class="${stCls(c.statut)}" onclick="openGlobalItem('${c.source_table}',${c.id})">
         <td><div class="cn">${e(c.nom||'—')}</div></td>
         <td><span class="badge b-blue">${ICONS[c.source_table]||''} ${e(c.categorie||'—')}</span></td>
         <td><div>${e(c.ville||'—')}</div><div class="cs">${c.cp||''}</div></td>
@@ -1362,7 +1370,7 @@ async function loadP(){
     tbody.innerHTML=d.data.map(row=>{
       const ht=row.telephone_direct;
       const sel=row.id===eid&&etype==='sante'?'sel':'';
-      return`<tr class="${ht?'ht':''} ${sel}" onclick="openDP(${row.id},'sante',this)">
+      return`<tr class="${stCls(row.statut)} ${sel}" onclick="openDP(${row.id},'sante',this)">
         <td><div class="cn">${e(row.nom)} ${e(row.prenom||'')}</div><div class="cs">${row.rpps||''}</div></td>
         <td><span class="spe" style="background:${color}18;color:${color}">${e(row.specialite||'—')}</span></td>
         <td><div>${e(row.ville||'—')}</div><div class="cs">${row.cp||''}</div></td>
@@ -1394,7 +1402,7 @@ async function loadPhr(){
     if(!d.data.length){tbody.innerHTML=`<tr class="empty"><td colspan="9">Aucun résultat</td></tr>`;renderPag('phr',0,0,0);return;}
     tbody.innerHTML=d.data.map(row=>{
       const sel=row.id===eid&&etype==='pharmacies'?'sel':'';
-      return`<tr class="${row.telephone_direct?'ht':''} ${sel}" onclick="openDP(${row.id},'pharmacies',this)">
+      return`<tr class="${stCls(row.statut)} ${sel}" onclick="openDP(${row.id},'pharmacies',this)">
         <td><div class="cn">${e(row.nom)}</div><div class="cs">${e((row.forme_juridique||'').substring(0,24))}</div></td>
         <td>${row.dirigeant?e(row.dirigeant):'<span style="color:var(--text3)">—</span>'}</td>
         <td><div>${e(row.ville||'—')}</div><div class="cs">${row.cp||''}</div></td>
@@ -1926,11 +1934,11 @@ function sendMail() {
 
 
 const ARB_COLORS_ART = {
-  'rdv':      {bg:'var(--blue-light)',border:'var(--blue)',text:'var(--blue)',label:'RDV pris'},
-  'signe':    {bg:'var(--green-light)',border:'var(--green)',text:'var(--green)',label:'Signé'},
-  'ko':       {bg:'var(--red-light)',border:'var(--red)',text:'var(--red)',label:'KO'},
-  'rappeler': {bg:'var(--orange-light)',border:'var(--orange)',text:'var(--orange)',label:'À rappeler'},
-  'nrp':      {bg:'var(--orange-light)',border:'var(--orange)',text:'var(--orange)',label:'NRP'},
+  'rdv':      {bg:'#C9F2D5',border:'#16A34A',text:'#15803D',label:'RDV pris'},
+  'signe':    {bg:'#9FE8B8',border:'#16A34A',text:'#14532D',label:'Signé'},
+  'ko':       {bg:'#FFC9C2',border:'#DC2626',text:'#B91C1C',label:'KO'},
+  'rappeler': {bg:'#FFF0B3',border:'#EAB308',text:'#A16207',label:'À rappeler'},
+  'nrp':      {bg:'#FFE0A8',border:'#F97316',text:'#C2410C',label:'NRP'},
   '':         {bg:'var(--white)',border:'var(--border2)',text:'var(--text)',label:'À appeler'},
 };
 
@@ -1982,7 +1990,7 @@ async function loadArt(){
     tbody.innerHTML=d.data.map(row=>{
       const col=ARB_COLORS_ART[row.statut||'']||ARB_COLORS_ART[''];
       const sel=row.id===artEid?'sel':'';
-      return`<tr class="${sel}" style="background:${col.bg};border-left:3px solid ${col.border}" onclick="openArtDP(${row.id},this)">
+      return`<tr class="${sel}" style="background:${col.bg}" onclick="openArtDP(${row.id},this)">
         <td><div class="cn" style="color:${col.text}">${e(row.nom||'—')}</div></td>
         <td><span class="badge b-orange" style="font-size:10px">${e(row.profession||'—')}</span></td>
         <td><div>${e(row.ville||'—')}</div><div class="cs">${row.cp||''}</div></td>
