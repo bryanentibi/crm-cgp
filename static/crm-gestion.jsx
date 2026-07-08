@@ -182,8 +182,27 @@ async function downloadFile(fileId, fallbackName) {
 
 const emptyRow = () => ({
   id: uid(), dateCreation: "", nom: "", type: "", compagnie: "", frais: "", ref: "",
-  commentaire: "", apporteur: "", versement: "", volume: "", remuneration: "", statut: "En attente",
+  commentaire: "", apporteur: "", versement: "", versementAnnuel: "", volume: "", remuneration: "", statut: "En attente",
 });
+
+/* ===== Taux de commission par défaut (médians calculés sur ton historique) ===== */
+const RATE_COMP = { "Optimum Vie": 0.20, "AFI ESCA": 0.125, "MMA": 0.15, "IAG Santé": 0.25, "Swiss Life": 0.10, "April": 0.20 };
+const RATE_TYPE = { "PER": 0.35, "Assurance vie": 0.20, "Prévoyance": 0.10, "Protection juridique": 0.25, "Mutuelle": 0.20, "Transfert": 0.10 };
+const rateFor = (r) => {
+  const t = parseFloat(r.taux);
+  if (!isNaN(t) && t > 0) return t;
+  return RATE_COMP[r.compagnie] ?? RATE_TYPE[r.type] ?? 0.10;
+};
+/* Volume = mensuel × 12 + annuel · Commission = volume × taux */
+function recalcRow(r, field) {
+  if (["versement", "versementAnnuel", "type", "compagnie", "volume", "taux"].includes(field)) {
+    const m = parseNum(r.versement), a = parseNum(r.versementAnnuel);
+    if (field !== "volume" && (m || a)) r = { ...r, volume: String(Math.round(m * 12 + a)) };
+    const vol = parseNum(r.volume);
+    if (vol) r = { ...r, remuneration: String(Math.round(vol * rateFor(r) * 100) / 100) };
+  }
+  return r;
+}
 const emptyMonthData = (users) => {
   const out = {};
   users.forEach((u) => { out[u.id] = { rows: Array.from({ length: 20 }, emptyRow), nonPayes: "" }; });
@@ -231,7 +250,7 @@ const CSS = `
   table.t td { border-bottom:1px solid #edf1f6; padding: 4px 6px; text-align:center; }
   table.t input, table.t select { width:100%; border:1px solid transparent; background:transparent; padding: 6px 4px; font-size:13px; text-align:center; border-radius:6px; color:inherit; }
   table.t input:focus, table.t select:focus { background:#fff; border-color:${GOLD}; outline:none; }
-  tr.paye td { background:#e4f3e6; } tr.annule td { background:#fbe4e2; }
+  tr.paye td { background:#e4f3e6; } tr.annule td { background:#fbe4e2; } tr.attente td { background:#fdf1dc; }
   .totrow td { background:${NAVY}; color:#fff; font-weight:700; padding: 10px 8px; }
   .nprow td { background:#fdf6e7; font-weight:600; }
   .modal-bg { position:fixed; inset:0; background:rgba(11,37,69,.55); display:flex; align-items:flex-start; justify-content:center; padding: 40px 16px; z-index:50; overflow:auto; }
@@ -347,6 +366,12 @@ function App() {
       }
       setUsers(loadedUsers);
       if (!u) await sSet("crm-users", loadedUsers);
+      /* Reconnexion automatique si déjà connecté sur ce navigateur */
+      try {
+        const savedId = localStorage.getItem("crm-me");
+        const saved = savedId && loadedUsers.find((x) => x.id === savedId);
+        if (saved) { setMe(saved); setViewAs(saved); }
+      } catch {}
       setClients(c || []);
       let salesData = s || {};
       let changed = false;
@@ -392,7 +417,7 @@ function App() {
     return (
       <Login
         users={users}
-        onLogin={(u) => { setMe(u); setViewAs(u); setPage("dash"); }}
+        onLogin={(u) => { setMe(u); setViewAs(u); setPage("dash"); try { localStorage.setItem("crm-me", u.id); } catch {} }}
         onSetPassword={(userId, pwd) => {
           saveUsers(users.map((u) => (u.id === userId ? { ...u, password: pwd } : u)));
         }}
@@ -501,7 +526,7 @@ function App() {
               </button>
             </div>
           )}
-          <button className="btn ghost sm" style={{ marginTop: 12, width: "100%" }} onClick={() => { setMe(null); setViewAs(null); }}>
+          <button className="btn ghost sm" style={{ marginTop: 12, width: "100%" }} onClick={() => { setMe(null); setViewAs(null); try { localStorage.removeItem("crm-me"); } catch {} }}>
             Se déconnecter
           </button>
         </div>
@@ -782,7 +807,7 @@ function ClientsPage({ clients, saveClients, me, users, openClient, typeFilter, 
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("alpha");
-  const [monthTab, setMonthTab] = useState("all");
+  const [monthTab, setMonthTab] = useState(null);
   const [ownerFilter, setOwnerFilter] = useState("all");
 
   /* Cloisonnement : un commercial ne voit QUE son portefeuille. Le manager voit tout. */
@@ -797,7 +822,10 @@ function ClientsPage({ clients, saveClients, me, users, openClient, typeFilter, 
     (!typeFilter || (c.contrats || []).some((k) => k.type === typeFilter)) &&
     (c.nom + " " + c.prenom + " " + (c.profession || "")).toLowerCase().includes(search.toLowerCase())
   );
-  const moisDispo = clientMonths(scoped.filter((c) => !c.decom));
+  const actifs = scoped.filter((c) => !c.decom);
+  const moisDispo = clientMonths(actifs);
+  const moisCounts = { all: actifs.length };
+  moisDispo.forEach((m) => { moisCounts[m] = actifs.filter((c) => (c.contrats || []).some((k) => (k.dateSignature || "").slice(0, 7) === m)).length; });
   const lastSig = (c) => (c.contrats || []).reduce((m, k) => (k.dateSignature > m ? k.dateSignature : m), "");
   const totMontant = (c) => (c.contrats || []).reduce((s, k) => s + parseNum(k.montant), 0);
   const firstType = (c) => ((c.contrats || [])[0]?.type) || "";
@@ -849,13 +877,16 @@ function ClientsPage({ clients, saveClients, me, users, openClient, typeFilter, 
         </div>
       </div>
 
-      <MonthTabs months={moisDispo} value={monthTab} onChange={setMonthTab} />
+      {monthTab === null && <MonthTiles months={moisDispo} counts={moisCounts} onPick={setMonthTab} />}
 
-      <div className="grid">
+      {monthTab !== null && (<>
+      <button className="btn ghost sm" style={{ marginBottom: 14 }} onClick={() => setMonthTab(null)}>← Retour aux mois</button>
+      <span style={{ marginLeft: 12, fontFamily: "Georgia, serif", fontSize: 17, color: "#0B2545", fontWeight: 700, textTransform: "capitalize" }}>{monthTab === "all" ? "Tous les clients" : monthLabel(monthTab)}</span>
+      <div className="grid" style={{ marginTop: 14 }}>
         {sorted.map((c) => (
           <div className="clientcard" key={c.id} onClick={() => openClient(c.id)}>
             <div>
-              <b style={{ fontSize: 15 }}>{c.nom.toUpperCase()} {c.prenom}</b>
+              <b style={{ fontSize: 15 }}>{c.civilite ? c.civilite + " " : ""}{c.nom.toUpperCase()} {c.prenom}</b>
               <div style={{ fontSize: 12.5, color: "#5b6b82" }}>
                 {c.profession || "Profession non renseignée"} · {c.telephone || "—"} · {c.email || "—"}
               </div>
@@ -868,8 +899,9 @@ function ClientsPage({ clients, saveClients, me, users, openClient, typeFilter, 
             </div>
           </div>
         ))}
-        {sorted.length === 0 && <div className="card" style={{ color: "#8593a8" }}>Aucun client. Créez la première fiche pour démarrer.</div>}
+        {sorted.length === 0 && <div className="card" style={{ color: "#8593a8" }}>Aucun client sur cette période.</div>}
       </div>
+      </>)}
 
       {showForm && (
         <ClientForm
@@ -930,7 +962,7 @@ function ClientDetail({ client, me, users, back, update, remove }) {
       <div className="ph">
         <div>
           <button className="btn ghost sm" onClick={back}>← Retour aux clients</button>
-          <h1 style={{ marginTop: 10 }}>{client.nom.toUpperCase()} {client.prenom}</h1>
+          <h1 style={{ marginTop: 10 }}>{client.civilite ? client.civilite + " " : ""}{client.nom.toUpperCase()} {client.prenom}</h1>
           <div className="sub">
             Fiche créée le {fmtDate(client.createdAt)}
             {" · Conseiller : "}
@@ -1167,12 +1199,12 @@ function SalesPage({ sales, saveSales, users, objectifs, saveObjectifs, me }) {
     users.forEach((u) => {
       (((md0[u.id] || {}).rows) || []).forEach((r) => {
         if (!(r.nom || "").trim()) return;
-        rows.push([`${u.prenom} ${u.nom}`, fmtDate(r.dateCreation), r.nom, r.type, r.compagnie, r.frais, r.ref, r.commentaire, r.apporteur, r.versement || "", r.volume, r.remuneration, r.statut]);
+        rows.push([`${u.prenom} ${u.nom}`, fmtDate(r.dateCreation), r.nom, r.type, r.compagnie, r.frais, r.ref, r.commentaire, r.apporteur, r.versement || "", r.versementAnnuel || "", r.volume, r.remuneration, r.statut]);
       });
     });
     downloadCSV(
       `ELYON_ventes_${month}.csv`,
-      ["Commercial", "Date de création", "Client", "Type de contrat", "Compagnie", "Frais", "Réf. contrat", "Commentaires", "Apporteur", "Versement mensuel", "Volume", "Rémunération", "Statut"],
+      ["Commercial", "Date de création", "Client", "Type de contrat", "Compagnie", "Frais", "Réf. contrat", "Commentaires", "Apporteur", "Versement mensuel", "Versement annuel", "Volume", "Rémunération", "Statut"],
       rows
     );
   };
@@ -1183,7 +1215,7 @@ function SalesPage({ sales, saveSales, users, objectifs, saveObjectifs, me }) {
       ...md,
       [userId]: {
         ...md[userId],
-        rows: md[userId].rows.map((r) => (r.id === rowId ? { ...r, [field]: value } : r)),
+        rows: md[userId].rows.map((r) => (r.id === rowId ? recalcRow({ ...r, [field]: value }, field) : r)),
       },
     };
 
@@ -1325,6 +1357,7 @@ function SalesPage({ sales, saveSales, users, objectifs, saveObjectifs, me }) {
                   <th style={{ width: "14%" }}>Commentaires</th>
                   <th>Apporteur</th>
                   <th>Versement/mois</th>
+                  <th>Versement/an</th>
                   <th>Volume</th>
                   <th>Rémunération</th>
                   <th>Statut</th>
@@ -1332,7 +1365,7 @@ function SalesPage({ sales, saveSales, users, objectifs, saveObjectifs, me }) {
               </thead>
               <tbody>
                 {data.rows.map((r) => (
-                  <tr key={r.id} className={r.statut === "Payé" ? "paye" : r.statut === "Annulé" ? "annule" : ""} style={r.mirrorOf ? { background: "#fdf9f0" } : undefined} title={r.mirrorOf ? "Ligne recopiée automatiquement depuis le tableau d'un commercial — saisissez votre rémunération" : undefined}>
+                  <tr key={r.id} className={r.statut === "Payé" ? "paye" : r.statut === "Annulé" ? "annule" : "attente"} style={r.mirrorOf ? { background: "#fdf9f0" } : undefined} title={r.mirrorOf ? "Ligne recopiée automatiquement depuis le tableau d'un commercial — saisissez votre rémunération" : undefined}>
                     <td><input type="date" value={r.dateCreation || ""} onChange={(e) => updateCell(u.id, r.id, "dateCreation", e.target.value)} style={{ fontSize: 12 }} /></td>
                     <td><input value={r.nom} onChange={(e) => updateCell(u.id, r.id, "nom", e.target.value)} /></td>
                     <td>
@@ -1352,8 +1385,15 @@ function SalesPage({ sales, saveSales, users, objectifs, saveObjectifs, me }) {
                     <td><input value={r.commentaire} onChange={(e) => updateCell(u.id, r.id, "commentaire", e.target.value)} /></td>
                     <td><input value={r.apporteur} onChange={(e) => updateCell(u.id, r.id, "apporteur", e.target.value)} /></td>
                     <td><input value={r.versement || ""} onChange={(e) => updateCell(u.id, r.id, "versement", e.target.value)} placeholder="€/mois" /></td>
+                    <td><input value={r.versementAnnuel || ""} onChange={(e) => updateCell(u.id, r.id, "versementAnnuel", e.target.value)} placeholder="€/an" /></td>
                     <td><input value={r.volume} onChange={(e) => updateCell(u.id, r.id, "volume", e.target.value)} placeholder="€" /></td>
-                    <td><input value={r.remuneration} onChange={(e) => updateCell(u.id, r.id, "remuneration", e.target.value)} placeholder="€" /></td>
+                    <td><input value={r.remuneration} onChange={(e) => updateCell(u.id, r.id, "remuneration", e.target.value)} placeholder="€"
+                      title={"Taux appliqué : " + (rateFor(r) * 100).toFixed(1) + "% · Double-clic pour le changer"}
+                      onDoubleClick={() => {
+                        const cur = (rateFor(r) * 100).toFixed(1);
+                        const p = prompt("Taux de commission (%) pour cette ligne :", cur);
+                        if (p !== null && !isNaN(parseFloat(p.replace(",", ".")))) updateCell(u.id, r.id, "taux", String(parseFloat(p.replace(",", ".")) / 100));
+                      }} /></td>
                     <td>
                       <select value={r.statut} onChange={(e) => updateCell(u.id, r.id, "statut", e.target.value)}>
                         {STATUTS.map((s) => <option key={s}>{s}</option>)}
@@ -2322,6 +2362,25 @@ function TrashPage({ trash, saveTrash, users, restoreClient, restoreProspect }) 
 }
 
 
+/* ================= GROSSES TUILES PAR MOIS ================= */
+function MonthTiles({ months, counts, onPick, accent = "#C9A24B" }) {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 14 }}>
+      <div onClick={() => onPick("all")} style={{ background: "#0B2545", border: "1px solid #0B2545", borderRadius: 14, padding: "26px 20px", cursor: "pointer", textAlign: "center", boxShadow: "0 2px 6px rgba(11,37,69,.15)" }}>
+        <div style={{ fontFamily: "Georgia, serif", fontSize: 21, fontWeight: 700, color: "#C9A24B" }}>Tous</div>
+        <div style={{ fontSize: 12.5, color: "rgba(255,255,255,.7)", marginTop: 6 }}>{counts.all} client(s)</div>
+      </div>
+      {months.map((m) => (
+        <div key={m} onClick={() => onPick(m)} style={{ background: "#fff", border: "1px solid #E3E9F1", borderLeft: "4px solid " + accent, borderRadius: 14, padding: "26px 20px", cursor: "pointer", textAlign: "center", boxShadow: "0 1px 3px rgba(11,37,69,.05)", transition: "transform .15s" }}
+          onMouseEnter={(e) => e.currentTarget.style.transform = "translateY(-2px)"} onMouseLeave={(e) => e.currentTarget.style.transform = ""}>
+          <div style={{ fontFamily: "Georgia, serif", fontSize: 19, fontWeight: 700, color: "#0B2545", textTransform: "capitalize" }}>{monthLabel(m)}</div>
+          <div style={{ fontSize: 12.5, color: "#8593a8", marginTop: 6 }}>{counts[m] || 0} client(s)</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /* ================= ONGLETS PAR MOIS ================= */
 function MonthTabs({ months, value, onChange }) {
   return (
@@ -2381,9 +2440,11 @@ function VentesJour({ sales, users, clients, goClient }) {
 /* ================= PAGE DÉCOMMISSIONNÉS ================= */
 function DecomPage({ clients, saveClients, goClient }) {
   const [search, setSearch] = useState("");
-  const [monthTab, setMonthTab] = useState("all");
+  const [monthTab, setMonthTab] = useState(null);
   const allDecoms = clients.filter((c) => c.decom);
   const moisDispo = clientMonths(allDecoms);
+  const moisCounts = { all: allDecoms.length };
+  moisDispo.forEach((m) => { moisCounts[m] = allDecoms.filter((c) => (c.contrats || []).some((k) => (k.dateSignature || "").slice(0, 7) === m)).length; });
   const decoms = allDecoms
     .filter((c) => monthTab === "all" || (c.contrats || []).some((k) => (k.dateSignature || "").slice(0, 7) === monthTab))
     .filter((c) => (c.nom + " " + c.prenom).toLowerCase().includes(search.toLowerCase()))
@@ -2403,8 +2464,10 @@ function DecomPage({ clients, saveClients, goClient }) {
         </div>
         <input className="in" style={{ width: 220 }} placeholder="Rechercher…" value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
-      <MonthTabs months={moisDispo} value={monthTab} onChange={setMonthTab} />
-      <div className="grid">
+      {monthTab === null && <MonthTiles months={moisDispo} counts={moisCounts} onPick={setMonthTab} accent="#B3261E" />}
+      {monthTab !== null && (<>
+      <button className="btn ghost sm" style={{ marginBottom: 14 }} onClick={() => setMonthTab(null)}>← Retour aux mois</button>
+      <div className="grid" style={{ marginTop: 8 }}>
         {decoms.map((c) => (
           <div className="clientcard" key={c.id} style={{ borderLeft: "4px solid #B3261E" }}>
             <div style={{ cursor: "pointer" }} onClick={() => goClient(c.id)}>
@@ -2419,8 +2482,9 @@ function DecomPage({ clients, saveClients, goClient }) {
             </div>
           </div>
         ))}
-        {decoms.length === 0 && <div className="card" style={{ color: "#8593a8" }}>Aucun client décommissionné. 👌</div>}
+        {decoms.length === 0 && <div className="card" style={{ color: "#8593a8" }}>Aucun client décommissionné sur cette période. 👌</div>}
       </div>
+      </>)}
     </div>
   );
 }
