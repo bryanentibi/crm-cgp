@@ -2353,9 +2353,16 @@ window.saveSign = async function(){
     const contrat = { id:kvUid(), type, compagnie:comp, numero:'', montant:String(vol), frais:'',
       commentaire:(m?`Versement : ${m} €/mois`:'')+(a?` Versement annuel : ${a} €`:'')+(note?' · '+note:''),
       dateSignature:dateS, datePrelevement:'', transfertInterne:'non', fraisTransfert:'non', fichiers:[] };
-    // 1) Fiche client
+    // 1) Fiche client (anti-doublon : correspondance exacte puis fiches proches)
     const clients = (await kvGet('crm-clients')) || [];
-    const existant = clients.find(x => (x.nom||'').trim().toUpperCase() === nom.toUpperCase());
+    const nrm = s => (s||'').toUpperCase().replace(/^(MME|MR|M\.|MLLE)\s+/,'').replace(/[^A-ZÀ-Ü0-9\- ]/g,'').replace(/\s+/g,' ').trim();
+    const cible = nrm(nom);
+    let existant = clients.find(x => nrm(x.nom) === cible || nrm(x.nom+' '+(x.prenom||'')) === cible || nrm(nom+' '+prenom) === nrm(x.nom));
+    if(!existant){
+      const premierMot = cible.split(' ')[0];
+      const proche = premierMot.length >= 4 && clients.find(x => nrm(x.nom).split(' ')[0] === premierMot);
+      if(proche && confirm(`Une fiche ressemble : ${proche.civilite||''} ${proche.nom} ${proche.prenom||''}.\n\nOK = ajouter le contrat à CETTE fiche\nAnnuler = créer une NOUVELLE fiche`)) existant = proche;
+    }
     if(existant){
       existant.contrats = [...(existant.contrats||[]), contrat];
       existant.decom = false;

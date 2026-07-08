@@ -989,6 +989,22 @@ function ClientDetail({ client, me, users, back, update, remove }) {
       <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", alignItems: "start" }}>
         <div className="card">
           <h2 style={{ fontSize: 17, marginBottom: 12 }}>Informations personnelles</h2>
+          <div className="row" style={{ gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
+            <div onClick={() => update({ ...client, transfertsFaits: client.transfertsFaits === "oui" ? "non" : "oui" })}
+              style={{ cursor: "pointer", padding: "8px 14px", borderRadius: 20, fontSize: 12.5, fontWeight: 600, border: "1px solid",
+                background: client.transfertsFaits === "oui" ? "#e4f3e6" : "#fff",
+                borderColor: client.transfertsFaits === "oui" ? "#1B7A3D" : "#cdd6e2",
+                color: client.transfertsFaits === "oui" ? "#1B7A3D" : "#8593a8" }}>
+              {client.transfertsFaits === "oui" ? "✓ Transferts effectués" : "Transferts : non faits"}
+            </div>
+            <div onClick={() => update({ ...client, espaceClient: client.espaceClient === "oui" ? "non" : "oui" })}
+              style={{ cursor: "pointer", padding: "8px 14px", borderRadius: 20, fontSize: 12.5, fontWeight: 600, border: "1px solid",
+                background: client.espaceClient === "oui" ? "#e4f3e6" : "#fff",
+                borderColor: client.espaceClient === "oui" ? "#1B7A3D" : "#cdd6e2",
+                color: client.espaceClient === "oui" ? "#1B7A3D" : "#8593a8" }}>
+              {client.espaceClient === "oui" ? "✓ Espace client ouvert" : "Espace client : non ouvert"}
+            </div>
+          </div>
           <div style={{ fontSize: 14, lineHeight: 2 }}>
             <div><b>Date de naissance :</b> {fmtDate(client.dateNaissance)}</div>
             <div><b>Téléphone :</b> {client.telephone || "—"}</div>
@@ -1183,7 +1199,7 @@ function AlertForm({ onSave, onClose }) {
 function SalesPage({ sales, saveSales, users, objectifs, saveObjectifs, me, clients, saveClients }) {
   /* Créer (ou compléter) la fiche client depuis une ligne de vente */
   const addClientFromRow = (userId, r) => {
-    const norm = (s) => (s || "").toUpperCase().replace(/^(MME|MR|M\.|MLLE)\s+/, "").replace(/\s+/g, " ").trim();
+    const norm = (s) => (s || "").toUpperCase().replace(/^(MME|MR|M\.|MLLE)\s+/, "").replace(/[^A-ZÀ-Ü0-9\- ]/g, "").replace(/\s+/g, " ").trim();
     const nomComplet = norm(r.nom);
     if (!nomComplet) { alert("Renseigne d'abord le nom du client sur la ligne."); return; }
     const civ = /^MME/i.test(r.nom || "") ? "Mme" : (/^(MR|M\.)/i.test(r.nom || "") ? "M." : "");
@@ -1194,7 +1210,13 @@ function SalesPage({ sales, saveSales, users, objectifs, saveObjectifs, me, clie
       dateSignature: r.dateCreation || todayISO(), datePrelevement: "",
       transfertInterne: "non", fraisTransfert: "non", fichiers: [],
     };
-    const existant = clients.find((c) => norm(c.nom + " " + (c.prenom || "")) === nomComplet || norm(c.nom) === nomComplet);
+    let existant = clients.find((c) => norm(c.nom + " " + (c.prenom || "")) === nomComplet || norm(c.nom) === nomComplet);
+    if (!existant) {
+      /* Fiches proches : le nom de famille saisi commence pareil qu'une fiche existante */
+      const premierMot = nomComplet.split(" ")[0];
+      const proche = premierMot.length >= 4 && clients.find((c) => norm(c.nom).split(" ")[0] === premierMot);
+      if (proche && confirm(`Une fiche ressemble : ${proche.civilite || ""} ${proche.nom} ${proche.prenom || ""}.\n\nOK = ajouter le contrat à CETTE fiche\nAnnuler = créer une NOUVELLE fiche`)) existant = proche;
+    }
     let cid;
     if (existant) {
       if (!confirm(`${existant.civilite || ""} ${existant.nom} existe déjà — ajouter ce contrat à sa fiche ?`)) return;
@@ -1245,7 +1267,18 @@ function SalesPage({ sales, saveSales, users, objectifs, saveObjectifs, me, clie
       ...md,
       [userId]: {
         ...md[userId],
-        rows: md[userId].rows.map((r) => (r.id === rowId ? recalcRow({ ...r, [field]: value }, field) : r)),
+        rows: md[userId].rows.map((r) => {
+          if (r.id !== rowId) return r;
+          let nr = recalcRow({ ...r, [field]: value }, field);
+          /* Liaison auto : si le nom tapé correspond exactement à un client existant */
+          if (field === "nom" && clients) {
+            const nrm = (s) => (s || "").toUpperCase().replace(/^(MME|MR|M\.|MLLE)\s+/, "").replace(/[^A-ZÀ-Ü0-9\- ]/g, "").replace(/\s+/g, " ").trim();
+            const t = nrm(value);
+            const m = t && clients.find((cl) => nrm((cl.civilite ? cl.civilite + " " : "") + cl.nom + " " + (cl.prenom || "")) === t || nrm(cl.nom + " " + (cl.prenom || "")) === t || nrm(cl.nom) === t);
+            nr = { ...nr, clientId: m ? m.id : undefined };
+          }
+          return nr;
+        }),
       },
     };
 
@@ -2455,20 +2488,13 @@ function VentesJour({ sales, users, clients, goClient }) {
       if (direct) return goClient(direct);
     }
     /* 2. Sinon : correspondance exacte du nom complet (civilité retirée), jamais un simple morceau */
-    const norm = (s) => (s || "").toUpperCase().replace(/^(MME|MR|M\.|MLLE)\s+/, "").replace(/\s+/g, " ").trim();
+    const norm = (s) => (s || "").toUpperCase().replace(/^(MME|MR|M\.|MLLE)\s+/, "").replace(/[^A-ZÀ-Ü0-9\- ]/g, "").replace(/\s+/g, " ").trim();
     const target = norm(r.nom);
     let cl = clients.find((c) => norm((c.civilite ? c.civilite + " " : "") + c.nom + " " + (c.prenom || "")) === target)
           || clients.find((c) => norm(c.nom + " " + (c.prenom || "")) === target)
           || clients.find((c) => norm(c.nom) === target);
-    if (!cl) {
-      /* 3. Dernier recours : le nom du client doit être un MOT ENTIER du libellé, on prend le plus long */
-      const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const cands = clients.filter((c) => norm(c.nom).length >= 3 && new RegExp("\\b" + esc(norm(c.nom)) + "\\b").test(target));
-      cands.sort((a, b) => norm(b.nom).length - norm(a.nom).length);
-      cl = cands[0];
-    }
     if (cl && goClient) goClient(cl);
-    else alert("Aucune fiche client trouvée pour « " + r.nom + " ». Utilise le bouton + Fiche dans l'onglet Ventes pour la créer.");
+    else alert("Aucune fiche client ne correspond exactement à « " + r.nom + " ». Va dans l'onglet Ventes et clique + Fiche sur cette ligne pour la lier proprement.");
   };
   return (
     <div className="card" style={{ marginTop: 20 }}>
