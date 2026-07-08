@@ -599,7 +599,7 @@ function Login({ users, onLogin, onSetPassword }) {
       <style>{CSS}</style>
       <div className="login">
         <div className="loginbox">
-          <h1>ELYON <span style={{ color: GOLD }}>&</span> Associés</h1>
+          <h1>BRYAN <span style={{ color: GOLD }}>·</span> CGP</h1>
           <span className="gold">CRM · Gestion de patrimoine</span>
           {!selected && (
             <>
