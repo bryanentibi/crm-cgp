@@ -2371,7 +2371,7 @@ window.saveSign = async function(){
     const mk = dateS.slice(0,7);
     if(!sales[mk]) sales[mk] = {};
     if(!sales[mk]['bryan']) sales[mk]['bryan'] = { rows:[], nonPayes:'' };
-    sales[mk]['bryan'].rows.push({ id:kvUid(), dateCreation:dateS, nom:(civ+' '+nom).toUpperCase(),
+    sales[mk]['bryan'].rows.push({ id:kvUid(), dateCreation:dateS, nom:(civ+' '+nom).toUpperCase(), clientId: existant ? existant.id : cid,
       type, compagnie:comp, frais:'', ref:'', commentaire:note, apporteur:'Bryan',
       versement:String(m||''), versementAnnuel:String(a||''), volume:String(vol),
       remuneration:String(com), taux:String(taux), statut:'En attente' });

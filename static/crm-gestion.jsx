@@ -555,7 +555,7 @@ function App() {
             remove={() => { if (confirm("Mettre cette fiche client à la corbeille ? (restaurable pendant 30 jours)")) { toTrash("client", clients.find((c) => c.id === openClient)); saveClients(clients.filter((c) => c.id !== openClient)); setOpenClient(null); } }}
           />
         )}
-        {page === "ventes" && <SalesPage sales={sales} saveSales={saveSales} users={users} objectifs={objectifs} saveObjectifs={saveObjectifs} me={me} />}
+        {page === "ventes" && <SalesPage sales={sales} saveSales={saveSales} users={users} objectifs={objectifs} saveObjectifs={saveObjectifs} me={me} clients={clients} saveClients={saveClients} />}
         {page === "paye" && <PayePage view={view} sales={sales} bordereaux={bordereaux} saveBordereaux={saveBordereaux} />}
         {page === "docs" && <DocsPage docs={docs} saveDocs={saveDocs} />}
         {page === "equipe" && me.isManager && <TeamPage users={users} saveUsers={saveUsers} sales={sales} saveSales={saveSales} me={me} />}
@@ -1180,7 +1180,37 @@ function AlertForm({ onSave, onClose }) {
 }
 
 /* ================= VENTES ÉQUIPE ================= */
-function SalesPage({ sales, saveSales, users, objectifs, saveObjectifs, me }) {
+function SalesPage({ sales, saveSales, users, objectifs, saveObjectifs, me, clients, saveClients }) {
+  /* Créer (ou compléter) la fiche client depuis une ligne de vente */
+  const addClientFromRow = (userId, r) => {
+    const norm = (s) => (s || "").toUpperCase().replace(/^(MME|MR|M\.|MLLE)\s+/, "").replace(/\s+/g, " ").trim();
+    const nomComplet = norm(r.nom);
+    if (!nomComplet) { alert("Renseigne d'abord le nom du client sur la ligne."); return; }
+    const civ = /^MME/i.test(r.nom || "") ? "Mme" : (/^(MR|M\.)/i.test(r.nom || "") ? "M." : "");
+    const contrat = {
+      id: uid(), type: r.type || "PER", compagnie: r.compagnie || "", numero: "",
+      montant: r.volume || "", frais: "",
+      commentaire: [r.versement ? `Versement : ${r.versement} €/mois` : "", r.versementAnnuel ? `Versement annuel : ${r.versementAnnuel} €` : "", r.commentaire || ""].filter(Boolean).join(" · "),
+      dateSignature: r.dateCreation || todayISO(), datePrelevement: "",
+      transfertInterne: "non", fraisTransfert: "non", fichiers: [],
+    };
+    const existant = clients.find((c) => norm(c.nom + " " + (c.prenom || "")) === nomComplet || norm(c.nom) === nomComplet);
+    let cid;
+    if (existant) {
+      if (!confirm(`${existant.civilite || ""} ${existant.nom} existe déjà — ajouter ce contrat à sa fiche ?`)) return;
+      cid = existant.id;
+      saveClients(clients.map((c) => (c.id === existant.id ? { ...c, decom: false, contrats: [...(c.contrats || []), contrat] } : c)));
+    } else {
+      cid = uid();
+      saveClients([...clients, {
+        id: cid, nom: nomComplet, prenom: "", civilite: civ, dateNaissance: "", telephone: "",
+        email: "", profession: "", revenus: "", situation: "Célibataire",
+        createdBy: me.id, createdAt: todayISO(), contrats: [contrat], alertes: [],
+      }]);
+    }
+    updateCell(userId, r.id, "clientId", cid);
+    alert(existant ? "✅ Contrat ajouté à la fiche existante !" : "✅ Fiche client créée ! Retrouve-la dans l'onglet Clients.");
+  };
   const months = Object.keys(sales).sort();
   const [month, setMonth] = useState(months[months.length - 1]);
   const [showObj, setShowObj] = useState(false);
@@ -1361,6 +1391,7 @@ function SalesPage({ sales, saveSales, users, objectifs, saveObjectifs, me }) {
                   <th>Volume</th>
                   <th>Rémunération</th>
                   <th>Statut</th>
+                  <th>Fiche</th>
                 </tr>
               </thead>
               <tbody>
@@ -1401,12 +1432,18 @@ function SalesPage({ sales, saveSales, users, objectifs, saveObjectifs, me }) {
                         {STATUTS.map((s) => <option key={s}>{s}</option>)}
                       </select>
                     </td>
+                    <td>
+                      {r.clientId
+                        ? <span className="badge b-green" title="Fiche client liée">✓</span>
+                        : <button className="btn ghost sm" style={{ padding: "3px 8px", fontSize: 11 }} title="Créer la fiche client depuis cette vente" onClick={() => addClientFromRow(u.id, r)}>+ Fiche</button>}
+                    </td>
                   </tr>
                 ))}
                 <tr className="totrow">
-                  <td colSpan={8} style={{ textAlign: "right" }}>TOTAL {monthLabel(month).toUpperCase()}</td>
+                  <td colSpan={10} style={{ textAlign: "right" }}>TOTAL {monthLabel(month).toUpperCase()}</td>
                   <td>{fmtEUR(totVol)}</td>
                   <td>{fmtEUR(totRem)}</td>
+                  <td></td>
                   <td></td>
                 </tr>
                 <tr className="nprow">
@@ -2412,8 +2449,26 @@ function VentesJour({ sales, users, clients, goClient }) {
     });
   });
   const openFiche = (r) => {
-    const cl = clients.find((c) => (r.nom || "").toUpperCase().includes((c.nom || "").toUpperCase()) && c.nom);
+    /* 1. Liaison directe par identifiant si la vente est liée à une fiche */
+    if (r.clientId) {
+      const direct = clients.find((c) => c.id === r.clientId);
+      if (direct) return goClient(direct);
+    }
+    /* 2. Sinon : correspondance exacte du nom complet (civilité retirée), jamais un simple morceau */
+    const norm = (s) => (s || "").toUpperCase().replace(/^(MME|MR|M\.|MLLE)\s+/, "").replace(/\s+/g, " ").trim();
+    const target = norm(r.nom);
+    let cl = clients.find((c) => norm((c.civilite ? c.civilite + " " : "") + c.nom + " " + (c.prenom || "")) === target)
+          || clients.find((c) => norm(c.nom + " " + (c.prenom || "")) === target)
+          || clients.find((c) => norm(c.nom) === target);
+    if (!cl) {
+      /* 3. Dernier recours : le nom du client doit être un MOT ENTIER du libellé, on prend le plus long */
+      const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const cands = clients.filter((c) => norm(c.nom).length >= 3 && new RegExp("\\b" + esc(norm(c.nom)) + "\\b").test(target));
+      cands.sort((a, b) => norm(b.nom).length - norm(a.nom).length);
+      cl = cands[0];
+    }
     if (cl && goClient) goClient(cl);
+    else alert("Aucune fiche client trouvée pour « " + r.nom + " ». Utilise le bouton + Fiche dans l'onglet Ventes pour la créer.");
   };
   return (
     <div className="card" style={{ marginTop: 20 }}>
