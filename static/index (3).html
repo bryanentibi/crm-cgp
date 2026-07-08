@@ -1029,7 +1029,7 @@ function renderBarriere(){
       <input type="text" value="${e(c.commentaire||'')}" placeholder="Note libre..."
         style="border:1px solid ${col.border};border-radius:5px;padding:4px 8px;font-size:11px;width:95%;background:var(--white);color:var(--text);font-family:Inter,sans-serif;outline:none"
         onchange="bState[${ri}].commentaire=this.value;saveArbField('b',bState[${ri}].id,'commentaire',this.value);toast('\u2705 Sauvegard\u00e9','ok')">
-      <select onchange="bState[${ri}].statut=this.value;saveArbField('b',bState[${ri}].id,'statut',this.value);renderBarriere();toast('\u2705 Statut mis \u00e0 jour','ok')"
+      <select onchange="bState[${ri}].statut=this.value;saveArbField('b',bState[${ri}].id,'statut',this.value);if(this.value==='signe')openSign(bState[${ri}].nom||'',bState[${ri}].montant||0);renderBarriere();toast('\u2705 Statut mis \u00e0 jour','ok')"
         style="border:2px solid ${col.border};border-radius:6px;padding:5px 8px;font-size:11px;font-weight:600;background:${col.bg};color:${col.text};cursor:pointer;font-family:Inter,sans-serif;outline:none;width:100%">
         <option value="" ${!c.statut?'selected':''}>\u2B55 \u00c0 Appeler</option>
         <option value="rdv" ${c.statut==='rdv'?'selected':''}>\uD83D\uDCC5 RDV Pris</option>
@@ -1087,7 +1087,7 @@ function renderOptimum(){
       <input type="text" value="${e(c.commentaire||'')}" placeholder="Note libre..."
         style="border:1px solid ${col.border};border-radius:5px;padding:4px 8px;font-size:11px;width:95%;background:var(--white);color:var(--text);font-family:Inter,sans-serif;outline:none"
         onchange="oState[${ri}].commentaire=this.value;saveArbField('o',oState[${ri}].id,'commentaire',this.value);toast('\u2705 Sauvegard\u00e9','ok')">
-      <select onchange="oState[${ri}].statut=this.value;saveArbField('o',oState[${ri}].id,'statut',this.value);renderOptimum();toast('\u2705 Statut mis \u00e0 jour','ok')"
+      <select onchange="oState[${ri}].statut=this.value;saveArbField('o',oState[${ri}].id,'statut',this.value);if(this.value==='signe')openSign(oState[${ri}].nom||'',oState[${ri}].versement||0);renderOptimum();toast('\u2705 Statut mis \u00e0 jour','ok')"
         style="border:2px solid ${col.border};border-radius:6px;padding:5px 8px;font-size:11px;font-weight:600;background:${col.bg};color:${col.text};cursor:pointer;font-family:Inter,sans-serif;outline:none;width:100%">
         <option value="" ${!c.statut?'selected':''}>\u2B55 \u00c0 Appeler</option>
         <option value="rdv" ${c.statut==='rdv'?'selected':''}>\uD83D\uDCC5 RDV Pris</option>
@@ -2236,6 +2236,15 @@ window.openRDV = function(contact, type) {
 let rdvContactId = null;
 let rdvContactType = null;
 
+/* ===== PONT PROSPECTION <-> GESTION (même base PostgreSQL) ===== */
+async function kvGet(key){ try{const r=await fetch('/api/storage/'+encodeURIComponent(key)); if(!r.ok)return null; const j=await r.json(); return JSON.parse(j.value);}catch(e){return null;} }
+async function kvSet(key,val){ await fetch('/api/storage/'+encodeURIComponent(key),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({value:JSON.stringify(val)})}); }
+function kvUid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
+const G_RATE_COMP = {'Optimum Vie':0.20,'AFI ESCA':0.125,'MMA':0.15,'IAG Santé':0.25,'SPP':0.35,'Swiss Life':0.10,'April':0.20};
+const G_RATE_TYPE = {'PER':0.20,'Assurance vie':0.15,'Prévoyance':0.10,'Protection juridique':0.25,'Mutuelle':0.20,'Transfert':0.10};
+const G_COMPANIES = {'PER':['Optimum Vie','MMA','Swiss Life','Abeille','Malakoff Humanis','Generali'],'Assurance vie':['AFI ESCA','MMA','Swiss Life','Generali'],'Prévoyance':['April','Abeille','Swiss Life','MMA'],'Protection juridique':['IAG Santé','SPP'],'Mutuelle':['April','Abeille','Generali','MMA'],'Transfert':['Optimum Vie','MMA','AFI ESCA','Abeille']};
+function gRate(){ const t=document.getElementById('sg-type').value, co=document.getElementById('sg-comp').value; return G_RATE_COMP[co] ?? G_RATE_TYPE[t] ?? 0.10; }
+
 window.closeRDV = function() {
   document.getElementById('modal-rdv').style.display = 'none';
 }
@@ -2276,7 +2285,24 @@ window.saveRDV = async function() {
     await fetch(`${API}/${ep}/${rdvContactId}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({statut:'rdv',note:noteRDV})});
   }
   
-  toast('📅 RDV ajouté à Google Calendar !', 'ok');
+  // Synchro vers l'onglet Prospection du CRM Gestion
+  try {
+    const liste = (await kvGet('crm-prospection')) || [];
+    liste.unshift({
+      id: kvUid(), ownerId: 'bryan',
+      nom: nom, prenom: '',
+      profession: rdvContactType==='sante'?'Professionnel de santé':rdvContactType==='artisans'?'Artisan':'Pharmacie',
+      telephone: tel || '', ville: '',
+      dateAppel: new Date().toISOString().slice(0,10),
+      repondu: 'Oui', statut: 'RDV pris',
+      dateRdv: date.slice(0,10), heureRdv: date.slice(11,16),
+      qualitePrise: '', noteRdv: notes || '',
+      commentaire: `Assurance: ${assurance||'—'} · RCP: ${rcp||'—'} · Mutuelle: ${mutuelle||'—'} · PER: ${per||'—'}`,
+      createdAt: new Date().toISOString().slice(0,10),
+    });
+    await kvSet('crm-prospection', liste);
+    toast('📅 RDV ajouté à Google Calendar + agenda Gestion !', 'ok');
+  } catch(e) { console.error('sync gestion', e); toast('📅 RDV ajouté à Google Calendar !', 'ok'); }
   closeRDV();
   if(rdvContactType==='sante') loadP();
   else if(rdvContactType==='artisans') loadArt();
@@ -2286,12 +2312,128 @@ window.saveRDV = async function() {
   btn.textContent = '📅 Ajouter à Google Calendar'; btn.disabled = false;
 }
 
+
+/* ===== MODAL SIGNATURE -> CRM GESTION ===== */
+window.openSign = function(nom, montant){
+  const ts = document.getElementById('sg-type');
+  ts.innerHTML = Object.keys(G_COMPANIES).map(t=>`<option>${t}</option>`).join('');
+  sgComps();
+  document.getElementById('sg-nom').value = (nom||'').replace(/^(MME|MR|M\.|MLLE)\s+/i,'');
+  document.getElementById('sg-civ').value = /^(MME|MLLE)/i.test(nom||'') ? 'Mme' : (/^(MR|M\.)/i.test(nom||'') ? 'M.' : 'Mme');
+  document.getElementById('sg-prenom').value = '';
+  document.getElementById('sg-tel').value = '';
+  document.getElementById('sg-date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('sg-mens').value = montant || '';
+  document.getElementById('sg-ann').value = '';
+  document.getElementById('sg-taux').value = (gRate()*100).toFixed(2);
+  document.getElementById('sg-note').value = '';
+  document.getElementById('sg-err').style.display = 'none';
+  sgCalc();
+  document.getElementById('modal-sign').style.display = 'flex';
+}
+window.closeSign = function(){ document.getElementById('modal-sign').style.display = 'none'; }
+window.sgComps = function(){
+  const t = document.getElementById('sg-type').value;
+  document.getElementById('sg-comp').innerHTML = (G_COMPANIES[t]||[]).map(co=>`<option>${co}</option>`).join('');
+  document.getElementById('sg-taux').value = (gRate()*100).toFixed(2);
+}
+window.sgCalc = function(tauxManuel){
+  if(!tauxManuel) document.getElementById('sg-taux').value = document.getElementById('sg-taux').value || (gRate()*100).toFixed(2);
+  const m = parseFloat(document.getElementById('sg-mens').value)||0;
+  const a = parseFloat(document.getElementById('sg-ann').value)||0;
+  const taux = (parseFloat(document.getElementById('sg-taux').value)||0)/100;
+  const vol = Math.round((m+a)*12), com = Math.round(vol*taux*100)/100;
+  document.getElementById('sg-calc').innerHTML = `Volume : <b>${vol.toLocaleString('fr-FR')} €</b> · Commission : <b>${com.toLocaleString('fr-FR')} €</b> (taux ${(taux*100).toFixed(2)}%)`;
+}
+window.saveSign = async function(){
+  const civ = document.getElementById('sg-civ').value;
+  const nom = document.getElementById('sg-nom').value.trim();
+  const prenom = document.getElementById('sg-prenom').value.trim();
+  const tel = document.getElementById('sg-tel').value.trim();
+  const dateS = document.getElementById('sg-date').value;
+  const type = document.getElementById('sg-type').value;
+  const comp = document.getElementById('sg-comp').value;
+  const m = parseFloat(document.getElementById('sg-mens').value)||0;
+  const a = parseFloat(document.getElementById('sg-ann').value)||0;
+  const taux = (parseFloat(document.getElementById('sg-taux').value)||0)/100;
+  const note = document.getElementById('sg-note').value.trim();
+  if(!nom || !dateS){ const er=document.getElementById('sg-err'); er.textContent='Nom et date obligatoires'; er.style.display='block'; return; }
+  const btn = document.getElementById('sg-btn'); btn.textContent='⏳ Création...'; btn.disabled=true;
+  try {
+    const vol = Math.round((m+a)*12), com = Math.round(vol*taux*100)/100;
+    const cid = kvUid();
+    const contrat = { id:kvUid(), type, compagnie:comp, numero:'', montant:String(vol), frais:'',
+      commentaire:(m?`Versement : ${m} €/mois`:'')+(a?` Versement annuel : ${a} €`:'')+(note?' · '+note:''),
+      dateSignature:dateS, datePrelevement:'', transfertInterne:'non', fraisTransfert:'non', fichiers:[] };
+    // 1) Fiche client
+    const clients = (await kvGet('crm-clients')) || [];
+    const existant = clients.find(x => (x.nom||'').trim().toUpperCase() === nom.toUpperCase());
+    if(existant){
+      existant.contrats = [...(existant.contrats||[]), contrat];
+      existant.decom = false;
+      if(tel && !existant.telephone) existant.telephone = tel;
+    } else {
+      clients.push({ id:cid, nom:nom.toUpperCase(), prenom, civilite:civ, dateNaissance:'', telephone:tel,
+        email:'', profession:'', revenus:'', situation:'Célibataire', createdBy:'bryan',
+        createdAt:dateS, contrats:[contrat], alertes:[] });
+    }
+    await kvSet('crm-clients', clients);
+    // 2) Ligne de vente du mois
+    const sales = (await kvGet('crm-sales')) || {};
+    const mk = dateS.slice(0,7);
+    if(!sales[mk]) sales[mk] = {};
+    if(!sales[mk]['bryan']) sales[mk]['bryan'] = { rows:[], nonPayes:'' };
+    sales[mk]['bryan'].rows.push({ id:kvUid(), dateCreation:dateS, nom:(civ+' '+nom).toUpperCase(),
+      type, compagnie:comp, frais:'', ref:'', commentaire:note, apporteur:'Bryan',
+      versement:String(m||''), versementAnnuel:String(a||''), volume:String(vol),
+      remuneration:String(com), taux:String(taux), statut:'En attente' });
+    await kvSet('crm-sales', sales);
+    toast(`🎉 ${existant?'Contrat ajouté à':'Client créé dans'} Gestion + vente de ${monthFR(mk)} !`, 'ok');
+    closeSign();
+  } catch(e){ console.error(e); const er=document.getElementById('sg-err'); er.textContent='Erreur de connexion à la base Gestion'; er.style.display='block'; }
+  btn.textContent='✅ Créer dans Gestion'; btn.disabled=false;
+}
+function monthFR(mk){ const [y,mo]=mk.split('-'); return new Date(y,mo-1,1).toLocaleDateString('fr-FR',{month:'long',year:'numeric'}); }
+document.addEventListener('click', function(e){if(e.target.id==='modal-sign')closeSign();});
+
 document.addEventListener('click', function(e){if(e.target.id==='modal-rdv')closeRDV();});
 
 })();
 </script>
 
 <!-- MODAL RDV -->
+<div id="modal-sign" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:10001;align-items:center;justify-content:center">
+  <div style="background:var(--white);border-radius:20px;padding:30px;width:540px;max-width:92vw;max-height:88vh;overflow-y:auto">
+    <h2 style="font-family:Georgia,serif;font-size:20px;color:var(--navy);margin-bottom:4px">✅ Nouvelle signature → CRM Gestion</h2>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:16px">Crée la fiche client + la ligne de vente du mois automatiquement</div>
+    <div style="display:grid;grid-template-columns:1fr 2fr 2fr;gap:10px;margin-bottom:10px">
+      <div><label style="font-size:11px;font-weight:600;color:var(--text2)">Civilité</label><select id="sg-civ" style="width:100%;border:1.5px solid var(--border2);border-radius:8px;padding:9px;background:var(--white)"><option>Mme</option><option>M.</option></select></div>
+      <div><label style="font-size:11px;font-weight:600;color:var(--text2)">Nom *</label><input id="sg-nom" style="width:100%;border:1.5px solid var(--border2);border-radius:8px;padding:9px;background:var(--white)"></div>
+      <div><label style="font-size:11px;font-weight:600;color:var(--text2)">Prénom</label><input id="sg-prenom" style="width:100%;border:1.5px solid var(--border2);border-radius:8px;padding:9px;background:var(--white)"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div><label style="font-size:11px;font-weight:600;color:var(--text2)">Téléphone</label><input id="sg-tel" style="width:100%;border:1.5px solid var(--border2);border-radius:8px;padding:9px;background:var(--white)"></div>
+      <div><label style="font-size:11px;font-weight:600;color:var(--text2)">Date de signature</label><input id="sg-date" type="date" style="width:100%;border:1.5px solid var(--border2);border-radius:8px;padding:9px;background:var(--white)"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div><label style="font-size:11px;font-weight:600;color:var(--text2)">Type de contrat</label><select id="sg-type" onchange="sgComps();sgCalc()" style="width:100%;border:1.5px solid var(--border2);border-radius:8px;padding:9px;background:var(--white)"></select></div>
+      <div><label style="font-size:11px;font-weight:600;color:var(--text2)">Compagnie</label><select id="sg-comp" onchange="sgCalc()" style="width:100%;border:1.5px solid var(--border2);border-radius:8px;padding:9px;background:var(--white)"></select></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px">
+      <div><label style="font-size:11px;font-weight:600;color:var(--text2)">Versement €/mois</label><input id="sg-mens" type="number" oninput="sgCalc()" placeholder="ex: 200" style="width:100%;border:1.5px solid var(--border2);border-radius:8px;padding:9px;background:var(--white)"></div>
+      <div><label style="font-size:11px;font-weight:600;color:var(--text2)">Versement €/an</label><input id="sg-ann" type="number" oninput="sgCalc()" placeholder="ex: 20000" style="width:100%;border:1.5px solid var(--border2);border-radius:8px;padding:9px;background:var(--white)"></div>
+      <div><label style="font-size:11px;font-weight:600;color:var(--text2)">Taux com. %</label><input id="sg-taux" type="number" step="0.01" oninput="sgCalc(true)" style="width:100%;border:1.5px solid var(--border2);border-radius:8px;padding:9px;background:var(--white)"></div>
+    </div>
+    <div id="sg-calc" style="background:var(--gold-light);border:1px solid var(--gold);border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:13px;color:var(--navy)">Volume : — · Commission : —</div>
+    <div style="margin-bottom:14px"><label style="font-size:11px;font-weight:600;color:var(--text2)">Commentaire</label><input id="sg-note" style="width:100%;border:1.5px solid var(--border2);border-radius:8px;padding:9px;background:var(--white)"></div>
+    <div id="sg-err" style="display:none;background:var(--red-light);border:1px solid var(--red);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--red);margin-bottom:10px"></div>
+    <div style="display:flex;gap:10px">
+      <button id="sg-btn" onclick="saveSign()" style="flex:1;background:var(--gold);color:var(--navy);border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:700;cursor:pointer">✅ Créer dans Gestion</button>
+      <button onclick="closeSign()" style="background:var(--white);color:var(--text2);border:1px solid var(--border2);border-radius:10px;padding:12px 18px;font-size:13px;cursor:pointer">Annuler</button>
+    </div>
+  </div>
+</div>
+
 <div id="modal-rdv" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:10000;align-items:center;justify-content:center">
   <div style="background:var(--white);border-radius:20px;padding:32px;width:520px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 25px 80px rgba(0,0,0,0.3)">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
