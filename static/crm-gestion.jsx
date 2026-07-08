@@ -356,7 +356,13 @@ function App() {
         sGet("crm-users"), sGet("crm-clients"), sGet("crm-sales"), sGet("crm-docs"), sGet("crm-bordereaux"),
         sGet("crm-prospection"), sGet("crm-objectifs"), sGet("crm-trash"),
       ]);
-      let loadedUsers = u && u.length ? u : DEFAULT_USERS;
+      /* Le compte Prospection connecté détermine le propriétaire de cette Gestion */
+      let flaskUser = "bryanentibi";
+      try { const rm = await fetch("/api/me"); if (rm.ok) { const jm = await rm.json(); flaskUser = jm.username || flaskUser; } } catch {}
+      const defaults = flaskUser === "quentin"
+        ? [{ id: "quentin", prenom: "Quentin", nom: "", bareme: "Manager", isManager: true, password: null }]
+        : DEFAULT_USERS;
+      let loadedUsers = u && u.length ? u : defaults;
       /* Réinitialisation des mots de passe demandée le 07/07/2026 (une seule fois) */
       const pwdResetDone = await sGet("crm-pwd-reset-0707");
       if (!pwdResetDone) {

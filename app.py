@@ -18,6 +18,12 @@ USERS = {
         "role": "admin",
         "nom": "Bryan Entibi",
         "restricted": []
+    },
+    "quentin": {
+        "password_hash": "27bb63ed6f711388cd6e7b053728de769515945977022b6414ecc9ca546a0889",
+        "role": "user",
+        "nom": "Quentin",
+        "restricted": ["arbitrage", "ro"]
     }
 }
 
@@ -73,17 +79,25 @@ def kv_conn():
     conn = get_db()
     cur = conn.cursor()
     cur.execute("CREATE TABLE IF NOT EXISTS kv_store (k TEXT PRIMARY KEY, v TEXT)")
+    # Migration unique : les données Gestion existantes appartiennent à Bryan
+    cur.execute("UPDATE kv_store SET k = 'bryanentibi::' || k WHERE k NOT LIKE %s", ['%::%'])
     conn.commit()
     return conn, cur
+
+def kv_namespace():
+    """Chaque utilisateur Prospection a SA propre base Gestion"""
+    s = check_session(request)
+    return (s.get('username') if s else 'anon') + '::'  
 
 @app.route('/api/storage', methods=['GET'])
 def kv_list():
     if not check_session(request):
         return jsonify({'error': 'unauthorized'}), 401
+    ns = kv_namespace()
     prefix = request.args.get('prefix', '')
     conn, cur = kv_conn()
-    cur.execute("SELECT k FROM kv_store WHERE k LIKE %s", [prefix + '%'])
-    keys = [r['k'] for r in cur.fetchall()]
+    cur.execute("SELECT k FROM kv_store WHERE k LIKE %s", [ns + prefix + '%'])
+    keys = [r['k'][len(ns):] for r in cur.fetchall()]
     cur.close(); conn.close()
     return jsonify({'keys': keys})
 
@@ -91,6 +105,7 @@ def kv_list():
 def kv_item(key):
     if not check_session(request):
         return jsonify({'error': 'unauthorized'}), 401
+    key = kv_namespace() + key
     conn, cur = kv_conn()
     try:
         if request.method == 'GET':
