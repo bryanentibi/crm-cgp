@@ -9,12 +9,12 @@ const GOLD = "#C9A24B";
 const LIGHT = "#F5F7FA";
 
 const COMPANIES = {
-  "PER": ["Abeille", "Generali", "MMA", "Malakoff Humanis", "Swiss Life", "Optimum Vie"],
-  "Assurance vie": ["MMA", "Swiss Life", "Abeille", "Generali"],
-  "Prévoyance": ["Abeille", "Swiss Life", "April"],
-  "Protection juridique": ["IAG Santé"],
-  "Mutuelle": ["Abeille", "Generali", "MMA", "Malakoff Humanis", "Swiss Life", "April"],
-  "Transfert": ["Abeille", "Generali", "MMA", "Malakoff Humanis", "Swiss Life", "April", "IAG Santé"],
+  "PER": ["Optimum Vie", "MMA", "Swiss Life", "Abeille", "Malakoff Humanis", "Generali"],
+  "Assurance vie": ["AFI ESCA", "MMA", "Swiss Life", "Generali"],
+  "Prévoyance": ["April", "Abeille", "Swiss Life", "MMA"],
+  "Protection juridique": ["IAG Santé", "SPP"],
+  "Mutuelle": ["April", "Abeille", "Generali", "MMA", "Malakoff Humanis", "Swiss Life"],
+  "Transfert": ["Optimum Vie", "MMA", "AFI ESCA", "Abeille", "Malakoff Humanis", "Swiss Life", "Generali", "IAG Santé"],
 };
 const CONTRACT_TYPES = Object.keys(COMPANIES);
 const SITUATIONS = ["Célibataire", "Marié(e)", "Pacsé(e)", "Concubinage"];
