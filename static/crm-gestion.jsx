@@ -186,8 +186,8 @@ const emptyRow = () => ({
 });
 
 /* ===== Taux de commission par défaut (médians calculés sur ton historique) ===== */
-const RATE_COMP = { "Optimum Vie": 0.20, "AFI ESCA": 0.125, "MMA": 0.15, "IAG Santé": 0.25, "Swiss Life": 0.10, "April": 0.20 };
-const RATE_TYPE = { "PER": 0.35, "Assurance vie": 0.20, "Prévoyance": 0.10, "Protection juridique": 0.25, "Mutuelle": 0.20, "Transfert": 0.10 };
+const RATE_COMP = { "Optimum Vie": 0.20, "AFI ESCA": 0.125, "MMA": 0.15, "IAG Santé": 0.25, "SPP": 0.35, "Swiss Life": 0.10, "April": 0.20 };
+const RATE_TYPE = { "PER": 0.20, "Assurance vie": 0.15, "Prévoyance": 0.10, "Protection juridique": 0.25, "Mutuelle": 0.20, "Transfert": 0.10 };
 const rateFor = (r) => {
   const t = parseFloat(r.taux);
   if (!isNaN(t) && t > 0) return t;
