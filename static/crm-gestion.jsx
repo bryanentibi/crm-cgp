@@ -440,6 +440,8 @@ function App() {
     ["paye", "💶 Ma rémunération"],
     ["docs", "📁 Documents"],
     ["decom", "🔻 Décommissionnés"],
+    ["arbitrage", "⚖️ Arbitrage clients"],
+    ["messagerie", "✉️ Messagerie"],
     ...(me.isManager ? [["equipe", "🧑‍💼 Mon équipe"], ["corbeille", "🗑️ Corbeille"]] : []),
   ];
 
@@ -452,7 +454,7 @@ function App() {
           <span>Gestion de patrimoine</span>
         </div>
         <div style={{ display: "flex", gap: 4, margin: "0 10px 12px", background: "#13315C", border: "1px solid rgba(255,255,255,.12)", borderRadius: 10, padding: 4 }}>
-          <div onClick={() => { window.location.href = "/"; }} style={{ flex: 1, textAlign: "center", padding: "8px 4px", borderRadius: 7, fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,.6)", cursor: "pointer" }}>🎯 Prospection</div>
+          <div onClick={() => { window.location.href = "/?p=1"; }} style={{ flex: 1, textAlign: "center", padding: "8px 4px", borderRadius: 7, fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,.6)", cursor: "pointer" }}>🎯 Prospection</div>
           <div style={{ flex: 1, textAlign: "center", padding: "8px 4px", borderRadius: 7, fontSize: 12, fontWeight: 700, background: "#C9A24B", color: "#0B2545", cursor: "default" }}>📁 Gestion</div>
         </div>
         <nav className="nav">
@@ -540,6 +542,8 @@ function App() {
 
       <main className="main">
         {page === "decom" && <DecomPage clients={clients} saveClients={saveClients} goClient={(id) => { setPage("clients"); setOpenClient(id); }} />}
+        {page === "arbitrage" && <ArbitragePage clients={clients} saveClients={saveClients} sales={sales} saveSales={saveSales} me={me} />}
+        {page === "messagerie" && <MessageriePage clients={clients} />}
         {page === "dash" && <Dashboard clients={clients} users={users} view={view} me={me} sales={sales} saveClients={saveClients} goClient={(c) => { setOpenClient(c.id); setPage("clients"); }} goClients={(t) => { setClientTypeFilter(t || ""); setOpenClient(null); setPage("clients"); }} />}
         {page === "prospection" && (
           <ProspectionPage
@@ -2574,6 +2578,170 @@ function DecomPage({ clients, saveClients, goClient }) {
         {decoms.length === 0 && <div className="card" style={{ color: "#8593a8" }}>Aucun client décommissionné sur cette période. 👌</div>}
       </div>
       </>)}
+    </div>
+  );
+}
+
+/* ================= ARBITRAGE CLIENTS (par personne, style Gestion) ================= */
+const ARB_STATUTS = ["À appeler", "RDV pris", "Signé", "KO", "À rappeler", "NRP"];
+const ARB_OLD_MAP = { "": "À appeler", "rdv": "RDV pris", "signe": "Signé", "ko": "KO", "rappeler": "À rappeler", "nrp": "NRP" };
+const arbRowCls = (s) => (s === "Signé" ? "paye" : s === "KO" ? "annule" : (s === "À rappeler" || s === "NRP") ? "attente" : "");
+
+function ArbitragePage({ clients, saveClients, sales, saveSales, me }) {
+  const [groups, setGroups] = useState(null);
+  const [tab, setTab] = useState(0);
+
+  useEffect(() => {
+    (async () => {
+      let g = await sGet("crm-arbitrage");
+      if (!g) {
+        /* Migration unique depuis l'ancien Arbitrage de la Prospection */
+        try {
+          const r = await fetch("/api/arbitrage-export");
+          const j = r.ok ? await r.json() : {};
+          const conv = (rows) => (rows || []).map((x) => ({
+            id: uid(), nom: x.nom || "", montant: String(x.montant ?? x.versement ?? ""),
+            notes: x.notes || "", statut: ARB_OLD_MAP[x.statut || ""] || "À appeler",
+          }));
+          g = [
+            { id: uid(), nom: "Bryan", rows: conv(j.liste1) },
+            { id: uid(), nom: "Alexis", rows: conv(j.liste2) },
+          ];
+        } catch { g = [{ id: uid(), nom: "Bryan", rows: [] }, { id: uid(), nom: "Alexis", rows: [] }]; }
+        await sSet("crm-arbitrage", g);
+      }
+      setGroups(g);
+    })();
+  }, []);
+
+  if (!groups) return <div style={{ color: "#8593a8" }}>Chargement…</div>;
+  const save = (g) => { setGroups(g); sSet("crm-arbitrage", g); };
+  const grp = groups[Math.min(tab, groups.length - 1)];
+  const upRow = (rowId, field, value) => {
+    save(groups.map((g, i) => i !== tab ? g : { ...g, rows: g.rows.map((r) => r.id === rowId ? { ...r, [field]: value } : r) }));
+    if (field === "statut" && value === "Signé") {
+      const r = grp.rows.find((x) => x.id === rowId);
+      if (r && r.nom && confirm(`Créer la fiche client + la vente du mois pour ${r.nom} ?`)) signerArb({ ...r, statut: "Signé" });
+    }
+  };
+  const signerArb = (r) => {
+    const nrm = (s) => (s || "").toUpperCase().replace(/^(MME|MR|M\.|MLLE)\s+/, "").replace(/[^A-ZÀ-Ü0-9\- ]/g, "").replace(/\s+/g, " ").trim();
+    const nomC = nrm(r.nom);
+    let cid;
+    const existant = clients.find((cl) => nrm(cl.nom) === nomC || nrm(cl.nom + " " + (cl.prenom || "")) === nomC);
+    const contrat = { id: uid(), type: "PER", compagnie: "", numero: "", montant: "", frais: "", commentaire: `Arbitrage signé${r.montant ? " · " + r.montant + " €/mois" : ""}${r.notes ? " · " + r.notes : ""}`, dateSignature: todayISO(), datePrelevement: "", transfertInterne: "non", fraisTransfert: "non", fichiers: [] };
+    if (existant) { cid = existant.id; saveClients(clients.map((cl) => cl.id === existant.id ? { ...cl, decom: false, contrats: [...(cl.contrats || []), contrat] } : cl)); }
+    else { cid = uid(); saveClients([...clients, { id: cid, nom: nomC, prenom: "", civilite: /^MME/i.test(r.nom) ? "Mme" : /^(MR|M\.)/i.test(r.nom) ? "M." : "", dateNaissance: "", telephone: "", email: "", profession: "", revenus: "", situation: "Célibataire", createdBy: me.id, createdAt: todayISO(), contrats: [contrat], alertes: [] }]); }
+    const mk = todayISO().slice(0, 7);
+    const ns = { ...sales };
+    if (!ns[mk]) ns[mk] = {};
+    if (!ns[mk][me.id]) ns[mk][me.id] = { rows: [], nonPayes: "" };
+    ns[mk][me.id] = { ...ns[mk][me.id], rows: [...ns[mk][me.id].rows, recalcRow({ ...emptyRow(), dateCreation: todayISO(), nom: r.nom.toUpperCase(), type: "PER", apporteur: "Arbitrage", versement: String(r.montant || ""), clientId: cid, commentaire: r.notes || "" }, "versement")] };
+    saveSales(ns);
+    alert("✅ Fiche client + vente du mois créées !");
+  };
+  const addRow = () => save(groups.map((g, i) => i !== tab ? g : { ...g, rows: [{ id: uid(), nom: "", montant: "", notes: "", statut: "À appeler" }, ...g.rows] }));
+  const delRow = (rowId) => { if (confirm("Supprimer cette ligne ?")) save(groups.map((g, i) => i !== tab ? g : { ...g, rows: g.rows.filter((r) => r.id !== rowId) })); };
+  const addGroup = () => { const nom = prompt("Nom du nouvel onglet (ex : Théo) :"); if (nom && nom.trim()) { save([...groups, { id: uid(), nom: nom.trim(), rows: [] }]); setTab(groups.length); } };
+  const renameGroup = () => { const nom = prompt("Renommer cet onglet :", grp.nom); if (nom && nom.trim()) save(groups.map((g, i) => i === tab ? { ...g, nom: nom.trim() } : g)); };
+
+  return (
+    <div>
+      <div className="ph">
+        <div><h1>⚖️ Arbitrage clients</h1><div className="sub">Clients à arbitrer, par apporteur — double-clic sur l'onglet pour le renommer</div></div>
+        <button className="btn gold" onClick={addRow}>+ Ajouter un client</button>
+      </div>
+      <div className="row" style={{ gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+        {groups.map((g, i) => (
+          <div key={g.id} onClick={() => setTab(i)} onDoubleClick={() => i === tab && renameGroup()}
+            style={{ padding: "9px 20px", borderRadius: 10, fontSize: 13.5, fontWeight: 700, cursor: "pointer", fontFamily: "Georgia, serif", background: i === tab ? "#0B2545" : "#fff", color: i === tab ? "#C9A24B" : "#44536B", border: "1px solid " + (i === tab ? "#0B2545" : "#CDD6E2") }}>
+            {g.nom} <span style={{ fontWeight: 400, fontSize: 11.5, opacity: .75 }}>· {g.rows.length}</span>
+          </div>
+        ))}
+        <div onClick={addGroup} style={{ padding: "9px 16px", borderRadius: 10, fontSize: 13, cursor: "pointer", color: "#8593a8", border: "1px dashed #CDD6E2" }}>+ Onglet</div>
+      </div>
+      <div className="card" style={{ overflowX: "auto" }}>
+        <table className="t" style={{ width: "100%" }}>
+          <thead><tr><th style={{ textAlign: "left" }}>Client</th><th>Montant €/mois</th><th>Statut</th><th style={{ textAlign: "left" }}>Notes</th><th></th></tr></thead>
+          <tbody>
+            {grp.rows.map((r) => (
+              <tr key={r.id} className={arbRowCls(r.statut)}>
+                <td style={{ textAlign: "left" }}><input style={{ fontWeight: 700 }} value={r.nom} onChange={(e) => upRow(r.id, "nom", e.target.value)} placeholder="Nom du client" /></td>
+                <td style={{ width: 130 }}><input value={r.montant} onChange={(e) => upRow(r.id, "montant", e.target.value)} placeholder="€" /></td>
+                <td style={{ width: 150 }}>
+                  <select className="sel" value={r.statut} onChange={(e) => upRow(r.id, "statut", e.target.value)}>
+                    {ARB_STATUTS.map((s) => <option key={s}>{s}</option>)}
+                  </select>
+                </td>
+                <td style={{ textAlign: "left" }}><input value={r.notes} onChange={(e) => upRow(r.id, "notes", e.target.value)} placeholder="Notes…" /></td>
+                <td style={{ width: 40 }}><button onClick={() => delRow(r.id)} style={{ background: "none", border: "none", color: "#B3261E", cursor: "pointer" }}>✕</button></td>
+              </tr>
+            ))}
+            {grp.rows.length === 0 && <tr><td colSpan={5} style={{ color: "#8593a8", padding: 20 }}>Aucun client dans cet onglet. Clique sur + Ajouter un client.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/* ================= MESSAGERIE (mails clients Gestion) ================= */
+const MAIL_SENDERS = ["bryan.entibi@elyon-associes.fr", "bryan.entibi@vauban-associes.fr", "bryan.entibi@evka-conseil.fr"];
+const MAIL_TEMPLATES = [
+  { nom: "Prise de nouvelles", objet: "Prenons des nouvelles de vos contrats", corps: "Bonjour,\n\nJ'espère que vous allez bien. Je me permets de revenir vers vous pour faire un point sur vos contrats et m'assurer que tout correspond toujours à votre situation.\n\nN'hésitez pas à me proposer un créneau qui vous arrange pour en discuter.\n\nBien cordialement,\nBryan Entibi" },
+  { nom: "Vœux / remerciements", objet: "Merci de votre confiance", corps: "Bonjour,\n\nJe tenais à vous remercier pour votre confiance renouvelée. Je reste à votre entière disposition pour toute question concernant vos contrats ou vos projets patrimoniaux.\n\nBien cordialement,\nBryan Entibi" },
+  { nom: "Information marché", objet: "Une opportunité à étudier ensemble", corps: "Bonjour,\n\nAu vu de l'évolution récente des marchés et de la réglementation, il pourrait être intéressant de revoir ensemble certains de vos placements.\n\nJe vous propose un rapide échange téléphonique — dites-moi vos disponibilités.\n\nBien cordialement,\nBryan Entibi" },
+];
+
+function MessageriePage({ clients }) {
+  const [sender, setSender] = useState(MAIL_SENDERS[0]);
+  const [to, setTo] = useState("");
+  const [objet, setObjet] = useState("");
+  const [corps, setCorps] = useState("");
+  const avecEmail = clients.filter((c) => !c.decom && (c.email || "").includes("@"));
+
+  const insererClients = () => setTo(avecEmail.map((c) => c.email.trim()).join(", "));
+  const envoyer = () => {
+    const emails = to.split(/[,;\n]/).map((e) => e.trim()).filter((e) => e.includes("@"));
+    if (!emails.length) { alert("Ajoute des destinataires (bouton « Insérer mes clients » ou à la main)."); return; }
+    if (!objet.trim()) { alert("Ajoute un objet."); return; }
+    const batch = emails.slice(0, 100), reste = emails.slice(100);
+    const url = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(sender)}&bcc=${encodeURIComponent(batch.join(","))}&su=${encodeURIComponent(objet)}&body=${encodeURIComponent(corps)}`;
+    try { navigator.clipboard.writeText(url); } catch {}
+    window.open(url, "_blank");
+    if (reste.length) setTo(reste.join(", "));
+    alert(`✉️ ${batch.length} destinataires en Cci.\n\nSi Gmail s'ouvre sur le MAUVAIS compte : le lien est copié, colle-le (Cmd+V) dans la barre d'adresse du Chrome connecté à ${sender}.${reste.length ? "\n\nReste " + reste.length + " destinataires — reclique sur Envoyer." : ""}`);
+  };
+
+  return (
+    <div>
+      <div className="ph"><div><h1>✉️ Messagerie</h1><div className="sub">{avecEmail.length} client(s) avec une adresse email · envoi groupé en Cci (invisibles entre eux)</div></div></div>
+      <div className="card" style={{ maxWidth: 860 }}>
+        <div className="row" style={{ gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: 280 }}>
+            <div style={{ fontSize: 11.5, fontWeight: 700, color: "#44536B", marginBottom: 4 }}>EXPÉDITEUR</div>
+            <select className="sel" style={{ width: "100%" }} value={sender} onChange={(e) => setSender(e.target.value)}>
+              {MAIL_SENDERS.map((s) => <option key={s}>{s}</option>)}
+            </select>
+          </div>
+          <div style={{ alignSelf: "flex-end" }}>
+            <button className="btn" onClick={insererClients}>👥 Insérer mes clients ({avecEmail.length})</button>
+          </div>
+        </div>
+        <div style={{ fontSize: 11.5, fontWeight: 700, color: "#44536B", marginBottom: 4 }}>DESTINATAIRES (Cci)</div>
+        <textarea className="in" style={{ width: "100%", minHeight: 64, marginBottom: 12, fontFamily: "inherit" }} value={to} onChange={(e) => setTo(e.target.value)} placeholder="email1@..., email2@..." />
+        <div style={{ fontSize: 11.5, fontWeight: 700, color: "#44536B", marginBottom: 4 }}>MODÈLES</div>
+        <div className="row" style={{ gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+          {MAIL_TEMPLATES.map((t) => (
+            <button key={t.nom} className="btn" onClick={() => { setObjet(t.objet); setCorps(t.corps); }}>{t.nom}</button>
+          ))}
+        </div>
+        <div style={{ fontSize: 11.5, fontWeight: 700, color: "#44536B", marginBottom: 4 }}>OBJET</div>
+        <input className="in" style={{ width: "100%", marginBottom: 12 }} value={objet} onChange={(e) => setObjet(e.target.value)} />
+        <div style={{ fontSize: 11.5, fontWeight: 700, color: "#44536B", marginBottom: 4 }}>MESSAGE</div>
+        <textarea className="in" style={{ width: "100%", minHeight: 180, marginBottom: 14, fontFamily: "inherit", lineHeight: 1.6 }} value={corps} onChange={(e) => setCorps(e.target.value)} />
+        <button className="btn gold" style={{ width: "100%", padding: 13, fontSize: 15 }} onClick={envoyer}>✉️ Préparer l'envoi dans Gmail</button>
+      </div>
     </div>
   );
 }

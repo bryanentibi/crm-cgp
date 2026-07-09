@@ -421,8 +421,7 @@ tbody td{padding:5px 12px;font-size:13px;vertical-align:middle}
       <div class="sb-item" id="nav-phr" onclick="showV('pharmacies')"><span class="sb-icon">💊</span>Pharmacies</div>
       <div class="sb-item" id="nav-ro" onclick="showV('ro')"><span class="sb-icon">📁</span>Ancien R&O</div>
       <div class="sb-item" id="nav-art" onclick="showV('artisans')"><span class="sb-icon">🔧</span>Artisans</div>
-      <div class="sb-item" id="nav-arb" onclick="showV('arbitrage')"><span class="sb-icon">⚖️</span>Arbitrage clients</div>
-      <div class="sb-item" id="nav-mail" onclick="showV('mailing')"><span class="sb-icon">📧</span>Mailing</div>
+      <div class="sb-item" id="nav-acces" style="display:none" onclick="openAcces()"><span class="sb-icon">🔑</span>Gérer les accès</div>
     </div>
 
     <div class="sb-lbl collapsible" style="margin-top:6px" onclick="toggleSection('flt')">Filtres rapides <span class="sb-chevron" id="chev-flt">▾</span></div>
@@ -2101,7 +2100,10 @@ async function doLogin() {
       document.getElementById('login-page').style.display = 'none';
       document.querySelector('.sidebar').style.display = 'flex';
       document.querySelector('.main').style.display = 'flex';
+      window.myRole = d.role; window.myUsername = d.username;
+      window.myRole = d.role; window.myUsername = d.username;
       applyRestrictions(d.restricted || []);
+      if (!(d.restricted || []).includes('gestion')) { window.location.href = '/gestion'; return; }
       toast('✅ Bienvenue ' + d.nom, 'ok');
       loadStats();
       loadDash();
@@ -2144,9 +2146,14 @@ async function checkLogin() {
 }
 
 function applyRestrictions(restricted) {
+  /* Sans accès Gestion : le sélecteur d'onglets disparaît */
+  const sw = document.querySelector('.mode-switch');
+  if (sw) sw.style.display = restricted.includes('gestion') ? 'none' : 'flex';
+  /* Gérer les accès : réservé à Bryan et Quentin */
+  const acc = document.getElementById('nav-acces');
+  if (acc) acc.style.display = (window.myRole === 'admin' || window.myRole === 'manager') ? 'flex' : 'none';
   // Cacher les onglets restreints
   const map = {
-    'arbitrage': 'nav-arb',
     'ro': 'nav-ro',
     'mailing': 'nav-mail',
     'artisans': 'nav-art',
@@ -2281,10 +2288,9 @@ window.saveRDV = async function() {
     await fetch(`${API}/${ep}/${rdvContactId}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({statut:'rdv',note:noteRDV})});
   }
   
-  // Synchro vers l'onglet Prospection du CRM Gestion
+  // Synchro serveur : agenda Gestion de Bryan + CRM Elyon de Quentin si applicable
   try {
-    const liste = (await kvGet('crm-prospection')) || [];
-    liste.unshift({
+    const entry = {
       id: kvUid(), ownerId: 'bryan',
       nom: nom, prenom: '',
       profession: rdvContactType==='sante'?'Professionnel de santé':rdvContactType==='artisans'?'Artisan':'Pharmacie',
@@ -2295,10 +2301,11 @@ window.saveRDV = async function() {
       qualitePrise: '', noteRdv: notes || '',
       commentaire: `Assurance: ${assurance||'—'} · RCP: ${rcp||'—'} · Mutuelle: ${mutuelle||'—'} · PER: ${per||'—'}`,
       createdAt: new Date().toISOString().slice(0,10),
-    });
-    await kvSet('crm-prospection', liste);
-    toast("📅 RDV enregistré dans l'agenda Gestion !", 'ok');
-  } catch(e) { console.error('sync gestion', e); toast('⚠️ RDV noté sur la fiche mais pas synchronisé avec Gestion', 'err'); }
+    };
+    const r = await fetch('/api/sync-rdv', {method:'POST', headers:{'Content-Type':'application/json','X-Auth-Token':authToken}, body: JSON.stringify({entry})});
+    const j = await r.json();
+    toast(j.forwarded ? '📅 RDV enregistré (agenda Bryan + CRM Quentin) !' : "📅 RDV enregistré dans l'agenda !", 'ok');
+  } catch(e) { console.error('sync rdv', e); toast('⚠️ RDV noté sur la fiche mais pas synchronisé', 'err'); }
   closeRDV();
   if(rdvContactType==='sante') loadP();
   else if(rdvContactType==='artisans') loadArt();
@@ -2308,6 +2315,47 @@ window.saveRDV = async function() {
   btn.textContent = '📅 Enregistrer le RDV'; btn.disabled = false;
 }
 
+
+/* ===== GESTION DES ACCÈS COMMERCIAUX ===== */
+window.openAcces = async function(){
+  document.getElementById('modal-acces').style.display = 'flex';
+  loadAcces();
+}
+async function loadAcces(){
+  const el = document.getElementById('acces-liste');
+  el.innerHTML = '<span style="color:var(--text3);font-size:12px">Chargement…</span>';
+  try {
+    const r = await fetch('/api/users', {headers:{'X-Auth-Token':authToken}});
+    const j = await r.json();
+    if(!j.users || !j.users.length){ el.innerHTML = '<span style="color:var(--text3);font-size:12.5px">Aucun compte commercial pour l\'instant.</span>'; return; }
+    el.innerHTML = j.users.map(u => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px">
+        <div><b style="font-size:13px">${u.nom}</b> <span style="color:var(--text3);font-size:12px">· ${u.username}</span></div>
+        <button onclick="deleteAcces('${u.username}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px;font-weight:600">Supprimer</button>
+      </div>`).join('');
+  } catch(e){ el.innerHTML = '<span style="color:var(--red);font-size:12px">Erreur de chargement</span>'; }
+}
+window.createAcces = async function(){
+  const nom = document.getElementById('ac-nom').value.trim();
+  const username = document.getElementById('ac-user').value.trim();
+  const password = document.getElementById('ac-pwd').value;
+  const err = document.getElementById('acces-err');
+  err.style.display = 'none';
+  try {
+    const r = await fetch('/api/users', {method:'POST', headers:{'Content-Type':'application/json','X-Auth-Token':authToken}, body: JSON.stringify({nom, username, password})});
+    const j = await r.json();
+    if(!r.ok){ err.textContent = j.error || 'Erreur'; err.style.display = 'block'; return; }
+    document.getElementById('ac-nom').value=''; document.getElementById('ac-user').value=''; document.getElementById('ac-pwd').value='';
+    toast('✅ Accès créé pour ' + nom, 'ok');
+    loadAcces();
+  } catch(e){ err.textContent = 'Erreur de connexion'; err.style.display = 'block'; }
+}
+window.deleteAcces = async function(username){
+  if(!confirm('Supprimer l\'accès de ' + username + ' ?')) return;
+  await fetch('/api/users/' + encodeURIComponent(username), {method:'DELETE', headers:{'X-Auth-Token':authToken}});
+  loadAcces();
+}
+document.addEventListener('click', function(e){if(e.target.id==='modal-acces')e.target.style.display='none';});
 
 /* ===== MODAL SIGNATURE -> CRM GESTION ===== */
 window.openSign = function(nom, montant){
@@ -2405,6 +2453,27 @@ document.addEventListener('click', function(e){if(e.target.id==='modal-rdv')clos
 </script>
 
 <!-- MODAL RDV -->
+<div id="modal-acces" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:10001;align-items:center;justify-content:center">
+  <div style="background:var(--white);border-radius:16px;padding:28px;width:480px;max-width:92vw;max-height:85vh;overflow-y:auto">
+    <h2 style="font-family:Georgia,serif;font-size:19px;color:var(--navy);margin-bottom:4px">🔑 Accès commerciaux</h2>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:16px">Comptes limités à la Prospection (prise de RDV)</div>
+    <div id="acces-liste" style="margin-bottom:16px"></div>
+    <div style="border-top:1px solid var(--border);padding-top:14px">
+      <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px">Nouveau compte</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
+        <input id="ac-nom" placeholder="Nom complet" style="border:1px solid #cdd6e2;border-radius:8px;padding:9px;background:var(--white)">
+        <input id="ac-user" placeholder="identifiant" style="border:1px solid #cdd6e2;border-radius:8px;padding:9px;background:var(--white)">
+        <input id="ac-pwd" placeholder="mot de passe" style="border:1px solid #cdd6e2;border-radius:8px;padding:9px;background:var(--white)">
+      </div>
+      <div id="acces-err" style="display:none;color:var(--red);font-size:12px;margin-bottom:8px"></div>
+      <div style="display:flex;gap:8px">
+        <button onclick="createAcces()" style="flex:1;background:var(--gold);color:var(--navy);border:none;border-radius:8px;padding:10px;font-weight:700;cursor:pointer">Créer l'accès</button>
+        <button onclick="document.getElementById('modal-acces').style.display='none'" style="background:var(--white);border:1px solid var(--border2);border-radius:8px;padding:10px 16px;cursor:pointer;color:var(--text2)">Fermer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="modal-sign" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:10001;align-items:center;justify-content:center">
   <div style="background:var(--white);border-radius:20px;padding:30px;width:540px;max-width:92vw;max-height:88vh;overflow-y:auto">
     <h2 style="font-family:Georgia,serif;font-size:20px;color:var(--navy);margin-bottom:4px">✅ Nouvelle signature → CRM Gestion</h2>
