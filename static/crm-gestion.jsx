@@ -440,6 +440,8 @@ function App() {
     ["paye", "💶 Ma rémunération"],
     ["docs", "📁 Documents"],
     ["decom", "🔻 Décommissionnés"],
+    ["arbitrage", "⚖️ Arbitrage clients"],
+    ["messagerie", "✉️ Messagerie"],
     ...(me.isManager ? [["equipe", "🧑‍💼 Mon équipe"], ["corbeille", "🗑️ Corbeille"]] : []),
   ];
 
@@ -452,8 +454,8 @@ function App() {
           <span>Gestion de patrimoine</span>
         </div>
         <div style={{ display: "flex", gap: 4, margin: "0 10px 12px", background: "#13315C", border: "1px solid rgba(255,255,255,.12)", borderRadius: 10, padding: 4 }}>
-          <div onClick={() => { window.location.href = "/"; }} style={{ flex: 1, textAlign: "center", padding: "8px 4px", borderRadius: 7, fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,.6)", cursor: "pointer" }}>🎯 Prospection</div>
           <div style={{ flex: 1, textAlign: "center", padding: "8px 4px", borderRadius: 7, fontSize: 12, fontWeight: 700, background: "#C9A24B", color: "#0B2545", cursor: "default" }}>📁 Gestion</div>
+          <div onClick={() => { window.location.href = "/?p=1"; }} style={{ flex: 1, textAlign: "center", padding: "8px 4px", borderRadius: 7, fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,.6)", cursor: "pointer" }}>🎯 Prospection</div>
         </div>
         <nav className="nav">
           {NAV.map(([k, l]) => (
@@ -540,6 +542,8 @@ function App() {
 
       <main className="main">
         {page === "decom" && <DecomPage clients={clients} saveClients={saveClients} goClient={(id) => { setPage("clients"); setOpenClient(id); }} />}
+        {page === "arbitrage" && <ArbitragePage clients={clients} saveClients={saveClients} sales={sales} saveSales={saveSales} me={me} />}
+        {page === "messagerie" && <MessageriePage clients={clients} />}
         {page === "dash" && <Dashboard clients={clients} users={users} view={view} me={me} sales={sales} saveClients={saveClients} goClient={(c) => { setOpenClient(c.id); setPage("clients"); }} goClients={(t) => { setClientTypeFilter(t || ""); setOpenClient(null); setPage("clients"); }} />}
         {page === "prospection" && (
           <ProspectionPage
@@ -956,6 +960,7 @@ function ClientDetail({ client, me, users, back, update, remove }) {
   const [showEdit, setShowEdit] = useState(false);
   const [showContract, setShowContract] = useState(false);
   const [editContract, setEditContract] = useState(null);
+  const [showEic, setShowEic] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   if (!client) return null;
 
@@ -993,6 +998,8 @@ function ClientDetail({ client, me, users, back, update, remove }) {
       </div>
 
       <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", alignItems: "start" }}>
+        <EicSynthese client={client} onOpen={() => setShowEic(true)} onPdf={() => eicPdf(client)} />
+
         <div className="card">
           <h2 style={{ fontSize: 17, marginBottom: 12 }}>Informations personnelles</h2>
           <div className="row" style={{ gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
@@ -1062,6 +1069,14 @@ function ClientDetail({ client, me, users, back, update, remove }) {
       <HistoriqueCard client={client} update={update} me={me} users={users} />
 
       {showEdit && <ClientForm initial={client} onClose={() => setShowEdit(false)} onSave={(f) => { update({ ...client, ...f }); setShowEdit(false); }} />}
+      {showEic && (
+        <EicForm
+          client={client}
+          onClose={() => setShowEic(false)}
+          onSave={(f) => { update({ ...client, eic: f, eicDate: todayISO() }); setShowEic(false); }}
+        />
+      )}
+
       {showContract && (
         <ContractForm
           initial={editContract}
@@ -2576,6 +2591,618 @@ function DecomPage({ clients, saveClients, goClient }) {
       </>)}
     </div>
   );
+}
+
+/* ================= ARBITRAGE CLIENTS (par personne, style Gestion) ================= */
+const ARB_STATUTS = ["À appeler", "RDV pris", "Signé", "KO", "À rappeler", "NRP"];
+const ARB_OLD_MAP = { "": "À appeler", "rdv": "RDV pris", "signe": "Signé", "ko": "KO", "rappeler": "À rappeler", "nrp": "NRP" };
+const arbRowCls = (s) => (s === "Signé" ? "paye" : s === "KO" ? "annule" : (s === "À rappeler" || s === "NRP") ? "attente" : "");
+
+function ArbitragePage({ clients, saveClients, sales, saveSales, me }) {
+  const [groups, setGroups] = useState(null);
+  const [tab, setTab] = useState(0);
+
+  useEffect(() => {
+    (async () => {
+      let g = await sGet("crm-arbitrage");
+      if (!g) {
+        /* Migration unique depuis l'ancien Arbitrage de la Prospection */
+        try {
+          const r = await fetch("/api/arbitrage-export");
+          const j = r.ok ? await r.json() : {};
+          const conv = (rows) => (rows || []).map((x) => ({
+            id: uid(), nom: x.nom || "", montant: String(x.montant ?? x.versement ?? ""),
+            notes: x.notes || "", statut: ARB_OLD_MAP[x.statut || ""] || "À appeler",
+          }));
+          g = [
+            { id: uid(), nom: "Bryan", rows: conv(j.liste1) },
+            { id: uid(), nom: "Alexis", rows: conv(j.liste2) },
+          ];
+        } catch { g = [{ id: uid(), nom: "Bryan", rows: [] }, { id: uid(), nom: "Alexis", rows: [] }]; }
+        await sSet("crm-arbitrage", g);
+      }
+      setGroups(g);
+    })();
+  }, []);
+
+  if (!groups) return <div style={{ color: "#8593a8" }}>Chargement…</div>;
+  const save = (g) => { setGroups(g); sSet("crm-arbitrage", g); };
+  const grp = groups[Math.min(tab, groups.length - 1)];
+  const upRow = (rowId, field, value) => {
+    save(groups.map((g, i) => i !== tab ? g : { ...g, rows: g.rows.map((r) => r.id === rowId ? { ...r, [field]: value } : r) }));
+    if (field === "statut" && value === "Signé") {
+      const r = grp.rows.find((x) => x.id === rowId);
+      if (r && r.nom && confirm(`Créer la fiche client + la vente du mois pour ${r.nom} ?`)) signerArb({ ...r, statut: "Signé" });
+    }
+  };
+  const signerArb = (r) => {
+    const nrm = (s) => (s || "").toUpperCase().replace(/^(MME|MR|M\.|MLLE)\s+/, "").replace(/[^A-ZÀ-Ü0-9\- ]/g, "").replace(/\s+/g, " ").trim();
+    const nomC = nrm(r.nom);
+    let cid;
+    const existant = clients.find((cl) => nrm(cl.nom) === nomC || nrm(cl.nom + " " + (cl.prenom || "")) === nomC);
+    const contrat = { id: uid(), type: "PER", compagnie: "", numero: "", montant: "", frais: "", commentaire: `Arbitrage signé${r.montant ? " · " + r.montant + " €/mois" : ""}${r.notes ? " · " + r.notes : ""}`, dateSignature: todayISO(), datePrelevement: "", transfertInterne: "non", fraisTransfert: "non", fichiers: [] };
+    if (existant) { cid = existant.id; saveClients(clients.map((cl) => cl.id === existant.id ? { ...cl, decom: false, contrats: [...(cl.contrats || []), contrat] } : cl)); }
+    else { cid = uid(); saveClients([...clients, { id: cid, nom: nomC, prenom: "", civilite: /^MME/i.test(r.nom) ? "Mme" : /^(MR|M\.)/i.test(r.nom) ? "M." : "", dateNaissance: "", telephone: "", email: "", profession: "", revenus: "", situation: "Célibataire", createdBy: me.id, createdAt: todayISO(), contrats: [contrat], alertes: [] }]); }
+    const mk = todayISO().slice(0, 7);
+    const ns = { ...sales };
+    if (!ns[mk]) ns[mk] = {};
+    if (!ns[mk][me.id]) ns[mk][me.id] = { rows: [], nonPayes: "" };
+    ns[mk][me.id] = { ...ns[mk][me.id], rows: [...ns[mk][me.id].rows, recalcRow({ ...emptyRow(), dateCreation: todayISO(), nom: r.nom.toUpperCase(), type: "PER", apporteur: "Arbitrage", versement: String(r.montant || ""), clientId: cid, commentaire: r.notes || "" }, "versement")] };
+    saveSales(ns);
+    alert("✅ Fiche client + vente du mois créées !");
+  };
+  const addRow = () => save(groups.map((g, i) => i !== tab ? g : { ...g, rows: [{ id: uid(), nom: "", montant: "", notes: "", statut: "À appeler" }, ...g.rows] }));
+  const delRow = (rowId) => { if (confirm("Supprimer cette ligne ?")) save(groups.map((g, i) => i !== tab ? g : { ...g, rows: g.rows.filter((r) => r.id !== rowId) })); };
+  const addGroup = () => { const nom = prompt("Nom du nouvel onglet (ex : Théo) :"); if (nom && nom.trim()) { save([...groups, { id: uid(), nom: nom.trim(), rows: [] }]); setTab(groups.length); } };
+  const renameGroup = () => { const nom = prompt("Renommer cet onglet :", grp.nom); if (nom && nom.trim()) save(groups.map((g, i) => i === tab ? { ...g, nom: nom.trim() } : g)); };
+
+  return (
+    <div>
+      <div className="ph">
+        <div><h1>⚖️ Arbitrage clients</h1><div className="sub">Clients à arbitrer, par apporteur — double-clic sur l'onglet pour le renommer</div></div>
+        <button className="btn gold" onClick={addRow}>+ Ajouter un client</button>
+      </div>
+      <div className="row" style={{ gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+        {groups.map((g, i) => (
+          <div key={g.id} onClick={() => setTab(i)} onDoubleClick={() => i === tab && renameGroup()}
+            style={{ padding: "9px 20px", borderRadius: 10, fontSize: 13.5, fontWeight: 700, cursor: "pointer", fontFamily: "Georgia, serif", background: i === tab ? "#0B2545" : "#fff", color: i === tab ? "#C9A24B" : "#44536B", border: "1px solid " + (i === tab ? "#0B2545" : "#CDD6E2") }}>
+            {g.nom} <span style={{ fontWeight: 400, fontSize: 11.5, opacity: .75 }}>· {g.rows.length}</span>
+          </div>
+        ))}
+        <div onClick={addGroup} style={{ padding: "9px 16px", borderRadius: 10, fontSize: 13, cursor: "pointer", color: "#8593a8", border: "1px dashed #CDD6E2" }}>+ Onglet</div>
+      </div>
+      <div className="card" style={{ overflowX: "auto" }}>
+        <table className="t" style={{ width: "100%" }}>
+          <thead><tr><th style={{ textAlign: "left" }}>Client</th><th>Montant €/mois</th><th>Statut</th><th style={{ textAlign: "left" }}>Notes</th><th></th></tr></thead>
+          <tbody>
+            {grp.rows.map((r) => (
+              <tr key={r.id} className={arbRowCls(r.statut)}>
+                <td style={{ textAlign: "left" }}><input style={{ fontWeight: 700 }} value={r.nom} onChange={(e) => upRow(r.id, "nom", e.target.value)} placeholder="Nom du client" /></td>
+                <td style={{ width: 130 }}><input value={r.montant} onChange={(e) => upRow(r.id, "montant", e.target.value)} placeholder="€" /></td>
+                <td style={{ width: 150 }}>
+                  <select className="sel" value={r.statut} onChange={(e) => upRow(r.id, "statut", e.target.value)}>
+                    {ARB_STATUTS.map((s) => <option key={s}>{s}</option>)}
+                  </select>
+                </td>
+                <td style={{ textAlign: "left" }}><input value={r.notes} onChange={(e) => upRow(r.id, "notes", e.target.value)} placeholder="Notes…" /></td>
+                <td style={{ width: 40 }}><button onClick={() => delRow(r.id)} style={{ background: "none", border: "none", color: "#B3261E", cursor: "pointer" }}>✕</button></td>
+              </tr>
+            ))}
+            {grp.rows.length === 0 && <tr><td colSpan={5} style={{ color: "#8593a8", padding: 20 }}>Aucun client dans cet onglet. Clique sur + Ajouter un client.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/* ================= MESSAGERIE (mails clients Gestion) ================= */
+const MAIL_SENDERS = ["bryan.entibi@elyon-associes.fr", "bryan.entibi@vauban-associes.fr", "bryan.entibi@evka-conseil.fr"];
+const MAIL_TEMPLATES = [
+  {
+    "nom": "PER professionnels de santé",
+    "objet": "Optimisez votre retraite — Plan Épargne Retraite dédié aux professionnels de santé",
+    "corps": "Bonjour,\n\nJe me permets de vous contacter en tant que conseiller en gestion de patrimoine spécialisé dans l'accompagnement des professionnels de santé libéraux.\n\nEn tant que [profession], vous êtes confronté(e) à une réalité souvent méconnue : votre pension de retraite sera significativement inférieure à votre revenu actuel d'activité. Le Plan Épargne Retraite (PER) est aujourd'hui la solution la plus efficace pour combler cet écart tout en réduisant votre pression fiscale dès maintenant.\n\n✅ Avantages concrets :\n• Déduction fiscale immédiate de vos versements (jusqu'à 10% de votre revenu professionnel)\n• Capital disponible à la retraite ou rente viagère\n• Transmission optimisée en cas de décès\n\nJe vous propose un bilan retraite personnalisé et gratuit, sans engagement, pour évaluer précisément votre situation.\n\nSeriez-vous disponible pour un échange de 20 minutes cette semaine ?\n\nCordialement,\nBryan Entibi\nConseiller en Gestion de Patrimoine\n"
+  },
+  {
+    "nom": "Prévoyance TNS",
+    "objet": "Protégez vos revenus en cas d’arrêt maladie — Prévoyance TNS",
+    "corps": "Bonjour,\n\nJe me permets de vous adresser ce message en tant que conseiller spécialisé dans la protection des professionnels de santé indépendants.\n\nEn tant que libéral(e), un arrêt maladie ou une invalidité peut avoir des conséquences financières dramatiques sur votre activité et votre famille. Les indemnités journalières de la CARMF/CARPIMKO sont souvent insuffisantes pour maintenir votre niveau de vie.\n\n🛡️ Une prévoyance adaptée vous protège :\n• Maintien de revenus dès le 1er jour d'arrêt\n• Couverture invalidité totale ou partielle\n• Protection de votre cabinet et de vos charges fixes\n\nJe vous propose une analyse gratuite de votre couverture actuelle et un comparatif des meilleures solutions du marché.\n\nDisponible pour un échange cette semaine ?\n\nCordialement,\nBryan Entibi\nConseiller en Gestion de Patrimoine\n"
+  },
+  {
+    "nom": "Audit patrimonial",
+    "objet": "Bilan patrimonial offert — Optimisez votre fiscalité 2025",
+    "corps": "Bonjour,\n\nJe me permets de prendre contact avec vous pour vous proposer un audit patrimonial complet et gratuit, sans engagement.\n\nEn tant que professionnel(le) libéral(e), vous avez probablement des opportunités d'optimisation fiscale et patrimoniale qui méritent d'être explorées :\n\n📊 Points abordés lors du bilan :\n• Optimisation de votre imposition (PER, PERP, Madelin...)\n• Analyse de votre protection sociale\n• Stratégie d'épargne et de placement\n• Transmission et protection de votre patrimoine\n\nCe bilan de 45 minutes est offert et sans aucun engagement de votre part.\n\nJe reste à votre disposition pour convenir d'un rendez-vous selon vos disponibilités.\n\nCordialement,\nBryan Entibi\nConseiller en Gestion de Patrimoine — Evka Conseil\n"
+  },
+  {
+    "nom": "Relance",
+    "objet": "Bilan annuel de votre contrat — Optimisations disponibles",
+    "corps": "Bonjour,\n\nJe reviens vers vous dans le cadre du suivi annuel de votre contrat.\n\nL'année écoulée a vu d'importantes évolutions réglementaires et fiscales qui peuvent impacter positivement votre situation. Je souhaite vous proposer un point de 20 minutes pour :\n\n🔄 Points à aborder :\n• Bilan de performance de votre contrat\n• Optimisations possibles suite aux évolutions fiscales 2025\n• Arbitrages éventuels pour améliorer votre rendement\n• Nouvelles opportunités adaptées à votre profil\n\nSeriez-vous disponible prochainement pour cet échange ?\n\nDans l'attente de vous lire,\n\nCordialement,\nBryan Entibi\nConseiller en Gestion de Patrimoine\n"
+  },
+  {
+    "nom": "Arbitrage",
+    "objet": "Proposition d’arbitrage — Améliorez les performances de votre épargne",
+    "corps": "Bonjour,\n\nSuite à notre dernier échange, je reviens vers vous concernant votre contrat en cours.\n\nAprès analyse, je suis en mesure de vous proposer une solution plus avantageuse permettant d'améliorer significativement les performances de votre épargne retraite tout en maintenant le même niveau de protection.\n\n⚖️ Ce que nous pouvons faire ensemble :\n• Arbitrage vers des supports plus performants\n• Révision des conditions contractuelles\n• Optimisation de la fiscalité à la sortie\n• Meilleure adéquation avec vos objectifs actuels\n\nPourriez-vous me confirmer vos disponibilités pour un rendez-vous téléphonique de 15 minutes ?\n\nCordialement,\nBryan Entibi\nConseiller en Gestion de Patrimoine — Evka Conseil / Vauban Associés\n"
+  }
+];
+
+function MessageriePage({ clients }) {
+  const [sender, setSender] = useState(MAIL_SENDERS[0]);
+  const [to, setTo] = useState("");
+  const [objet, setObjet] = useState("");
+  const [corps, setCorps] = useState("");
+  const [customTpls, setCustomTpls] = useState([]);
+  const [picker, setPicker] = useState(false);
+  const [pickSearch, setPickSearch] = useState("");
+  const [picked, setPicked] = useState({});
+  const avecEmail = clients.filter((c) => !c.decom && (c.email || "").includes("@"));
+
+  useEffect(() => { (async () => { const t = await sGet("crm-mail-templates"); if (t) setCustomTpls(t); })(); }, []);
+  const saveCustom = (t) => { setCustomTpls(t); sSet("crm-mail-templates", t); };
+  const addTpl = () => {
+    if (!objet.trim() && !corps.trim()) { alert("Écris d'abord l'objet et le message, puis clique + Modèle pour l'enregistrer."); return; }
+    const nom = prompt("Nom de ce modèle :");
+    if (nom && nom.trim()) saveCustom([...customTpls, { nom: nom.trim(), objet, corps }]);
+  };
+  const delTpl = (i) => { if (confirm("Supprimer ce modèle ?")) saveCustom(customTpls.filter((_, k) => k !== i)); };
+
+  const addPicked = () => {
+    const emails = Object.keys(picked).filter((id) => picked[id]).map((id) => (clients.find((c) => c.id === id) || {}).email).filter(Boolean);
+    if (!emails.length) { alert("Coche au moins un client."); return; }
+    const existants = to.split(/[,;\n]/).map((e) => e.trim()).filter(Boolean);
+    setTo([...new Set([...existants, ...emails])].join(", "));
+    setPicker(false); setPicked({});
+  };
+  const toutSelectionner = () => { const p = {}; avecEmail.forEach((c) => p[c.id] = true); setPicked(p); };
+
+  const envoyer = () => {
+    const emails = to.split(/[,;\n]/).map((e) => e.trim()).filter((e) => e.includes("@"));
+    if (!emails.length) { alert("Ajoute des destinataires (bouton Choisir des clients, ou à la main)."); return; }
+    if (!objet.trim()) { alert("Ajoute un objet."); return; }
+    const batch = emails.slice(0, 100), reste = emails.slice(100);
+    const url = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(sender)}&bcc=${encodeURIComponent(batch.join(","))}&su=${encodeURIComponent(objet)}&body=${encodeURIComponent(corps)}`;
+    try { navigator.clipboard.writeText(url); } catch {}
+    window.open(url, "_blank");
+    if (reste.length) setTo(reste.join(", "));
+    alert(`✉️ ${batch.length} destinataires en Cci.\n\nSi Gmail s'ouvre sur le MAUVAIS compte : le lien est copié, colle-le (Cmd+V) dans la barre d'adresse du Chrome connecté à ${sender}.${reste.length ? "\n\nReste " + reste.length + " destinataires — reclique sur Envoyer." : ""}`);
+  };
+
+  const pickList = clients.filter((c) => !c.decom && ((c.nom + " " + (c.prenom || "")).toLowerCase().includes(pickSearch.toLowerCase()))).sort((a, b) => a.nom.localeCompare(b.nom));
+
+  return (
+    <div>
+      <div className="ph"><div><h1>✉️ Messagerie</h1><div className="sub">{avecEmail.length} client(s) avec une adresse email · envoi groupé en Cci (invisibles entre eux)</div></div></div>
+      <div className="card" style={{ maxWidth: 880 }}>
+        <div className="row" style={{ gap: 10, marginBottom: 14, flexWrap: "wrap", alignItems: "flex-end" }}>
+          <div style={{ flex: 1, minWidth: 280 }}>
+            <div style={{ fontSize: 11.5, fontWeight: 700, color: "#44536B", marginBottom: 4 }}>EXPÉDITEUR</div>
+            <select className="sel" style={{ width: "100%" }} value={sender} onChange={(e) => setSender(e.target.value)}>
+              {MAIL_SENDERS.map((s) => <option key={s}>{s}</option>)}
+            </select>
+          </div>
+          <button className="btn" onClick={() => setPicker(true)}>👥 Choisir des clients</button>
+          <button className="btn" onClick={() => { setTo(""); setObjet(""); setCorps(""); }} style={{ color: "#B3261E", borderColor: "#B3261E" }}>🗑 Tout effacer</button>
+        </div>
+        <div style={{ fontSize: 11.5, fontWeight: 700, color: "#44536B", marginBottom: 4 }}>DESTINATAIRES (Cci) — modifiables à la main</div>
+        <textarea className="in" style={{ width: "100%", minHeight: 64, marginBottom: 12, fontFamily: "inherit" }} value={to} onChange={(e) => setTo(e.target.value)} placeholder="email1@..., email2@... (tape librement ou utilise Choisir des clients)" />
+        <div style={{ fontSize: 11.5, fontWeight: 700, color: "#44536B", marginBottom: 4 }}>MODÈLES</div>
+        <div className="row" style={{ gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+          {MAIL_TEMPLATES.map((t) => (
+            <button key={t.nom} className="btn" onClick={() => { setObjet(t.objet); setCorps(t.corps); }}>{t.nom}</button>
+          ))}
+          {customTpls.map((t, i) => (
+            <span key={"c" + i} style={{ display: "inline-flex", alignItems: "center" }}>
+              <button className="btn" style={{ borderColor: "#C9A24B" }} onClick={() => { setObjet(t.objet); setCorps(t.corps); }}>{t.nom}</button>
+              <span onClick={() => delTpl(i)} style={{ cursor: "pointer", color: "#B3261E", marginLeft: 3, fontSize: 12 }}>✕</span>
+            </span>
+          ))}
+          <button className="btn gold" onClick={addTpl}>+ Modèle</button>
+        </div>
+        <div style={{ fontSize: 11.5, fontWeight: 700, color: "#44536B", marginBottom: 4 }}>OBJET</div>
+        <input className="in" style={{ width: "100%", marginBottom: 12 }} value={objet} onChange={(e) => setObjet(e.target.value)} />
+        <div style={{ fontSize: 11.5, fontWeight: 700, color: "#44536B", marginBottom: 4 }}>MESSAGE</div>
+        <textarea className="in" style={{ width: "100%", minHeight: 200, marginBottom: 14, fontFamily: "inherit", lineHeight: 1.6 }} value={corps} onChange={(e) => setCorps(e.target.value)} />
+        <button className="btn gold" style={{ width: "100%", padding: 13, fontSize: 15 }} onClick={envoyer}>✉️ Préparer l'envoi dans Gmail</button>
+      </div>
+
+      {picker && (
+        <div className="overlay" onClick={(e) => e.target.classList && e.target.classList.contains("overlay") && setPicker(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 999, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ background: "#fff", borderRadius: 16, padding: 24, width: 560, maxWidth: "92vw", maxHeight: "82vh", display: "flex", flexDirection: "column" }}>
+            <h2 style={{ fontSize: 18, marginBottom: 10 }}>👥 Choisir les destinataires</h2>
+            <div className="row" style={{ gap: 8, marginBottom: 10 }}>
+              <input className="in" style={{ flex: 1 }} placeholder="Rechercher un client…" value={pickSearch} onChange={(e) => setPickSearch(e.target.value)} />
+              <button className="btn" onClick={toutSelectionner}>✓ Tous les clients ({avecEmail.length})</button>
+            </div>
+            <div style={{ overflowY: "auto", flex: 1, border: "1px solid #E3E9F1", borderRadius: 10, padding: 6 }}>
+              {pickList.map((c) => {
+                const has = (c.email || "").includes("@");
+                return (
+                  <label key={c.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 10px", borderBottom: "1px solid #edf1f6", cursor: has ? "pointer" : "default", opacity: has ? 1 : .45 }}>
+                    <input type="checkbox" disabled={!has} checked={!!picked[c.id]} onChange={(e) => setPicked({ ...picked, [c.id]: e.target.checked })} />
+                    <b style={{ fontSize: 13 }}>{c.civilite ? c.civilite + " " : ""}{c.nom} {c.prenom}</b>
+                    <span style={{ fontSize: 12, color: "#8593a8", marginLeft: "auto" }}>{has ? c.email : "pas d'email dans la fiche"}</span>
+                  </label>
+                );
+              })}
+            </div>
+            <div className="row" style={{ gap: 8, marginTop: 12 }}>
+              <button className="btn gold" style={{ flex: 1 }} onClick={addPicked}>Ajouter la sélection ({Object.values(picked).filter(Boolean).length})</button>
+              <button className="btn" onClick={() => setPicker(false)}>Fermer</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ================= QUESTIONNAIRE EIC / AUDIT PATRIMONIAL ================= */
+const EIC_FIN_ROWS = ["Comptes Courants","Livret A / B, LDD","LEP","PEL, CEL","CSL","Livret Jeune","Comptes Titres","PEA","PEE / PEG disponible","Assurance Vie 1","Assurance Vie 2","Assurance Vie 3","PERP, Madelin, PERIN, PERCO","Trésorerie Entreprise","Autres"];
+const EIC_OBJECTIFS = ["Protéger vos proches et vous-même","Valoriser votre patrimoine","Préparer l'avenir de vos enfants","Compléter votre retraite","Protéger son conjoint survivant","Organiser votre transmission · DMTG","Financer vos projets personnels (ex. RP)","Optimiser votre fiscalité · IRPP, IFI","Développer votre entreprise","Prévoyance / Dépendance"];
+const EIC_CRITERES = ["Disponible à 100%","À 50%","À 20%","Souple en effort d'épargne","Fiscalement avantageux","Prudent","Simple en gestion"];
+const eicEmpty = () => ({ biens: [{},{},{}], chargesImmo: [{},{}], autresCharges: [{},{}], fin: {}, objectifs: {}, criteres: {}, rdvs: [{},{},{}] });
+const eicN = (v) => parseNum(v) || 0;
+
+function EicField({ label, value, onChange, type = "text", options, wide }) {
+  return (
+    <div style={{ gridColumn: wide ? "1 / -1" : undefined }}>
+      <div style={{ fontSize: 10.5, fontWeight: 700, color: "#5b6b82", textTransform: "uppercase", letterSpacing: ".4px", marginBottom: 3 }}>{label}</div>
+      {type === "select" ? (
+        <select className="sel" style={{ width: "100%" }} value={value || ""} onChange={(e) => onChange(e.target.value)}>
+          <option value="">—</option>
+          {options.map((o) => <option key={o}>{o}</option>)}
+        </select>
+      ) : type === "textarea" ? (
+        <textarea className="in" style={{ width: "100%", minHeight: 60, fontFamily: "inherit" }} value={value || ""} onChange={(e) => onChange(e.target.value)} />
+      ) : (
+        <input className="in" style={{ width: "100%" }} type={type} value={value || ""} onChange={(e) => onChange(e.target.value)} />
+      )}
+    </div>
+  );
+}
+
+function EicSection({ title, children }) {
+  return (
+    <div style={{ marginBottom: 22 }}>
+      <div style={{ background: "#0B2545", color: "#fff", padding: "8px 14px", fontSize: 12, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", borderRadius: "8px 8px 0 0", borderRight: "4px solid #C9A24B" }}>{title}</div>
+      <div style={{ border: "1px solid #E3E9F1", borderTop: "none", borderRadius: "0 0 10px 10px", padding: 16, background: "#fff" }}>{children}</div>
+    </div>
+  );
+}
+
+function EicPersonne({ titre, p, set }) {
+  return (
+    <div style={{ flex: 1, minWidth: 300 }}>
+      <div style={{ fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 700, color: "#0B2545", marginBottom: 10, textAlign: "center", letterSpacing: "2px" }}>{titre}</div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        <EicField label="Nom, Prénom" value={p.nom} onChange={(v) => set("nom", v)} wide />
+        <EicField label="Date de naissance" type="date" value={p.naissance} onChange={(v) => set("naissance", v)} />
+        <EicField label="ADA" type="select" options={["Oui", "Non"]} value={p.ada} onChange={(v) => set("ada", v)} />
+        <EicField label="Tél fixe / Port" value={p.tel} onChange={(v) => set("tel", v)} />
+        <EicField label="E-mail" value={p.email} onChange={(v) => set("email", v)} />
+        <EicField label="Nationalité" value={p.nationalite} onChange={(v) => set("nationalite", v)} />
+        <EicField label="Nbre de frères et sœurs" value={p.freres} onChange={(v) => set("freres", v)} />
+        <EicField label="Patrimoine des parents (K€)" value={p.patParents} onChange={(v) => set("patParents", v)} />
+        <EicField label="Âge des parents" value={p.ageParents} onChange={(v) => set("ageParents", v)} />
+      </div>
+    </div>
+  );
+}
+
+function EicRevenus({ titre, p, set }) {
+  return (
+    <div style={{ flex: 1, minWidth: 300 }}>
+      <div style={{ fontFamily: "Georgia, serif", fontSize: 14, fontWeight: 700, color: "#0B2545", marginBottom: 10, textAlign: "center", letterSpacing: "2px" }}>{titre}</div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        <EicField label="Profession" value={p.profession} onChange={(v) => set("profession", v)} />
+        <EicField label="Statut (salarié / BIC / BNC)" type="select" options={["Salarié", "BIC", "BNC", "TNS", "Autre"]} value={p.statut} onChange={(v) => set("statut", v)} />
+        <EicField label="Nom de la société" value={p.societe} onChange={(v) => set("societe", v)} />
+        <EicField label="Date d'entrée" type="date" value={p.dateEntree} onChange={(v) => set("dateEntree", v)} />
+        <EicField label="Total PEE ou PEG (€)" value={p.pee} onChange={(v) => set("pee", v)} />
+        <EicField label="Revenus annuels nets (€)" value={p.revenus} onChange={(v) => set("revenus", v)} />
+        <EicField label="Revenu foncier / BIC (€)" value={p.foncier} onChange={(v) => set("foncier", v)} />
+        <EicField label="Micro / Réel" type="select" options={["Micro", "Réel"]} value={p.microReel} onChange={(v) => set("microReel", v)} />
+        <EicField label="Autres revenus annuels (€)" value={p.autres} onChange={(v) => set("autres", v)} />
+        <EicField label="Évolutions prévisibles N+1, N+2" value={p.evolutions} onChange={(v) => set("evolutions", v)} />
+      </div>
+    </div>
+  );
+}
+
+function EicTable({ cols, rows, onChange, onAdd }) {
+  return (
+    <div style={{ overflowX: "auto" }}>
+      <table className="t" style={{ width: "100%" }}>
+        <thead><tr>{cols.map((col) => <th key={col.k}>{col.l}</th>)}</tr></thead>
+        <tbody>
+          {rows.map((r, i) => (
+            <tr key={i}>{cols.map((col) => <td key={col.k}><input value={r[col.k] || ""} onChange={(e) => onChange(i, col.k, e.target.value)} /></td>)}</tr>
+          ))}
+        </tbody>
+      </table>
+      {onAdd && <button className="btn sm" style={{ marginTop: 8 }} onClick={onAdd}>+ Ligne</button>}
+    </div>
+  );
+}
+
+function EicForm({ client, onSave, onClose }) {
+  const [f, setF] = useState(() => ({ ...eicEmpty(), m: {}, mme: {}, revM: {}, revMme: {}, ...(client.eic || {}) }));
+  const s = (k, v) => setF({ ...f, [k]: v });
+  const sp = (grp, k, v) => setF({ ...f, [grp]: { ...(f[grp] || {}), [k]: v } });
+  const sRow = (arrKey) => (i, k, v) => { const a = [...(f[arrKey] || [])]; a[i] = { ...a[i], [k]: v }; setF({ ...f, [arrKey]: a }); };
+  const addRow = (arrKey) => () => setF({ ...f, [arrKey]: [...(f[arrKey] || []), {}] });
+  const sFin = (row, k, v) => setF({ ...f, fin: { ...f.fin, [row]: { ...(f.fin[row] || {}), [k]: v } } });
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(11,37,69,.55)", zIndex: 998, display: "flex", alignItems: "flex-start", justifyContent: "center", overflowY: "auto", padding: "24px 12px" }}>
+      <div style={{ background: "#F5F7FA", borderRadius: 16, padding: 26, width: 980, maxWidth: "96vw" }}>
+        <div className="row" style={{ justifyContent: "space-between", marginBottom: 18 }}>
+          <div>
+            <h1 style={{ fontSize: 22 }}>Audit Patrimonial — EIC</h1>
+            <div className="sub">{client.civilite} {client.nom} {client.prenom} · toutes les questions du questionnaire officiel</div>
+          </div>
+          <div className="row" style={{ gap: 8 }}>
+            <button className="btn gold" onClick={() => { onSave(f); }}>💾 Sauvegarder</button>
+            <button className="btn" onClick={onClose}>Fermer</button>
+          </div>
+        </div>
+
+        <EicSection title="État civil et situation familiale">
+          <div className="row" style={{ gap: 24, flexWrap: "wrap", alignItems: "flex-start" }}>
+            <EicPersonne titre="MONSIEUR" p={f.m || {}} set={(k, v) => sp("m", k, v)} />
+            <EicPersonne titre="MADAME" p={f.mme || {}} set={(k, v) => sp("mme", k, v)} />
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 10, marginTop: 16 }}>
+            <EicField label="Adresse" value={f.adresse} onChange={(v) => s("adresse", v)} />
+            <EicField label="Code postal" value={f.cp} onChange={(v) => s("cp", v)} />
+            <EicField label="Ville" value={f.ville} onChange={(v) => s("ville", v)} />
+            <EicField label="Situation familiale" type="select" options={["Marié", "Divorcé", "Pacs", "Concubin", "Veuf", "Célibataire"]} value={f.situation} onChange={(v) => s("situation", v)} />
+            <EicField label="Date de mariage" type="date" value={f.dateMariage} onChange={(v) => s("dateMariage", v)} />
+            <EicField label="Régime matrimonial" type="select" options={["SB", "CBRA", "CU", "PA"]} value={f.regime} onChange={(v) => s("regime", v)} />
+            <EicField label="Convention Mat." type="select" options={["Oui", "Non"]} value={f.convention} onChange={(v) => s("convention", v)} />
+            <EicField label="DDV" type="select" options={["Oui", "Non"]} value={f.ddv} onChange={(v) => s("ddv", v)} />
+            <EicField label="Notaire" value={f.notaire} onChange={(v) => s("notaire", v)} />
+            <EicField label="Nbre d'enfants à N, N+1, N+2" value={f.enfants} onChange={(v) => s("enfants", v)} />
+            <EicField label="Nbre de petits-enfants" value={f.petitsEnfants} onChange={(v) => s("petitsEnfants", v)} />
+            <EicField label="Donation" type="select" options={["Aucune", "Donation simple", "Donation partage", "Les deux"]} value={f.donation} onChange={(v) => s("donation", v)} />
+            <EicField label="Succession à venir (K€)" value={f.succession} onChange={(v) => s("succession", v)} />
+            <EicField label="Nombre de parts fiscales (N / N+1 / N+3)" value={f.partsFiscales} onChange={(v) => s("partsFiscales", v)} />
+          </div>
+        </EicSection>
+
+        <EicSection title="Revenus">
+          <div className="row" style={{ gap: 24, flexWrap: "wrap", alignItems: "flex-start" }}>
+            <EicRevenus titre="MONSIEUR" p={f.revM || {}} set={(k, v) => sp("revM", k, v)} />
+            <EicRevenus titre="MADAME" p={f.revMme || {}} set={(k, v) => sp("revMme", k, v)} />
+          </div>
+        </EicSection>
+
+        <EicSection title="Prévoyance">
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+            <EicField label="Compagnie" value={f.prevCompagnie} onChange={(v) => s("prevCompagnie", v)} />
+            <EicField label="Garanties" value={f.prevGaranties} onChange={(v) => s("prevGaranties", v)} />
+            <EicField label="Mensualité (€)" value={f.prevMensualite} onChange={(v) => s("prevMensualite", v)} />
+          </div>
+        </EicSection>
+
+        <EicSection title="Imposition">
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+            <EicField label="Monsieur — Déduction" type="select" options={["Déduction 10%", "Frais réels", "CGA"]} value={f.dedM} onChange={(v) => s("dedM", v)} />
+            <EicField label="Madame — Déduction" type="select" options={["Déduction 10%", "Frais réels", "CGA"]} value={f.dedMme} onChange={(v) => s("dedMme", v)} />
+            <EicField label="Revenu Brut Global (€)" value={f.rbg} onChange={(v) => s("rbg", v)} />
+            <EicField label="Résultat foncier (€)" value={f.resFoncier} onChange={(v) => s("resFoncier", v)} />
+            <EicField label="Déductions (€)" value={f.deductions} onChange={(v) => s("deductions", v)} />
+            <EicField label="Revenu imposable (€)" value={f.revImposable} onChange={(v) => s("revImposable", v)} />
+            <EicField label="TMI (%)" type="select" options={["0", "11", "30", "41", "45"]} value={f.tmi} onChange={(v) => s("tmi", v)} />
+            <EicField label="Revenus fonciers positifs (€)" value={f.rfPositifs} onChange={(v) => s("rfPositifs", v)} />
+            <EicField label="Déficit (€)" value={f.deficit} onChange={(v) => s("deficit", v)} />
+            <EicField label="Impôt brut (€)" value={f.impotBrut} onChange={(v) => s("impotBrut", v)} />
+            <EicField label="Réductions ou crédit d'impôt (€)" value={f.reductions} onChange={(v) => s("reductions", v)} />
+            <EicField label="Impôt net à payer (€)" value={f.impotNet} onChange={(v) => s("impotNet", v)} />
+            <EicField label="IFI (€)" value={f.ifi} onChange={(v) => s("ifi", v)} />
+            <EicField label="A cherché à agir sur sa fiscalité ?" type="select" options={["Oui", "Non"]} value={f.agiFisc} onChange={(v) => s("agiFisc", v)} />
+            <EicField label="Si oui, de quelle manière ?" value={f.agiComment} onChange={(v) => s("agiComment", v)} />
+          </div>
+        </EicSection>
+
+        <EicSection title="Patrimoine immobilier">
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+            <EicField label="Résidence principale" type="select" options={["Propriétaire", "Locataire", "Hébergé à titre gracieux"]} value={f.rpStatut} onChange={(v) => s("rpStatut", v)} />
+            <EicField label="Loyer mensuel (€)" value={f.loyer} onChange={(v) => s("loyer", v)} />
+          </div>
+          <EicTable cols={[{k:"nature",l:"Nature (RP, RS, Locatif)"},{k:"dateAcq",l:"Date d'acquisition"},{k:"valAcq",l:"Valeur d'acquisition"},{k:"valActuelle",l:"Valeur actuelle"},{k:"detention",l:"PP / NP / US"},{k:"revLocatifs",l:"Revenus locatifs"},{k:"sci",l:"SCI IS / IR"}]}
+            rows={f.biens || []} onChange={sRow("biens")} onAdd={addRow("biens")} />
+          <div style={{ marginTop: 12 }}><EicField label="Projet immobilier à venir ?" type="textarea" value={f.projetImmo} onChange={(v) => s("projetImmo", v)} /></div>
+        </EicSection>
+
+        <EicSection title="Charges immobilières">
+          <EicTable cols={[{k:"nature",l:"Nature (amortissable/in fine)"},{k:"etab",l:"Établissement"},{k:"montant",l:"Montant initial"},{k:"debut",l:"Date début"},{k:"fin",l:"Date fin"},{k:"crd",l:"CRD · Taux %"},{k:"mens",l:"Charges mensuelles"}]}
+            rows={f.chargesImmo || []} onChange={sRow("chargesImmo")} onAdd={addRow("chargesImmo")} />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 12 }}>
+            <EicField label="Délégation assurance" type="select" options={["Oui", "Non"]} value={f.delegAssurance} onChange={(v) => s("delegAssurance", v)} />
+            <EicField label="Taux d'endettement (%)" value={f.tauxEndettement} onChange={(v) => s("tauxEndettement", v)} />
+          </div>
+        </EicSection>
+
+        <EicSection title="Autres charges · Crédit conso · Leasing">
+          <EicTable cols={[{k:"nature",l:"Nature"},{k:"etab",l:"Établissement"},{k:"montant",l:"Montant initial"},{k:"debut",l:"Date début"},{k:"fin",l:"Date fin"},{k:"mens",l:"Charges mensuelles"}]}
+            rows={f.autresCharges || []} onChange={sRow("autresCharges")} onAdd={addRow("autresCharges")} />
+        </EicSection>
+
+        <EicSection title="Patrimoine financier">
+          <div style={{ overflowX: "auto" }}>
+            <table className="t" style={{ width: "100%" }}>
+              <thead><tr><th style={{ textAlign: "left" }}>Support</th><th>Monsieur (€)</th><th>Madame (€)</th><th>Versement mensuel (€)</th><th>Date ouverture / versements</th><th>Établissement (% € / % UC)</th><th>Objectifs / Clause bénéf.</th></tr></thead>
+              <tbody>
+                {EIC_FIN_ROWS.map((row) => {
+                  const r = f.fin[row] || {};
+                  return (
+                    <tr key={row}>
+                      <td style={{ textAlign: "left", fontWeight: 600, fontSize: 12, whiteSpace: "nowrap" }}>{row}</td>
+                      {["m","f","vers","dates","etab","obj"].map((k) => <td key={k}><input value={r[k] || ""} onChange={(e) => sFin(row, k, e.target.value)} /></td>)}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div style={{ marginTop: 12 }}><EicField label="Patrimoine en attente (cap. décès · héritages)" value={f.patAttente} onChange={(v) => s("patAttente", v)} /></div>
+        </EicSection>
+
+        <EicSection title="Objectifs (par niveau de priorité 1, 2, 3)">
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            {EIC_OBJECTIFS.map((o) => (
+              <div key={o} className="row" style={{ gap: 8, alignItems: "center" }}>
+                <select className="sel" style={{ width: 64 }} value={f.objectifs[o] || ""} onChange={(e) => setF({ ...f, objectifs: { ...f.objectifs, [o]: e.target.value } })}>
+                  <option value="">—</option><option>1</option><option>2</option><option>3</option>
+                </select>
+                <span style={{ fontSize: 13 }}>{o}</span>
+              </div>
+            ))}
+          </div>
+          <div style={{ marginTop: 12 }}><EicField label="Horizon de temps" value={f.horizon} onChange={(v) => s("horizon", v)} /></div>
+        </EicSection>
+
+        <EicSection title="Moyens et critères de solution idéale">
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 14 }}>
+            <EicField label="Moyens en épargne (€/mois)" value={f.moyensEpargne} onChange={(v) => s("moyensEpargne", v)} />
+            <EicField label="Dont partie souple (€)" value={f.partieSouple} onChange={(v) => s("partieSouple", v)} />
+            <EicField label="% du revenu en épargne" type="select" options={["10%", "15%", "20%"]} value={f.pctEpargne} onChange={(v) => s("pctEpargne", v)} />
+            <EicField label="Moyens en capital (€)" value={f.moyensCapital} onChange={(v) => s("moyensCapital", v)} />
+          </div>
+          <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+            {EIC_CRITERES.map((cr) => (
+              <label key={cr} style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 13, cursor: "pointer" }}>
+                <input type="checkbox" checked={!!f.criteres[cr]} onChange={(e) => setF({ ...f, criteres: { ...f.criteres, [cr]: e.target.checked } })} /> {cr}
+              </label>
+            ))}
+          </div>
+        </EicSection>
+
+        <EicSection title="Profil investisseur">
+          <EicField label="Stratégie (sur tout le patrimoine financier, SCPI comprises)" type="select"
+            options={["Prudente (max 40% risqué · 60% SRRI 1 à 3)", "Équilibrée (max 70% risqué · 30% SRRI 1 à 3)", "Dynamique (max 100% risqué · 0% SRRI 1 à 3)"]}
+            value={f.profil} onChange={(v) => s("profil", v)} />
+        </EicSection>
+
+        <EicSection title="Chronologie des rendez-vous">
+          <EicTable cols={[{k:"theme",l:"Thème"},{k:"objectif",l:"Objectifs"},{k:"date",l:"Date"}]} rows={f.rdvs || []} onChange={sRow("rdvs")} onAdd={addRow("rdvs")} />
+        </EicSection>
+
+        <EicSection title="Synthèse de rendez-vous et notes">
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <EicField label="Objectifs (synthèse)" value={f.synObjectifs} onChange={(v) => s("synObjectifs", v)} wide />
+            <EicField label="Critères de solution (synthèse)" value={f.synCriteres} onChange={(v) => s("synCriteres", v)} wide />
+            <EicField label="Notes" type="textarea" value={f.notes} onChange={(v) => s("notes", v)} wide />
+          </div>
+        </EicSection>
+
+        <div className="row" style={{ gap: 8, position: "sticky", bottom: 0, background: "#F5F7FA", padding: "12px 0" }}>
+          <button className="btn gold" style={{ flex: 1, padding: 13, fontSize: 15 }} onClick={() => { onSave(f); }}>💾 Sauvegarder le questionnaire</button>
+          <button className="btn" onClick={onClose}>Fermer sans sauvegarder</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ===== Synthèse intelligente affichée sur la fiche ===== */
+function EicSynthese({ client, onOpen, onPdf }) {
+  const f = client.eic;
+  if (!f) return (
+    <div className="card" style={{ borderLeft: "4px solid #C9A24B", marginBottom: 20 }}>
+      <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
+        <div><b>📋 Questionnaire EIC / Audit patrimonial</b><div style={{ fontSize: 12.5, color: "#8593a8" }}>Pas encore rempli pour ce client — obligatoire.</div></div>
+        <button className="btn gold" onClick={onOpen}>Remplir l'EIC</button>
+      </div>
+    </div>
+  );
+  const finTotal = EIC_FIN_ROWS.reduce((t, r) => t + eicN((f.fin[r] || {}).m) + eicN((f.fin[r] || {}).f), 0);
+  const revTotal = eicN((f.revM || {}).revenus) + eicN((f.revMme || {}).revenus) + eicN((f.revM || {}).autres) + eicN((f.revMme || {}).autres);
+  const immoTotal = (f.biens || []).reduce((t, b) => t + eicN(b.valActuelle), 0);
+  const nbBiens = (f.biens || []).filter((b) => b.nature || b.valActuelle).length;
+  const objPrio = EIC_OBJECTIFS.filter((o) => f.objectifs && f.objectifs[o] === "1");
+  const livrets = ["Livret A / B, LDD", "LEP", "CSL", "Livret Jeune"].reduce((t, r) => t + eicN((f.fin[r] || {}).m) + eicN((f.fin[r] || {}).f), 0);
+  const K = ({ v, l }) => <div style={{ textAlign: "center", padding: "8px 4px" }}><div style={{ fontFamily: "Georgia, serif", fontSize: 19, fontWeight: 700, color: "#0B2545" }}>{v}</div><div style={{ fontSize: 10, color: "#8593a8", textTransform: "uppercase", letterSpacing: ".4px" }}>{l}</div></div>;
+  return (
+    <div className="card" style={{ borderLeft: "4px solid #C9A24B", marginBottom: 20 }}>
+      <div className="row" style={{ justifyContent: "space-between", marginBottom: 8 }}>
+        <b>📋 Synthèse patrimoniale (EIC{f && client.eicDate ? " · " + fmtDate(client.eicDate) : ""})</b>
+        <div className="row" style={{ gap: 6 }}>
+          <button className="btn sm" onClick={onOpen}>✏️ Modifier</button>
+          <button className="btn gold sm" onClick={onPdf}>📄 Générer le PDF</button>
+        </div>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 4, borderTop: "1px solid #edf1f6", paddingTop: 8 }}>
+        <K v={fmtEUR(revTotal)} l="Revenus annuels" />
+        <K v={(f.tmi || "—") + (f.tmi ? " %" : "")} l="TMI" />
+        <K v={f.impotNet ? fmtEUR(eicN(f.impotNet)) : "—"} l="Impôt net" />
+        <K v={fmtEUR(finTotal)} l="Patrimoine financier" />
+        <K v={fmtEUR(livrets)} l="Dont livrets" />
+        <K v={nbBiens ? nbBiens + " bien(s) · " + fmtEUR(immoTotal) : "—"} l="Immobilier" />
+        <K v={f.moyensEpargne ? f.moyensEpargne + " €/mois" : "—"} l="Capacité d'épargne" />
+        <K v={f.moyensCapital ? fmtEUR(eicN(f.moyensCapital)) : "—"} l="Capital disponible" />
+      </div>
+      {(objPrio.length > 0 || f.profil) && (
+        <div style={{ fontSize: 12.5, color: "#44536B", borderTop: "1px solid #edf1f6", marginTop: 8, paddingTop: 8 }}>
+          {objPrio.length > 0 && <><b>Priorité 1 :</b> {objPrio.join(" · ")}<br /></>}
+          {f.profil && <><b>Profil :</b> {f.profil}</>}
+          {f.horizon && <> · <b>Horizon :</b> {f.horizon}</>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ===== PDF de l'audit (fenêtre d'impression stylée Elyon) ===== */
+function eicPdf(client) {
+  const f = client.eic || {};
+  const v = (x) => (x === undefined || x === null || x === "" ? "—" : x);
+  const sec = (t) => `<div class="sec">${t}</div>`;
+  const li = (l, x) => `<div class="li"><span class="ll">${l}</span><span class="lv">${v(x)}</span></div>`;
+  const pers = (t, p) => `<div class="col"><div class="pt">${t}</div>${li("Nom, Prénom", p.nom)}${li("Naissance", p.naissance)}${li("Tél", p.tel)}${li("E-mail", p.email)}${li("Nationalité", p.nationalite)}${li("Frères et sœurs", p.freres)}${li("Patrimoine parents (K€)", p.patParents)}${li("Âge des parents", p.ageParents)}</div>`;
+  const rev = (t, p) => `<div class="col"><div class="pt">${t}</div>${li("Profession", p.profession)}${li("Statut", p.statut)}${li("Société", p.societe)}${li("PEE/PEG", p.pee)}${li("Revenus annuels nets", p.revenus)}${li("Revenu foncier", p.foncier)}${li("Micro/Réel", p.microReel)}${li("Autres revenus", p.autres)}${li("Évolutions N+1, N+2", p.evolutions)}</div>`;
+  const table = (cols, rows) => `<table><tr>${cols.map((c2) => `<th>${c2.l}</th>`).join("")}</tr>${(rows || []).filter((r) => Object.values(r).some((x) => x)).map((r) => `<tr>${cols.map((c2) => `<td>${v(r[c2.k])}</td>`).join("")}</tr>`).join("") || "<tr><td colspan='" + cols.length + "'>—</td></tr>"}</table>`;
+  const fin = EIC_FIN_ROWS.map((r) => ({ s: r, ...(f.fin && f.fin[r] || {}) })).filter((r) => r.m || r.f || r.vers || r.etab);
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Audit Patrimonial — ${client.nom}</title><style>
+    body{font-family:'Segoe UI',Arial,sans-serif;color:#0B2545;margin:34px;font-size:11.5px}
+    h1{font-family:Georgia,serif;font-size:24px;margin:0;border-bottom:3px solid #C9A24B;display:inline-block;padding-bottom:4px}
+    .head{display:flex;justify-content:space-between;align-items:center;background:#0B2545;color:#fff;padding:12px 18px;margin-bottom:18px;border-radius:4px}
+    .brand{font-family:Georgia,serif;font-size:15px;letter-spacing:2px}.brand span{color:#C9A24B}
+    .sec{background:#0B2545;color:#fff;padding:6px 12px;font-size:10.5px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin:16px 0 8px;border-right:4px solid #C9A24B}
+    .grid{display:flex;gap:24px;flex-wrap:wrap}.col{flex:1;min-width:290px}
+    .pt{font-family:Georgia,serif;font-weight:700;letter-spacing:2px;text-align:center;margin-bottom:6px}
+    .li{display:flex;border-bottom:1px dotted #cdd6e2;padding:3px 0}.ll{width:200px;color:#5b6b82}.lv{flex:1;font-weight:600}
+    table{width:100%;border-collapse:collapse;margin:4px 0}th{background:#0B2545;color:#fff;font-size:9.5px;padding:5px 6px;font-weight:600}td{border-bottom:1px solid #edf1f6;padding:4px 6px;text-align:center;font-size:10.5px}
+    .kv{display:grid;grid-template-columns:repeat(3,1fr);gap:2px 20px}
+    @media print{body{margin:14mm}.sec{-webkit-print-color-adjust:exact;print-color-adjust:exact}th,.head{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+  </style></head><body>
+  <div class="head"><div class="brand">ELYON <span>&</span> ASSOCIÉS<br><span style="font-size:8px;letter-spacing:3px;color:#C9A24B">CABINET DE GESTION DE PATRIMOINE</span></div><div style="font-size:11px">AUDIT PATRIMONIAL</div></div>
+  <h1>Audit Patrimonial</h1>
+  <div style="margin:8px 0 4px;font-size:12px"><b>Client :</b> ${client.civilite || ""} ${client.nom} ${client.prenom || ""} &nbsp;·&nbsp; <b>Date :</b> ${new Date().toLocaleDateString("fr-FR")} &nbsp;·&nbsp; <b>CGP :</b> Bryan Entibi</div>
+  ${sec("État civil et situation familiale")}
+  <div class="grid">${pers("MONSIEUR", f.m || {})}${pers("MADAME", f.mme || {})}</div>
+  <div class="kv" style="margin-top:8px">${li("Adresse", [f.adresse, f.cp, f.ville].filter(Boolean).join(" · "))}${li("Situation familiale", f.situation)}${li("Date de mariage", f.dateMariage)}${li("Régime mat.", f.regime)}${li("Convention", f.convention)}${li("DDV", f.ddv)}${li("Notaire", f.notaire)}${li("Enfants", f.enfants)}${li("Petits-enfants", f.petitsEnfants)}${li("Donation", f.donation)}${li("Succession à venir (K€)", f.succession)}${li("Parts fiscales", f.partsFiscales)}</div>
+  ${sec("Revenus")}<div class="grid">${rev("MONSIEUR", f.revM || {})}${rev("MADAME", f.revMme || {})}</div>
+  ${sec("Prévoyance")}<div class="kv">${li("Compagnie", f.prevCompagnie)}${li("Garanties", f.prevGaranties)}${li("Mensualité", f.prevMensualite)}</div>
+  ${sec("Imposition")}<div class="kv">${li("Déduction M.", f.dedM)}${li("Déduction Mme", f.dedMme)}${li("Revenu Brut Global", f.rbg)}${li("Résultat foncier", f.resFoncier)}${li("Déductions", f.deductions)}${li("Revenu imposable", f.revImposable)}${li("TMI", f.tmi ? f.tmi + " %" : "")}${li("RF positifs / Déficit", [f.rfPositifs, f.deficit].filter(Boolean).join(" / "))}${li("Impôt brut", f.impotBrut)}${li("Réductions / crédit", f.reductions)}${li("Impôt net à payer", f.impotNet)}${li("IFI", f.ifi)}${li("A agi sur sa fiscalité", [f.agiFisc, f.agiComment].filter(Boolean).join(" — "))}</div>
+  ${sec("Patrimoine immobilier")}<div class="kv">${li("Résidence principale", f.rpStatut)}${li("Loyer mensuel", f.loyer)}${li("Projet immobilier", f.projetImmo)}</div>
+  ${table([{k:"nature",l:"Nature"},{k:"dateAcq",l:"Date acq."},{k:"valAcq",l:"Valeur acq."},{k:"valActuelle",l:"Valeur actuelle"},{k:"detention",l:"PP/NP/US"},{k:"revLocatifs",l:"Revenus locatifs"},{k:"sci",l:"SCI"}], f.biens)}
+  ${sec("Charges immobilières")}${table([{k:"nature",l:"Nature"},{k:"etab",l:"Établissement"},{k:"montant",l:"Montant"},{k:"debut",l:"Début"},{k:"fin",l:"Fin"},{k:"crd",l:"CRD · Taux"},{k:"mens",l:"Charges/mois"}], f.chargesImmo)}
+  <div class="kv">${li("Délégation assurance", f.delegAssurance)}${li("Taux d'endettement", f.tauxEndettement ? f.tauxEndettement + " %" : "")}</div>
+  ${sec("Autres charges · crédit conso · leasing")}${table([{k:"nature",l:"Nature"},{k:"etab",l:"Établissement"},{k:"montant",l:"Montant"},{k:"debut",l:"Début"},{k:"fin",l:"Fin"},{k:"mens",l:"Charges/mois"}], f.autresCharges)}
+  ${sec("Patrimoine financier")}${table([{k:"s",l:"Support"},{k:"m",l:"Monsieur (€)"},{k:"f",l:"Madame (€)"},{k:"vers",l:"Vers./mois"},{k:"dates",l:"Dates"},{k:"etab",l:"Établissement"},{k:"obj",l:"Objectifs"}], fin)}
+  <div class="kv">${li("Patrimoine en attente", f.patAttente)}</div>
+  ${sec("Objectifs, moyens et profil")}
+  <div class="kv">${EIC_OBJECTIFS.filter((o) => f.objectifs && f.objectifs[o]).map((o) => li("Priorité " + f.objectifs[o], o)).join("")}${li("Horizon", f.horizon)}${li("Moyens en épargne", f.moyensEpargne ? f.moyensEpargne + " €/mois" : "")}${li("Dont partie souple", f.partieSouple)}${li("% du revenu épargné", f.pctEpargne)}${li("Moyens en capital", f.moyensCapital)}${li("Critères", Object.keys(f.criteres || {}).filter((k) => f.criteres[k]).join(" · "))}${li("Profil investisseur", f.profil)}</div>
+  ${sec("Chronologie des rendez-vous")}${table([{k:"theme",l:"Thème"},{k:"objectif",l:"Objectifs"},{k:"date",l:"Date"}], f.rdvs)}
+  ${sec("Synthèse et notes")}<div class="kv">${li("Objectifs", f.synObjectifs)}${li("Critères de solution", f.synCriteres)}</div>
+  <div style="border:1px solid #cdd6e2;border-radius:4px;padding:10px;margin-top:6px;min-height:60px;white-space:pre-wrap">${v(f.notes)}</div>
+  <script>window.onload=function(){window.print();}</script>
+  </body></html>`;
+  const w = window.open("", "_blank");
+  w.document.write(html);
+  w.document.close();
 }
 
 /* ================= ADAPTATEUR STORAGE (API Flask/PostgreSQL) ================= */
