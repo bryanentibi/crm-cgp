@@ -439,6 +439,7 @@ function App() {
     ["ventes", "📈 Ventes"],
     ["paye", "💶 Ma rémunération"],
     ["docs", "📁 Documents"],
+    ["rappels", "🔔 Rappels"],
     ["decom", "🔻 Décommissionnés"],
     ["arbitrage", "⚖️ Arbitrage clients"],
     ["messagerie", "✉️ Messagerie"],
@@ -542,6 +543,7 @@ function App() {
 
       <main className="main">
         {page === "decom" && <DecomPage clients={clients} saveClients={saveClients} goClient={(id) => { setPage("clients"); setOpenClient(id); }} />}
+        {page === "rappels" && <RappelsPage clients={clients} saveClients={saveClients} goClient={(id) => { setPage("clients"); setOpenClient(id); }} />}
         {page === "arbitrage" && <ArbitragePage clients={clients} saveClients={saveClients} sales={sales} saveSales={saveSales} me={me} />}
         {page === "messagerie" && <MessageriePage clients={clients} />}
         {page === "dash" && <Dashboard clients={clients} users={users} view={view} me={me} sales={sales} saveClients={saveClients} goClient={(c) => { setOpenClient(c.id); setPage("clients"); }} goClients={(t) => { setClientTypeFilter(t || ""); setOpenClient(null); setPage("clients"); }} />}
@@ -1026,6 +1028,14 @@ function ClientDetail({ client, me, users, back, update, remove }) {
             <div><b>Revenus imposables :</b> {client.revenus ? fmtEUR(parseNum(client.revenus)) : "—"}</div>
             <div><b>Situation matrimoniale :</b> {client.situation || "—"}</div>
           </div>
+        </div>
+
+        <div className="card">
+          <h2 style={{ fontSize: 17, marginBottom: 6 }}>📝 Notes & à faire</h2>
+          <div style={{ fontSize: 11.5, color: "#8593a8", marginBottom: 8 }}>Astuce : commence une ligne par <b>!</b> pour créer un rappel à faire (visible dans l'onglet Rappels).</div>
+          <textarea className="in" style={{ width: "100%", minHeight: 80, fontFamily: "inherit", lineHeight: 1.6 }}
+            value={client.notes || ""} onChange={(e) => update({ ...client, notes: e.target.value })}
+            placeholder={"Notes libres sur le client…\n! Lui envoyer la proposition PER"} />
         </div>
 
         <div className="card">
@@ -3203,6 +3213,155 @@ function eicPdf(client) {
   const w = window.open("", "_blank");
   w.document.write(html);
   w.document.close();
+}
+
+/* ================= CENTRE DE RAPPELS INTELLIGENT ================= */
+function parseNaissance(s) {
+  if (!s) return null;
+  let m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (m) return { y: +m[1], mo: +m[2], d: +m[3] };
+  m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(s);
+  if (m) return { y: +m[3], mo: +m[2], d: +m[1] };
+  return null;
+}
+function lastContactOf(c) {
+  const dates = [c.lastContact, c.createdAt, ...(c.contrats || []).map((k) => k.dateSignature)].filter(Boolean);
+  return dates.sort().pop() || null;
+}
+function moisDepuis(iso) {
+  if (!iso) return 999;
+  return Math.floor((Date.now() - new Date(iso).getTime()) / (30.44 * 24 * 3600 * 1000));
+}
+
+function RappelsPage({ clients, saveClients, goClient }) {
+  const [tab, setTab] = useState("anniv");
+  const [seuil, setSeuil] = useState(4);
+  const actifs = clients.filter((c) => !c.decom);
+  const now = new Date();
+  const annee = now.getFullYear();
+
+  /* --- Anniversaires dans les 30 prochains jours --- */
+  const annivs = actifs.map((c) => {
+    const p = parseNaissance(c.dateNaissance);
+    if (!p) return null;
+    let next = new Date(annee, p.mo - 1, p.d);
+    const today0 = new Date(annee, now.getMonth(), now.getDate());
+    if (next < today0) next = new Date(annee + 1, p.mo - 1, p.d);
+    const days = Math.round((next - today0) / 86400000);
+    if (days > 30) return null;
+    if (c.bdayWished === next.getFullYear() + "") return null;
+    return { c, days, date: next, age: next.getFullYear() - p.y };
+  }).filter(Boolean).sort((a, b) => a.days - b.days);
+
+  /* --- Prendre des nouvelles (aucun contact depuis X mois) --- */
+  const nouvelles = actifs.map((c) => ({ c, last: lastContactOf(c), mois: moisDepuis(lastContactOf(c)) }))
+    .filter((x) => x.mois >= seuil)
+    .sort((a, b) => b.mois - a.mois);
+
+  /* --- À faire : alertes programmées + lignes "!" des notes --- */
+  const afaire = [];
+  actifs.forEach((c) => {
+    (c.alertes || []).filter((a) => !a.done).forEach((a) => afaire.push({ kind: "alerte", c, a, date: a.date }));
+    (c.notes || "").split("\n").forEach((ligne, i) => {
+      const t = ligne.trim();
+      if (t.startsWith("!") && t.length > 1) afaire.push({ kind: "note", c, texte: t.slice(1).trim(), ligne: i, date: "" });
+    });
+  });
+  afaire.sort((a, b) => (a.date || "9999").localeCompare(b.date || "9999"));
+
+  const marquerSouhaite = (x) => saveClients(clients.map((cl) => cl.id === x.c.id ? { ...cl, bdayWished: x.date.getFullYear() + "" } : cl));
+  const marquerContacte = (x) => saveClients(clients.map((cl) => cl.id === x.c.id ? { ...cl, lastContact: todayISO() } : cl));
+  const faitAlerte = (item) => saveClients(clients.map((cl) => cl.id === item.c.id ? { ...cl, alertes: cl.alertes.map((a) => a.id === item.a.id ? { ...a, done: true } : a) } : cl));
+  const faitNote = (item) => saveClients(clients.map((cl) => {
+    if (cl.id !== item.c.id) return cl;
+    const lignes = (cl.notes || "").split("\n");
+    lignes[item.ligne] = "✓ " + lignes[item.ligne].trim().slice(1).trim();
+    return { ...cl, notes: lignes.join("\n") };
+  }));
+
+  const TabBtn = ({ k, label, count }) => (
+    <div onClick={() => setTab(k)} style={{ padding: "9px 18px", borderRadius: 10, fontSize: 13.5, fontWeight: 700, cursor: "pointer", fontFamily: "Georgia, serif", background: tab === k ? "#0B2545" : "#fff", color: tab === k ? "#C9A24B" : "#44536B", border: "1px solid " + (tab === k ? "#0B2545" : "#CDD6E2") }}>
+      {label} {count > 0 && <span style={{ background: tab === k ? "#C9A24B" : "#DC2626", color: tab === k ? "#0B2545" : "#fff", borderRadius: 10, padding: "1px 8px", fontSize: 11, marginLeft: 4 }}>{count}</span>}
+    </div>
+  );
+  const Ligne = ({ children, boutons }) => (
+    <div className="row" style={{ justifyContent: "space-between", padding: "9px 12px", borderBottom: "1px solid #edf1f6", alignItems: "center" }}>
+      <div style={{ fontSize: 13.5 }}>{children}</div>
+      <div className="row" style={{ gap: 6 }}>{boutons}</div>
+    </div>
+  );
+
+  return (
+    <div>
+      <div className="ph"><div><h1>🔔 Rappels</h1><div className="sub">Le CRM veille pour toi : anniversaires, clients à recontacter, choses à faire</div></div></div>
+      <div className="row" style={{ gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+        <TabBtn k="anniv" label="🎂 Anniversaires" count={annivs.filter((x) => x.days <= 7).length} />
+        <TabBtn k="nouvelles" label="📞 Prendre des nouvelles" count={nouvelles.length} />
+        <TabBtn k="afaire" label="📝 À faire" count={afaire.length} />
+      </div>
+
+      {tab === "anniv" && (
+        <div className="card">
+          <h2 style={{ fontSize: 16, marginBottom: 10 }}>Anniversaires des 30 prochains jours</h2>
+          {annivs.length === 0 && <div style={{ color: "#8593a8", fontSize: 13.5 }}>Aucun anniversaire à venir (pense à renseigner les dates de naissance dans les fiches !).</div>}
+          {annivs.map((x) => (
+            <Ligne key={x.c.id} boutons={<>
+              <button className="btn sm" onClick={() => goClient(x.c.id)}>Voir la fiche</button>
+              <button className="btn ghost sm" onClick={() => marquerSouhaite(x)}>✓ Souhaité</button>
+            </>}>
+              <b>{x.c.civilite ? x.c.civilite + " " : ""}{x.c.nom} {x.c.prenom}</b> fêtera ses <b>{x.age} ans</b> le {x.date.toLocaleDateString("fr-FR")}
+              {x.days === 0 ? <span className="badge b-green" style={{ marginLeft: 8 }}>AUJOURD'HUI 🎉</span> : <span style={{ color: "#8593a8" }}> (dans {x.days} j)</span>}
+              {x.c.telephone && <span style={{ color: "#8593a8" }}> · {x.c.telephone}</span>}
+            </Ligne>
+          ))}
+        </div>
+      )}
+
+      {tab === "nouvelles" && (
+        <div className="card">
+          <div className="row" style={{ justifyContent: "space-between", marginBottom: 10 }}>
+            <h2 style={{ fontSize: 16 }}>Sans contact depuis…</h2>
+            <select className="sel" style={{ width: 140 }} value={seuil} onChange={(e) => setSeuil(+e.target.value)}>
+              <option value={3}>3 mois</option><option value={4}>4 mois</option><option value={6}>6 mois</option><option value={12}>12 mois</option>
+            </select>
+          </div>
+          {nouvelles.length === 0 && <div style={{ color: "#8593a8", fontSize: 13.5 }}>Personne à recontacter — tous tes clients ont eu des nouvelles récemment. 👌</div>}
+          {nouvelles.slice(0, 100).map((x) => (
+            <Ligne key={x.c.id} boutons={<>
+              <button className="btn sm" onClick={() => goClient(x.c.id)}>Voir la fiche</button>
+              <button className="btn ghost sm" onClick={() => marquerContacte(x)}>✓ Contacté aujourd'hui</button>
+            </>}>
+              <b>{x.c.civilite ? x.c.civilite + " " : ""}{x.c.nom} {x.c.prenom}</b>
+              <span className={"badge " + (x.mois >= 12 ? "b-red" : x.mois >= 6 ? "b-orange" : "b-gold")} style={{ marginLeft: 8 }}>{x.mois} mois</span>
+              <span style={{ color: "#8593a8" }}> · dernier contact : {x.last ? fmtDate(x.last) : "inconnu"}{x.c.telephone ? " · " + x.c.telephone : ""}</span>
+            </Ligne>
+          ))}
+          {nouvelles.length > 100 && <div style={{ color: "#8593a8", fontSize: 12, marginTop: 8 }}>… et {nouvelles.length - 100} autres (les plus anciens d'abord).</div>}
+        </div>
+      )}
+
+      {tab === "afaire" && (
+        <div className="card">
+          <h2 style={{ fontSize: 16, marginBottom: 4 }}>Choses à faire</h2>
+          <div style={{ fontSize: 11.5, color: "#8593a8", marginBottom: 10 }}>Alertes programmées + lignes commençant par <b>!</b> dans les notes des fiches clients.</div>
+          {afaire.length === 0 && <div style={{ color: "#8593a8", fontSize: 13.5 }}>Rien à faire — tout est carré. 🧘</div>}
+          {afaire.map((item, i) => (
+            <Ligne key={i} boutons={<>
+              <button className="btn sm" onClick={() => goClient(item.c.id)}>Voir la fiche</button>
+              <button className="btn ghost sm" onClick={() => item.kind === "alerte" ? faitAlerte(item) : faitNote(item)}>✓ Fait</button>
+            </>}>
+              {item.kind === "alerte" ? (
+                <><b>{item.a.type}</b> — {item.c.civilite ? item.c.civilite + " " : ""}{item.c.nom} {item.c.prenom}
+                  <span className={"badge " + (item.date <= todayISO() ? "b-red" : "b-gold")} style={{ marginLeft: 8 }}>{item.date <= todayISO() ? "En retard · " : ""}{fmtDate(item.date)}</span></>
+              ) : (
+                <><b>{item.texte}</b> — {item.c.civilite ? item.c.civilite + " " : ""}{item.c.nom} {item.c.prenom} <span className="badge b-gold" style={{ marginLeft: 8 }}>note</span></>
+              )}
+            </Ligne>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 /* ================= ADAPTATEUR STORAGE (API Flask/PostgreSQL) ================= */
