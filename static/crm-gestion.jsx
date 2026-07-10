@@ -2672,6 +2672,13 @@ function ArbitragePage({ clients, saveClients, sales, saveSales, me }) {
   const delRow = (rowId) => { if (confirm("Supprimer cette ligne ?")) save(groups.map((g, i) => i !== tab ? g : { ...g, rows: g.rows.filter((r) => r.id !== rowId) })); };
   const addGroup = () => { const nom = prompt("Nom du nouvel onglet (ex : Théo) :"); if (nom && nom.trim()) { save([...groups, { id: uid(), nom: nom.trim(), rows: [] }]); setTab(groups.length); } };
   const renameGroup = () => { const nom = prompt("Renommer cet onglet :", grp.nom); if (nom && nom.trim()) save(groups.map((g, i) => i === tab ? { ...g, nom: nom.trim() } : g)); };
+  const delGroup = (i) => {
+    const g = groups[i];
+    if (groups.length <= 1) { alert("Impossible de supprimer le dernier onglet."); return; }
+    if (!confirm(`Supprimer l'onglet « ${g.nom} » et ses ${g.rows.length} client(s) ?\n\nCette action est définitive.`)) return;
+    save(groups.filter((_, k) => k !== i));
+    setTab(0);
+  };
 
   return (
     <div>
@@ -2684,6 +2691,7 @@ function ArbitragePage({ clients, saveClients, sales, saveSales, me }) {
           <div key={g.id} onClick={() => setTab(i)} onDoubleClick={() => i === tab && renameGroup()}
             style={{ padding: "9px 20px", borderRadius: 10, fontSize: 13.5, fontWeight: 700, cursor: "pointer", fontFamily: "Georgia, serif", background: i === tab ? "#0B2545" : "#fff", color: i === tab ? "#C9A24B" : "#44536B", border: "1px solid " + (i === tab ? "#0B2545" : "#CDD6E2") }}>
             {g.nom} <span style={{ fontWeight: 400, fontSize: 11.5, opacity: .75 }}>· {g.rows.length}</span>
+            {i === tab && <span onClick={(e) => { e.stopPropagation(); delGroup(i); }} title="Supprimer cet onglet" style={{ marginLeft: 8, color: "#E8B4B0", fontWeight: 400, fontSize: 13 }}>✕</span>}
           </div>
         ))}
         <div onClick={addGroup} style={{ padding: "9px 16px", borderRadius: 10, fontSize: 13, cursor: "pointer", color: "#8593a8", border: "1px dashed #CDD6E2" }}>+ Onglet</div>
