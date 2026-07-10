@@ -21,9 +21,9 @@ USERS = {
     },
     "quentin": {
         "password_hash": "27bb63ed6f711388cd6e7b053728de769515945977022b6414ecc9ca546a0889",
-        "role": "user",
+        "role": "manager",
         "nom": "Quentin",
-        "restricted": ["arbitrage", "ro"]
+        "restricted": ["arbitrage", "ro", "gestion", "mailing"]
     }
 }
 
@@ -31,7 +31,24 @@ SESSIONS = {}
 
 def check_session(request):
     token = request.headers.get('X-Auth-Token') or request.cookies.get('auth_token')
-    return SESSIONS.get(token)
+    if not token:
+        return None
+    s = SESSIONS.get(token)
+    if s:
+        return s
+    # Session persistée en base (survit aux redéploiements Railway)
+    try:
+        conn, cur = kv_conn()
+        cur.execute("SELECT v FROM kv_store WHERE k = %s", ['__session::' + token])
+        row = cur.fetchone()
+        cur.close(); conn.close()
+        if row:
+            s = json.loads(row['v'])
+            SESSIONS[token] = s
+            return s
+    except Exception:
+        pass
+    return None
 
 
 app = Flask(__name__, static_folder='static')
@@ -66,14 +83,152 @@ def save_json(filename, data):
 
 @app.route('/')
 def index():
+    s = check_session(request)
+    if s and 'gestion' not in s.get('restricted', []) and request.args.get('p') is None:
+        return send_from_directory('static', 'gestion.html')
     return send_from_directory('static', 'index.html')
 
 # ================= CRM GESTION (base Elyon) =================
 @app.route('/gestion')
 def gestion_page():
-    if not check_session(request):
-        return send_from_directory('static', 'index.html')  # pas connecté -> login du CRM
+    s = check_session(request)
+    if not s or 'gestion' in s.get('restricted', []):
+        return send_from_directory('static', 'index.html')  # pas connecté ou pas autorisé
     return send_from_directory('static', 'gestion.html')
+
+# ============ COMPTES COMMERCIAUX (créés par Quentin ou Bryan) ============
+RESTRICT_COMMERCIAL = ["arbitrage", "ro", "gestion", "mailing", "acces"]
+
+def db_get_user(username):
+    try:
+        conn, cur = kv_conn()
+        cur.execute("SELECT v FROM kv_store WHERE k = %s", ['__user::' + username])
+        row = cur.fetchone()
+        cur.close(); conn.close()
+        return json.loads(row['v']) if row else None
+    except Exception:
+        return None
+
+@app.route('/api/users', methods=['GET', 'POST'])
+def api_users():
+    s = check_session(request)
+    if not s or (s.get('role') not in ('admin', 'manager')):
+        return jsonify({'error': 'unauthorized'}), 401
+    conn, cur = kv_conn()
+    try:
+        if request.method == 'GET':
+            cur.execute("SELECT k, v FROM kv_store WHERE k LIKE %s", ['__user::%'])
+            users = []
+            for r in cur.fetchall():
+                u = json.loads(r['v'])
+                users.append({'username': r['k'][8:], 'nom': u.get('nom', '')})
+            return jsonify({'users': users})
+        data = request.json or {}
+        username = (data.get('username') or '').lower().strip()
+        nom = (data.get('nom') or '').strip()
+        password = data.get('password') or ''
+        if not username or not password or not nom:
+            return jsonify({'error': 'Nom, identifiant et mot de passe obligatoires'}), 400
+        if username in USERS or db_get_user(username):
+            return jsonify({'error': 'Cet identifiant existe déjà'}), 400
+        u = {'password_hash': hashlib.sha256(password.encode()).hexdigest(),
+             'role': 'user', 'nom': nom, 'restricted': RESTRICT_COMMERCIAL,
+             'created_by': s.get('username')}
+        cur.execute("INSERT INTO kv_store (k, v) VALUES (%s, %s)", ['__user::' + username, json.dumps(u)])
+        conn.commit()
+        return jsonify({'ok': True, 'username': username})
+    finally:
+        cur.close(); conn.close()
+
+@app.route('/api/users/<username>', methods=['DELETE'])
+def api_users_delete(username):
+    s = check_session(request)
+    if not s or (s.get('role') not in ('admin', 'manager')):
+        return jsonify({'error': 'unauthorized'}), 401
+    conn, cur = kv_conn()
+    cur.execute("DELETE FROM kv_store WHERE k = %s", ['__user::' + username.lower()])
+    conn.commit(); cur.close(); conn.close()
+    return jsonify({'ok': True})
+
+# ============ SYNCHRO RDV : agenda Gestion de Bryan + CRM Elyon de Quentin ============
+@app.route('/api/sync-rdv', methods=['POST'])
+def sync_rdv():
+    s = check_session(request)
+    if not s:
+        return jsonify({'error': 'unauthorized'}), 401
+    entry = (request.json or {}).get('entry')
+    if not entry:
+        return jsonify({'error': 'entry manquante'}), 400
+    entry['prisPar'] = s.get('nom', '')
+    # 1) Toujours dans l'agenda Gestion de Bryan
+    conn, cur = kv_conn()
+    try:
+        cur.execute("SELECT v FROM kv_store WHERE k = %s", ['bryanentibi::crm-prospection'])
+        row = cur.fetchone()
+        liste = []
+        if row:
+            inner = json.loads(row['v'])
+            if isinstance(inner, str):
+                inner = json.loads(inner)
+            if isinstance(inner, list):
+                liste = inner
+        liste.insert(0, entry)
+        cur.execute("INSERT INTO kv_store (k, v) VALUES (%s, %s) ON CONFLICT (k) DO UPDATE SET v = EXCLUDED.v",
+                    ['bryanentibi::crm-prospection', json.dumps(json.dumps(liste))])
+        conn.commit()
+    finally:
+        cur.close(); conn.close()
+    # 2) Si le RDV vient de l'équipe de Quentin : aussi vers son CRM Elyon
+    forwarded = False
+    if s.get('username') != 'bryanentibi':
+        q_url = os.environ.get('QUENTIN_CRM_URL', '')
+        q_code = os.environ.get('QUENTIN_CRM_CODE', '')
+        if q_url and q_code:
+            try:
+                import urllib.request, base64
+                auth = base64.b64encode(f'elyon:{q_code}'.encode()).decode()
+                req = urllib.request.Request(q_url.rstrip('/') + '/api/storage/crm-prospection',
+                                             headers={'Authorization': 'Basic ' + auth})
+                try:
+                    with urllib.request.urlopen(req, timeout=8) as r:
+                        cur_val = json.loads(r.read().decode()).get('value')
+                except Exception:
+                    cur_val = None
+                if isinstance(cur_val, str):
+                    try:
+                        cur_val = json.loads(cur_val)
+                    except Exception:
+                        cur_val = None
+                q_liste = cur_val if isinstance(cur_val, list) else []
+                q_liste.insert(0, entry)
+                body = json.dumps({'value': json.dumps(q_liste)}).encode()
+                req2 = urllib.request.Request(q_url.rstrip('/') + '/api/storage/crm-prospection',
+                                              data=body, method='PUT',
+                                              headers={'Authorization': 'Basic ' + auth, 'Content-Type': 'application/json'})
+                urllib.request.urlopen(req2, timeout=8)
+                forwarded = True
+            except Exception as e:
+                print('sync quentin CRM:', e)
+    return jsonify({'ok': True, 'forwarded': forwarded})
+
+# ============ EXPORT ARBITRAGE (migration vers Gestion) ============
+@app.route('/api/arbitrage-export')
+def arbitrage_export():
+    s = check_session(request)
+    if not s or s.get('role') != 'admin':
+        return jsonify({'error': 'unauthorized'}), 401
+    conn = get_db()
+    cur = conn.cursor()
+    out = {}
+    for table, key in [('arbitrage_barriere', 'liste1'), ('arbitrage_optimum', 'liste2')]:
+        try:
+            cur.execute(f"SELECT * FROM {table} ORDER BY id")
+            out[key] = [dict(r) for r in cur.fetchall()]
+        except Exception:
+            conn.rollback()
+            out[key] = []
+    cur.close(); conn.close()
+    return jsonify(out)
 
 def kv_conn():
     conn = get_db()
@@ -500,7 +655,7 @@ def login():
     data = request.json or {}
     username = data.get('username', '').lower().strip()
     password = data.get('password', '')
-    user = USERS.get(username)
+    user = USERS.get(username) or db_get_user(username)
     if not user:
         return jsonify({'error': 'Identifiants incorrects'}), 401
     pwd_hash = hashlib.sha256(password.encode()).hexdigest()
@@ -508,8 +663,16 @@ def login():
         return jsonify({'error': 'Identifiants incorrects'}), 401
     import secrets as sec
     token = sec.token_hex(32)
-    SESSIONS[token] = {'username': username, 'role': user['role'], 'nom': user['nom'], 'restricted': user.get('restricted', [])}
-    resp = jsonify({'ok': True, 'token': token, 'nom': user['nom'], 'role': user['role'], 'restricted': user.get('restricted', [])})
+    sess = {'username': username, 'role': user['role'], 'nom': user['nom'], 'restricted': user.get('restricted', [])}
+    SESSIONS[token] = sess
+    try:
+        conn, cur = kv_conn()
+        cur.execute("INSERT INTO kv_store (k, v) VALUES (%s, %s) ON CONFLICT (k) DO UPDATE SET v = EXCLUDED.v",
+                    ['__session::' + token, json.dumps(sess)])
+        conn.commit(); cur.close(); conn.close()
+    except Exception:
+        pass
+    resp = jsonify({'ok': True, 'token': token, 'username': username, 'nom': user['nom'], 'role': user['role'], 'restricted': user.get('restricted', [])})
     resp.set_cookie('auth_token', token, max_age=86400*7, httponly=True, samesite='Lax')
     return resp
 
