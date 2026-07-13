@@ -211,6 +211,190 @@ def sync_rdv():
                 print('sync quentin CRM:', e)
     return jsonify({'ok': True, 'forwarded': forwarded})
 
+
+# ============ GÉNÉRATION DU PDF OFFICIEL EIC / AUDIT PATRIMONIAL ============
+@app.route('/api/eic-pdf', methods=['POST'])
+def eic_pdf_officiel():
+    s = check_session(request)
+    if not s:
+        return jsonify({'error': 'unauthorized'}), 401
+    import io, textwrap
+    from reportlab.pdfgen import canvas as rl_canvas
+    from pypdf import PdfReader, PdfWriter
+    data = request.json or {}
+    cl = data.get('client', {})
+    f = data.get('eic', {})
+    with open(os.path.join('static', 'eic_coords.json')) as fh:
+        C = json.load(fh)
+    FIELDS, CHECKS, TABLES = C['fields'], C['checks'], C['tables']
+
+    def frdate(v):
+        if v and re.match(r'^\d{4}-\d{2}-\d{2}$', str(v)):
+            y, m, d = v.split('-'); return f"{d}/{m}/{y}"
+        return v or ''
+
+    NAVY = (11/255, 37/255, 69/255)
+    pages_buf = {}
+    def cv(pi):
+        if pi not in pages_buf:
+            buf = io.BytesIO()
+            cc = rl_canvas.Canvas(buf, pagesize=(596, 843))
+            cc.setFillColorRGB(*NAVY)
+            pages_buf[pi] = (buf, cc)
+        return pages_buf[pi][1]
+
+    def draw(key, value, size=None):
+        if not value or key not in FIELDS: return
+        pi, x, y, sz = FIELDS[key]
+        c2 = cv(pi)
+        c2.setFont('Helvetica', size or sz)
+        c2.drawString(x, y, str(value)[:70])
+
+    def check_mark(pi, label_part, mark='X', which=0):
+        found = [ch for ch in CHECKS.get(str(pi), []) if label_part in ch['label']]
+        if len(found) > which:
+            ch = found[which]
+            c2 = cv(pi)
+            c2.setFont('Helvetica-Bold', 8)
+            c2.drawString(ch['x'], ch['y'], mark)
+
+    def table_cell(tid, row, col, value, size=7):
+        if not value: return
+        t = TABLES.get(tid)
+        if not t or row >= len(t['cells']): return
+        cell = t['cells'][row][col] if col < len(t['cells'][row]) else None
+        if not cell: return
+        pi = int(tid.split('_')[0])
+        c2 = cv(pi)
+        c2.setFont('Helvetica', size)
+        maxc = max(4, int(cell[2] / (size * 0.55)))
+        c2.drawString(cell[0] + 2, cell[1] + 3, str(value)[:maxc])
+
+    # ---------- PAGE 1 ----------
+    from datetime import date as _date
+    draw('dateR2', _date.today().strftime('%d/%m/%Y')); draw('cgp', 'Bryan Entibi')
+    m, mme, rev_m, rev_f = f.get('m', {}), f.get('mme', {}), f.get('revM', {}), f.get('revMme', {})
+    for col, p in (('m', m), ('mme', mme)):
+        draw(f'{col}.nom', p.get('nom')); draw(f'{col}.naissance', frdate(p.get('naissance')))
+        draw(f'{col}.tel', p.get('tel')); draw(f'{col}.email', p.get('email'))
+        draw(f'{col}.nationalite', p.get('nationalite')); draw(f'{col}.freres', p.get('freres'))
+        draw(f'{col}.patParents', p.get('patParents')); draw(f'{col}.ageParents', p.get('ageParents'))
+        if p.get('ada') == 'Oui':
+            check_mark(0, 'ADA', which=0 if col == 'm' else 1)
+    for k in ('adresse', 'cp', 'ville', 'situation', 'regime', 'notaire', 'enfants', 'petitsEnfants', 'succession'):
+        draw(k, f.get(k))
+    draw('dateMariage', frdate(f.get('dateMariage')))
+    if 'simple' in (f.get('donation') or '').lower() or 'deux' in (f.get('donation') or '').lower():
+        check_mark(0, 'DONATION SIMPLE')
+    if 'partage' in (f.get('donation') or '').lower() or 'deux' in (f.get('donation') or '').lower():
+        check_mark(0, 'DONATION PARTAGE')
+    if f.get('convention') == 'Oui': check_mark(0, 'CONVENTION')
+    if f.get('ddv') == 'Oui': check_mark(0, 'DDV')
+    table_cell('0_1', 1, 0, ('   ' * 4) + str(f.get('partsFiscales') or ''), 9)
+    # Revenus : colonne Madame décalée du même écart que l'état civil
+    delta = FIELDS.get('mme.nom', [0, 300])[1] - FIELDS.get('m.nom', [0, 60])[1]
+    REVK = [('profession', 'rev.profession'), ('statut', 'rev.statut'), ('societe', 'rev.societe'),
+            ('dateEntree', 'rev.dateEntree'), ('pee', 'rev.pee'), ('revenus', 'rev.revenus'),
+            ('foncier', 'rev.foncier'), ('microReel', 'rev.microReel'), ('autres', 'rev.autres'),
+            ('evolutions', 'rev.evolutions')]
+    for src, key in REVK:
+        draw(key, rev_m.get(src))
+        if rev_f.get(src) and key in FIELDS:
+            pi, x, y, sz = FIELDS[key]
+            c2 = cv(pi); c2.setFont('Helvetica', sz)
+            c2.drawString(x + delta * 0.72, y, str(rev_f.get(src))[:40])
+    for k in ('prevCompagnie', 'prevGaranties', 'prevMensualite', 'rbg', 'resFoncier', 'deductions',
+              'revImposable', 'rfPositifs', 'deficit', 'impotBrut', 'reductions', 'impotNet', 'ifi', 'agiComment'):
+        draw(k, f.get(k))
+    draw('tmi', (str(f.get('tmi')) + ' %') if f.get('tmi') else '')
+    for col, ded in (('M', f.get('dedM') or ''), ('MME', f.get('dedMme') or '')):
+        w = 0 if col == 'M' else 1
+        if '10%' in ded: check_mark(0, '10%', which=w)
+        elif 'réel' in ded.lower() or 'reel' in ded.lower(): check_mark(0, 'FRAIS', which=w)
+        elif 'CGA' in ded: check_mark(0, 'CGA', which=w)
+    if f.get('agiFisc') == 'Oui': check_mark(0, 'OUI')
+    elif f.get('agiFisc') == 'Non': check_mark(0, 'NON')
+
+    # ---------- PAGE 2 ----------
+    rp = f.get('rpStatut') or ''
+    if 'Propri' in rp: check_mark(1, 'PROPRIÉTAIRE')
+    elif 'Locat' in rp: check_mark(1, 'LOCATAIRE')
+    elif 'berg' in rp: check_mark(1, 'HÉBERGÉ')
+    draw('loyer', f.get('loyer')); draw('tauxEndettement', (str(f.get('tauxEndettement')) + ' %') if f.get('tauxEndettement') else '')
+    draw('patAttente', f.get('patAttente')); draw('projetImmo', (f.get('projetImmo') or '')[:110])
+    if f.get('delegAssurance') == 'Oui': check_mark(1, 'DÉLÉGATION')
+    for i, b in enumerate((f.get('biens') or [])[:4]):
+        for j, k in enumerate(('nature', 'dateAcq', 'valAcq', 'valActuelle', 'detention', 'revLocatifs', 'sci')):
+            table_cell('1_1', i + 1, j, b.get(k))
+    for i, b in enumerate((f.get('chargesImmo') or [])[:5]):
+        for j, k in enumerate(('nature', 'etab', 'montant', 'debut', 'fin', 'crd', 'mens')):
+            table_cell('1_2', i + 1, j, b.get(k))
+    for i, b in enumerate((f.get('autresCharges') or [])[:3]):
+        for j, k in enumerate(('nature', 'etab', 'montant', 'debut', 'fin', 'mens')):
+            table_cell('1_3', i + 1, j, b.get(k))
+    FIN_ROWS = ["Comptes Courants", "Livret A / B, LDD", "LEP", "PEL, CEL", "CSL", "Livret Jeune", "Comptes Titres", "PEA",
+                "PEE / PEG disponible", "Assurance Vie 1", "Assurance Vie 2", "Assurance Vie 3",
+                "PERP, Madelin, PERIN, PERCO", "Trésorerie Entreprise", "Autres"]
+    fin = f.get('fin') or {}
+    for i, rowname in enumerate(FIN_ROWS):
+        r = fin.get(rowname) or {}
+        for j, k in enumerate(('m', 'f', 'vers', 'dates', 'etab', 'obj')):
+            table_cell('1_4', i + 1, j + 1, r.get(k))
+
+    # ---------- PAGE 3 ----------
+    OBJ_LABELS = [('Protéger vos proches et vous-même', 'PROTÉGER VOS PROCHES'), ('Valoriser votre patrimoine', 'VALORISER VOTRE'),
+        ("Préparer l'avenir de vos enfants", "PRÉPARER L'AVENIR"), ('Compléter votre retraite', 'COMPLÉTER VOTRE RETRAITE'),
+        ('Protéger son conjoint survivant', 'PROTÉGER SON CONJOINT'), ('Organiser votre transmission · DMTG', 'ORGANISER VOTRE TRANSMISSION'),
+        ('Financer vos projets personnels (ex. RP)', 'FINANCER VOS PROJETS'), ('Optimiser votre fiscalité · IRPP, IFI', 'OPTIMISER VOTRE FISCALITÉ'),
+        ('Développer votre entreprise', 'DÉVELOPPER VOTRE ENTREPRISE'), ('Prévoyance / Dépendance', 'PRÉVOYANCE / DÉPENDANCE')]
+    objs = f.get('objectifs') or {}
+    for full, lbl in OBJ_LABELS:
+        if objs.get(full):
+            check_mark(2, lbl, mark=str(objs[full]))
+    draw('horizon', f.get('horizon')); draw('moyensEpargne', (str(f.get('moyensEpargne')) + ' €') if f.get('moyensEpargne') else '')
+    draw('partieSouple', f.get('partieSouple')); draw('moyensCapital', (str(f.get('moyensCapital')) + ' €') if f.get('moyensCapital') else '')
+    pct = f.get('pctEpargne') or ''
+    if pct.startswith('10'): check_mark(2, '10%')
+    elif pct.startswith('15'): check_mark(2, '15%OU')
+    elif pct.startswith('20'): check_mark(2, '20%', which=0)
+    CRIT_LABELS = [('Disponible à 100%', 'DISPONIBLE À 100%'), ('À 50%', 'À 50%'), ('À 20%', 'À 20%'),
+        ("Souple en effort d'épargne", 'SOUPLE EN EFFORT'), ('Fiscalement avantageux', 'FISCALEMENT'),
+        ('Prudent', 'PRUDENT'), ('Simple en gestion', 'SIMPLE EN GESTION')]
+    crits = f.get('criteres') or {}
+    for full, lbl in CRIT_LABELS:
+        if crits.get(full): check_mark(2, lbl)
+    profil = f.get('profil') or ''
+    if profil.startswith('Prudente'): check_mark(2, '60% SRRI')
+    elif profil.startswith('Équilibrée') or profil.startswith('Equilibrée'): check_mark(2, '30% SRRI')
+    elif profil.startswith('Dynamique'): check_mark(2, '0% SRRI')
+    for i, r in enumerate((f.get('rdvs') or [])[:4]):
+        table_cell('2_10', i + 1, 0, r.get('theme')); table_cell('2_10', i + 1, 1, r.get('objectif')); table_cell('2_10', i + 1, 2, r.get('date'))
+    draw('synObjectifs', f.get('synObjectifs')); draw('synEpargne', f.get('moyensEpargne'))
+    draw('synCapital', f.get('moyensCapital')); draw('synCriteres', f.get('synCriteres'))
+    if f.get('notes') and '_notesStart' in FIELDS:
+        pi, x, y, sz = FIELDS['_notesStart']
+        c2 = cv(pi); c2.setFont('Helvetica', 8)
+        for li, line in enumerate(textwrap.wrap(f['notes'].replace('\n', ' '), 108)[:11]):
+            c2.drawString(x, y - li * 13.4, line)
+
+    # ---------- Fusion overlay + modèle officiel ----------
+    for pi, (buf, c2) in pages_buf.items():
+        c2.save()
+    template = PdfReader(os.path.join('static', 'eic_template.pdf'))
+    writer = PdfWriter()
+    for pi, page in enumerate(template.pages):
+        if pi in pages_buf:
+            pages_buf[pi][0].seek(0)
+            overlay = PdfReader(pages_buf[pi][0])
+            page.merge_page(overlay.pages[0])
+        writer.add_page(page)
+    out = io.BytesIO()
+    writer.write(out)
+    out.seek(0)
+    nom_fichier = f"Audit_Patrimonial_{(cl.get('nom') or 'client').replace(' ', '_')}.pdf"
+    from flask import send_file
+    return send_file(out, mimetype='application/pdf', as_attachment=True, download_name=nom_fichier)
+
 # ============ EXPORT ARBITRAGE (migration vers Gestion) ============
 @app.route('/api/arbitrage-export')
 def arbitrage_export():

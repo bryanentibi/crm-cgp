@@ -830,7 +830,7 @@ function ClientsPage({ clients, saveClients, me, users, openClient, typeFilter, 
     : myPortfolio;
   const filtered = scoped.filter((c) =>
     !c.decom &&
-    (monthTab === "all" || (c.contrats || []).some((k) => (k.dateSignature || "").slice(0, 7) === monthTab)) &&
+    (search.trim() !== "" || monthTab === "all" || (c.contrats || []).some((k) => (k.dateSignature || "").slice(0, 7) === monthTab)) &&
     (!typeFilter || (c.contrats || []).some((k) => k.type === typeFilter)) &&
     (c.nom + " " + c.prenom + " " + (c.profession || "")).toLowerCase().includes(search.toLowerCase())
   );
@@ -889,11 +889,11 @@ function ClientsPage({ clients, saveClients, me, users, openClient, typeFilter, 
         </div>
       </div>
 
-      {monthTab === null && <MonthTiles months={moisDispo} counts={moisCounts} onPick={setMonthTab} />}
+      {monthTab === null && !search.trim() && <MonthTiles months={moisDispo} counts={moisCounts} onPick={setMonthTab} />}
 
-      {monthTab !== null && (<>
-      <button className="btn ghost sm" style={{ marginBottom: 14 }} onClick={() => setMonthTab(null)}>← Retour aux mois</button>
-      <span style={{ marginLeft: 12, fontFamily: "Georgia, serif", fontSize: 17, color: "#0B2545", fontWeight: 700, textTransform: "capitalize" }}>{monthTab === "all" ? "Tous les clients" : monthLabel(monthTab)}</span>
+      {(monthTab !== null || search.trim() !== "") && (<>
+      <button className="btn ghost sm" style={{ marginBottom: 14 }} onClick={() => { setMonthTab(null); setSearch(""); }}>← Retour aux mois</button>
+      <span style={{ marginLeft: 12, fontFamily: "Georgia, serif", fontSize: 17, color: "#0B2545", fontWeight: 700, textTransform: "capitalize" }}>{search.trim() ? "Résultats de recherche" : monthTab === "all" ? "Tous les clients" : monthLabel(monthTab)}</span>
       <div className="grid" style={{ marginTop: 14 }}>
         {sorted.map((c) => (
           <div className="clientcard" key={c.id} onClick={() => openClient(c.id)}>
@@ -932,7 +932,7 @@ function ClientForm({ initial, onSave, onClose }) {
   });
   const set = (k, v) => setF({ ...f, [k]: v });
   return (
-    <div className="modal-bg" onClick={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="modal-bg" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal">
         <h2>{initial ? "Modifier la fiche client" : "Nouvelle fiche client"}</h2>
         <div className="fgrid">
@@ -1145,7 +1145,7 @@ function ContractForm({ initial, onSave, onClose }) {
   const set = (k, v) => setF({ ...f, [k]: v });
   const setType = (t) => setF({ ...f, type: t, compagnie: COMPANIES[t][0] });
   return (
-    <div className="modal-bg" onClick={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="modal-bg" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal">
         <h2>{initial ? "Modifier le contrat" : "Ajouter un contrat"}</h2>
         <div className="fgrid">
@@ -1201,7 +1201,7 @@ function ContractForm({ initial, onSave, onClose }) {
 function AlertForm({ onSave, onClose }) {
   const [f, setF] = useState({ type: ALERT_TYPES[0], date: todayISO(), note: "" });
   return (
-    <div className="modal-bg" onClick={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="modal-bg" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal" style={{ maxWidth: 480 }}>
         <h2>Créer une alerte</h2>
         <div className="grid">
@@ -1755,7 +1755,7 @@ function ObjectifsForm({ users, month, initial, onSave, onClose }) {
   });
   const set = (uid2, k, v) => setF({ ...f, [uid2]: { ...f[uid2], [k]: v } });
   return (
-    <div className="modal-bg" onClick={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="modal-bg" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal" style={{ maxWidth: 560 }}>
         <h2>🎯 Objectifs — {monthLabel(month)}</h2>
         <p style={{ fontSize: 13, color: "#5b6b82", marginBottom: 14 }}>
@@ -2060,7 +2060,7 @@ function ProspectForm({ initial, me, users, onSave, onClose, onDelete, onConvert
   const showRdvFields = ["RDV pris", "RDV honoré", "RDV annulé", "RDV reporté", "Proposition envoyée", "Signé", "Perdu"].includes(f.statut);
   const showNoteRdv = ["RDV honoré", "Proposition envoyée", "Signé", "Perdu"].includes(f.statut);
   return (
-    <div className="modal-bg" onClick={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="modal-bg" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal" style={{ maxWidth: 640 }}>
         <h2>{initial ? "Modifier la fiche prospection" : "Nouvel appel / RDV"}</h2>
         <div className="fgrid">
@@ -2832,7 +2832,7 @@ function MessageriePage({ clients }) {
       </div>
 
       {picker && (
-        <div className="overlay" onClick={(e) => e.target.classList && e.target.classList.contains("overlay") && setPicker(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 999, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div className="overlay" onMouseDown={(e) => e.target.classList && e.target.classList.contains("overlay") && setPicker(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 999, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div style={{ background: "#fff", borderRadius: 16, padding: 24, width: 560, maxWidth: "92vw", maxHeight: "82vh", display: "flex", flexDirection: "column" }}>
             <h2 style={{ fontSize: 18, marginBottom: 10 }}>👥 Choisir les destinataires</h2>
             <div className="row" style={{ gap: 8, marginBottom: 10 }}>
@@ -3183,55 +3183,22 @@ function EicSynthese({ client, onOpen, onPdf }) {
   );
 }
 
-/* ===== PDF de l'audit (fenêtre d'impression stylée Elyon) ===== */
-function eicPdf(client) {
-  const f = client.eic || {};
-  const v = (x) => (x === undefined || x === null || x === "" ? "—" : x);
-  const sec = (t) => `<div class="sec">${t}</div>`;
-  const li = (l, x) => `<div class="li"><span class="ll">${l}</span><span class="lv">${v(x)}</span></div>`;
-  const pers = (t, p) => `<div class="col"><div class="pt">${t}</div>${li("Nom, Prénom", p.nom)}${li("Naissance", p.naissance)}${li("Tél", p.tel)}${li("E-mail", p.email)}${li("Nationalité", p.nationalite)}${li("Frères et sœurs", p.freres)}${li("Patrimoine parents (K€)", p.patParents)}${li("Âge des parents", p.ageParents)}</div>`;
-  const rev = (t, p) => `<div class="col"><div class="pt">${t}</div>${li("Profession", p.profession)}${li("Statut", p.statut)}${li("Société", p.societe)}${li("PEE/PEG", p.pee)}${li("Revenus annuels nets", p.revenus)}${li("Revenu foncier", p.foncier)}${li("Micro/Réel", p.microReel)}${li("Autres revenus", p.autres)}${li("Évolutions N+1, N+2", p.evolutions)}</div>`;
-  const table = (cols, rows) => `<table><tr>${cols.map((c2) => `<th>${c2.l}</th>`).join("")}</tr>${(rows || []).filter((r) => Object.values(r).some((x) => x)).map((r) => `<tr>${cols.map((c2) => `<td>${v(r[c2.k])}</td>`).join("")}</tr>`).join("") || "<tr><td colspan='" + cols.length + "'>—</td></tr>"}</table>`;
-  const fin = EIC_FIN_ROWS.map((r) => ({ s: r, ...(f.fin && f.fin[r] || {}) })).filter((r) => r.m || r.f || r.vers || r.etab);
-  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Audit Patrimonial — ${client.nom}</title><style>
-    body{font-family:'Segoe UI',Arial,sans-serif;color:#0B2545;margin:34px;font-size:11.5px}
-    h1{font-family:Georgia,serif;font-size:24px;margin:0;border-bottom:3px solid #C9A24B;display:inline-block;padding-bottom:4px}
-    .head{display:flex;justify-content:space-between;align-items:center;background:#0B2545;color:#fff;padding:12px 18px;margin-bottom:18px;border-radius:4px}
-    .brand{font-family:Georgia,serif;font-size:15px;letter-spacing:2px}.brand span{color:#C9A24B}
-    .sec{background:#0B2545;color:#fff;padding:6px 12px;font-size:10.5px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin:16px 0 8px;border-right:4px solid #C9A24B}
-    .grid{display:flex;gap:24px;flex-wrap:wrap}.col{flex:1;min-width:290px}
-    .pt{font-family:Georgia,serif;font-weight:700;letter-spacing:2px;text-align:center;margin-bottom:6px}
-    .li{display:flex;border-bottom:1px dotted #cdd6e2;padding:3px 0}.ll{width:200px;color:#5b6b82}.lv{flex:1;font-weight:600}
-    table{width:100%;border-collapse:collapse;margin:4px 0}th{background:#0B2545;color:#fff;font-size:9.5px;padding:5px 6px;font-weight:600}td{border-bottom:1px solid #edf1f6;padding:4px 6px;text-align:center;font-size:10.5px}
-    .kv{display:grid;grid-template-columns:repeat(3,1fr);gap:2px 20px}
-    @media print{body{margin:14mm}.sec{-webkit-print-color-adjust:exact;print-color-adjust:exact}th,.head{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
-  </style></head><body>
-  <div class="head"><div class="brand">ELYON <span>&</span> ASSOCIÉS<br><span style="font-size:8px;letter-spacing:3px;color:#C9A24B">CABINET DE GESTION DE PATRIMOINE</span></div><div style="font-size:11px">AUDIT PATRIMONIAL</div></div>
-  <h1>Audit Patrimonial</h1>
-  <div style="margin:8px 0 4px;font-size:12px"><b>Client :</b> ${client.civilite || ""} ${client.nom} ${client.prenom || ""} &nbsp;·&nbsp; <b>Date :</b> ${new Date().toLocaleDateString("fr-FR")} &nbsp;·&nbsp; <b>CGP :</b> Bryan Entibi</div>
-  ${sec("État civil et situation familiale")}
-  <div class="grid">${pers("MONSIEUR", f.m || {})}${pers("MADAME", f.mme || {})}</div>
-  <div class="kv" style="margin-top:8px">${li("Adresse", [f.adresse, f.cp, f.ville].filter(Boolean).join(" · "))}${li("Situation familiale", f.situation)}${li("Date de mariage", f.dateMariage)}${li("Régime mat.", f.regime)}${li("Convention", f.convention)}${li("DDV", f.ddv)}${li("Notaire", f.notaire)}${li("Enfants", f.enfants)}${li("Petits-enfants", f.petitsEnfants)}${li("Donation", f.donation)}${li("Succession à venir (K€)", f.succession)}${li("Parts fiscales", f.partsFiscales)}</div>
-  ${sec("Revenus")}<div class="grid">${rev("MONSIEUR", f.revM || {})}${rev("MADAME", f.revMme || {})}</div>
-  ${sec("Prévoyance")}<div class="kv">${li("Compagnie", f.prevCompagnie)}${li("Garanties", f.prevGaranties)}${li("Mensualité", f.prevMensualite)}</div>
-  ${sec("Imposition")}<div class="kv">${li("Déduction M.", f.dedM)}${li("Déduction Mme", f.dedMme)}${li("Revenu Brut Global", f.rbg)}${li("Résultat foncier", f.resFoncier)}${li("Déductions", f.deductions)}${li("Revenu imposable", f.revImposable)}${li("TMI", f.tmi ? f.tmi + " %" : "")}${li("RF positifs / Déficit", [f.rfPositifs, f.deficit].filter(Boolean).join(" / "))}${li("Impôt brut", f.impotBrut)}${li("Réductions / crédit", f.reductions)}${li("Impôt net à payer", f.impotNet)}${li("IFI", f.ifi)}${li("A agi sur sa fiscalité", [f.agiFisc, f.agiComment].filter(Boolean).join(" — "))}</div>
-  ${sec("Patrimoine immobilier")}<div class="kv">${li("Résidence principale", f.rpStatut)}${li("Loyer mensuel", f.loyer)}${li("Projet immobilier", f.projetImmo)}</div>
-  ${table([{k:"nature",l:"Nature"},{k:"dateAcq",l:"Date acq."},{k:"valAcq",l:"Valeur acq."},{k:"valActuelle",l:"Valeur actuelle"},{k:"detention",l:"PP/NP/US"},{k:"revLocatifs",l:"Revenus locatifs"},{k:"sci",l:"SCI"}], f.biens)}
-  ${sec("Charges immobilières")}${table([{k:"nature",l:"Nature"},{k:"etab",l:"Établissement"},{k:"montant",l:"Montant"},{k:"debut",l:"Début"},{k:"fin",l:"Fin"},{k:"crd",l:"CRD · Taux"},{k:"mens",l:"Charges/mois"}], f.chargesImmo)}
-  <div class="kv">${li("Délégation assurance", f.delegAssurance)}${li("Taux d'endettement", f.tauxEndettement ? f.tauxEndettement + " %" : "")}</div>
-  ${sec("Autres charges · crédit conso · leasing")}${table([{k:"nature",l:"Nature"},{k:"etab",l:"Établissement"},{k:"montant",l:"Montant"},{k:"debut",l:"Début"},{k:"fin",l:"Fin"},{k:"mens",l:"Charges/mois"}], f.autresCharges)}
-  ${sec("Patrimoine financier")}${table([{k:"s",l:"Support"},{k:"m",l:"Monsieur (€)"},{k:"f",l:"Madame (€)"},{k:"vers",l:"Vers./mois"},{k:"dates",l:"Dates"},{k:"etab",l:"Établissement"},{k:"obj",l:"Objectifs"}], fin)}
-  <div class="kv">${li("Patrimoine en attente", f.patAttente)}</div>
-  ${sec("Objectifs, moyens et profil")}
-  <div class="kv">${EIC_OBJECTIFS.filter((o) => f.objectifs && f.objectifs[o]).map((o) => li("Priorité " + f.objectifs[o], o)).join("")}${li("Horizon", f.horizon)}${li("Moyens en épargne", f.moyensEpargne ? f.moyensEpargne + " €/mois" : "")}${li("Dont partie souple", f.partieSouple)}${li("% du revenu épargné", f.pctEpargne)}${li("Moyens en capital", f.moyensCapital)}${li("Critères", Object.keys(f.criteres || {}).filter((k) => f.criteres[k]).join(" · "))}${li("Profil investisseur", f.profil)}</div>
-  ${sec("Chronologie des rendez-vous")}${table([{k:"theme",l:"Thème"},{k:"objectif",l:"Objectifs"},{k:"date",l:"Date"}], f.rdvs)}
-  ${sec("Synthèse et notes")}<div class="kv">${li("Objectifs", f.synObjectifs)}${li("Critères de solution", f.synCriteres)}</div>
-  <div style="border:1px solid #cdd6e2;border-radius:4px;padding:10px;margin-top:6px;min-height:60px;white-space:pre-wrap">${v(f.notes)}</div>
-  <script>window.onload=function(){window.print();}</script>
-  </body></html>`;
-  const w = window.open("", "_blank");
-  w.document.write(html);
-  w.document.close();
+/* ===== PDF OFFICIEL Elyon rempli (généré côté serveur) ===== */
+async function eicPdf(client) {
+  try {
+    const r = await fetch("/api/eic-pdf", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ client: { civilite: client.civilite, nom: client.nom, prenom: client.prenom }, eic: client.eic || {} }),
+    });
+    if (!r.ok) { alert("Erreur lors de la génération du PDF."); return; }
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "Audit_Patrimonial_" + (client.nom || "client").replace(/\s+/g, "_") + ".pdf";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  } catch (e) { console.error(e); alert("Erreur réseau pendant la génération du PDF."); }
 }
 
 /* ================= CENTRE DE RAPPELS INTELLIGENT ================= */
