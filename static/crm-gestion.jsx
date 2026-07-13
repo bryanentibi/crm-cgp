@@ -1000,7 +1000,7 @@ function ClientDetail({ client, me, users, back, update, remove }) {
       </div>
 
       <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", alignItems: "start" }}>
-        <EicSynthese client={client} onOpen={() => setShowEic(true)} onPdf={() => eicPdf(client)} />
+        <EicSynthese client={client} onOpen={() => setShowEic(true)} onPdf={() => eicPdf(client)} onDelete={() => { if (confirm("Supprimer définitivement le questionnaire EIC de cette fiche ?")) update({ ...client, eic: null, eicDate: null }); }} />
 
         <div className="card">
           <h2 style={{ fontSize: 17, marginBottom: 12 }}>Informations personnelles</h2>
@@ -1228,6 +1228,22 @@ function AlertForm({ onSave, onClose }) {
 
 /* ================= VENTES ÉQUIPE ================= */
 function SalesPage({ sales, saveSales, users, objectifs, saveObjectifs, me, clients, saveClients }) {
+  /* Ajouter le contrat de la ligne à la fiche déjà liée */
+  const addContractToLinked = (userId, r) => {
+    const cl = clients.find((x) => x.id === r.clientId);
+    if (!cl) { alert("Fiche introuvable — utilise ✕ pour délier puis + Fiche."); return; }
+    if (!confirm(`Ajouter ce contrat (${r.type || "?"} ${r.compagnie || ""}) à la fiche de ${cl.civilite || ""} ${cl.nom} ${cl.prenom || ""} ?`)) return;
+    const contrat = {
+      id: uid(), type: r.type || "PER", compagnie: r.compagnie || "", numero: "",
+      montant: r.volume || "", frais: "",
+      commentaire: [r.versement ? `Versement : ${r.versement} €/mois` : "", r.versementAnnuel ? `Versement annuel : ${r.versementAnnuel} €` : "", r.commentaire || ""].filter(Boolean).join(" · "),
+      dateSignature: r.dateCreation || todayISO(), datePrelevement: "",
+      transfertInterne: "non", fraisTransfert: "non", fichiers: [],
+    };
+    saveClients(clients.map((x) => (x.id === cl.id ? { ...x, decom: false, contrats: [...(x.contrats || []), contrat] } : x)));
+    alert("✅ Contrat ajouté à la fiche !");
+  };
+
   /* Créer (ou compléter) la fiche client depuis une ligne de vente */
   const addClientFromRow = (userId, r) => {
     const norm = (s) => (s || "").toUpperCase().replace(/^(MME|MR|M\.|MLLE)\s+/, "").replace(/[^A-ZÀ-Ü0-9\- ]/g, "").replace(/\s+/g, " ").trim();
@@ -1496,10 +1512,16 @@ function SalesPage({ sales, saveSales, users, objectifs, saveObjectifs, me, clie
                         {STATUTS.map((s) => <option key={s}>{s}</option>)}
                       </select>
                     </td>
-                    <td>
-                      {r.clientId
-                        ? <span className="badge b-green" title="Fiche client liée">✓</span>
-                        : <button className="btn ghost sm" style={{ padding: "3px 8px", fontSize: 11 }} title="Créer la fiche client depuis cette vente" onClick={() => addClientFromRow(u.id, r)}>+ Fiche</button>}
+                    <td style={{ whiteSpace: "nowrap" }}>
+                      {r.clientId ? (
+                        <>
+                          <span className="badge b-green" title="Fiche client liée">✓</span>
+                          <button className="btn ghost sm" style={{ padding: "3px 6px", fontSize: 10.5, marginLeft: 4 }} title="Ajouter ce contrat à la fiche liée" onClick={() => addContractToLinked(u.id, r)}>+ Contrat</button>
+                          <button className="btn ghost sm" style={{ padding: "3px 6px", fontSize: 10.5, marginLeft: 3, color: "#B3261E" }} title="Délier cette vente de la fiche (la fiche n'est pas supprimée)" onClick={() => updateCell(u.id, r.id, "clientId", undefined)}>✕</button>
+                        </>
+                      ) : (
+                        <button className="btn ghost sm" style={{ padding: "3px 8px", fontSize: 11 }} title="Créer la fiche client depuis cette vente" onClick={() => addClientFromRow(u.id, r)}>+ Fiche</button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -2972,6 +2994,7 @@ function EicForm({ client, onSave, onClose }) {
           </div>
           <div className="row" style={{ gap: 8 }}>
             <button className="btn gold" onClick={() => { onSave(f); }}>💾 Sauvegarder</button>
+            <button className="btn" style={{ color: "#B3261E", borderColor: "#B3261E" }} onClick={() => { if (confirm("Vider tout le questionnaire ? (rien n'est enregistré tant que tu ne sauvegardes pas)")) setF({ ...eicEmpty(), m: {}, mme: {}, revM: {}, revMme: {} }); }}>🗑 Vider</button>
             <button className="btn" onClick={onClose}>Fermer</button>
           </div>
         </div>
@@ -3136,9 +3159,9 @@ function EicForm({ client, onSave, onClose }) {
 }
 
 /* ===== Synthèse intelligente affichée sur la fiche ===== */
-function EicSynthese({ client, onOpen, onPdf }) {
+function EicSynthese({ client, onOpen, onPdf, onDelete }) {
   const f = client.eic;
-  if (!f) return (
+  if (!f || !Object.keys(f).length) return (
     <div className="card" style={{ borderLeft: "4px solid #C9A24B", marginBottom: 20 }}>
       <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
         <div><b>📋 Questionnaire EIC / Audit patrimonial</b><div style={{ fontSize: 12.5, color: "#8593a8" }}>Pas encore rempli pour ce client — obligatoire.</div></div>
@@ -3160,6 +3183,7 @@ function EicSynthese({ client, onOpen, onPdf }) {
         <div className="row" style={{ gap: 6 }}>
           <button className="btn sm" onClick={onOpen}>✏️ Modifier</button>
           <button className="btn gold sm" onClick={onPdf}>📄 Générer le PDF</button>
+          <button className="btn sm" style={{ color: "#B3261E", borderColor: "#B3261E" }} onClick={onDelete} title="Supprimer le questionnaire de cette fiche">🗑</button>
         </div>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 4, borderTop: "1px solid #edf1f6", paddingTop: 8 }}>
@@ -3190,7 +3214,7 @@ async function eicPdf(client) {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ client: { civilite: client.civilite, nom: client.nom, prenom: client.prenom }, eic: client.eic || {} }),
     });
-    if (!r.ok) { alert("Erreur lors de la génération du PDF."); return; }
+    if (!r.ok) { let msg = ""; try { msg = (await r.json()).error || (await r.text()); } catch {} alert("Erreur lors de la génération du PDF." + (msg ? "\n\nDétail : " + msg : "\n\n(Si ça persiste : le serveur vient peut-être de redémarrer, réessaie dans 2 min)")); return; }
     const blob = await r.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
