@@ -2,7 +2,12 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Elyon">
+<meta name="theme-color" content="#0B2545">
+<link rel="apple-touch-icon" href="/static/icone-ea.png">
 <title>Elyon &amp; Associés — Prospection</title>
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -45,8 +50,27 @@ body{display:flex;font-size:13px;color:var(--text)}
 /* ── SIDEBAR ── */
 .sidebar{
   width:var(--sidebar);min-width:var(--sidebar);background:linear-gradient(180deg,var(--navy) 0%,var(--navy2) 100%);
-  border-right:none;display:flex;flex-direction:column;overflow-y:auto;
+  border-right:none;display:flex;flex-direction:column;overflow-y:auto;-webkit-overflow-scrolling:touch;
   box-shadow:var(--shadow);
+  position:sticky;top:0;height:100vh;z-index:30;
+}
+#burger{display:none}
+#scrim{display:none}
+
+/* ===== MOBILE / TABLETTE ===== */
+@media (max-width: 900px){
+  #burger{display:flex;position:fixed;top:12px;left:12px;z-index:60;width:44px;height:44px;border-radius:12px;
+          background:var(--navy);color:var(--gold);border:1px solid rgba(201,162,75,.4);align-items:center;justify-content:center;
+          font-size:19px;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.28)}
+  .sidebar{position:fixed;top:0;bottom:0;left:0;width:268px;min-width:268px;transform:translateX(-102%);
+           transition:transform .28s ease;box-shadow:6px 0 30px rgba(0,0,0,.35);padding-top:env(safe-area-inset-top)}
+  .sidebar.open{transform:none}
+  #scrim.show{display:block;position:fixed;inset:0;background:rgba(11,37,69,.5);z-index:25}
+  .topbar{flex-wrap:wrap;gap:8px;padding-left:60px !important;min-height:56px}
+  .sb-item{padding:14px 16px;font-size:15px}
+  table{white-space:nowrap}
+  input,select,textarea{font-size:16px !important}
+  .modal>div{max-width:100% !important;width:100% !important}
 }
 .sb-logo{
   padding:16px 18px;border-bottom:1px solid rgba(255,255,255,.12);
@@ -384,7 +408,9 @@ tbody td{padding:5px 12px;font-size:13px;vertical-align:middle}
   </div>
 </div>
 
-<aside class="sidebar">
+<button id="burger" onclick="toggleMenu()">☰</button>
+<div id="scrim" onclick="toggleMenu(false)"></div>
+<aside class="sidebar" id="sidebar">
   <div class="sb-logo">
     <div class="sb-logo-icon">B</div>
     <div>
@@ -2322,6 +2348,19 @@ window.saveRDV = async function() {
   btn.textContent = '📅 Enregistrer le RDV'; btn.disabled = false;
 }
 
+
+/* ===== MENU MOBILE ===== */
+window.toggleMenu = function(force){
+  const sb = document.getElementById('sidebar'), sc = document.getElementById('scrim'), b = document.getElementById('burger');
+  if(!sb) return;
+  const open = force === false ? false : !sb.classList.contains('open');
+  sb.classList.toggle('open', open);
+  if(sc) sc.classList.toggle('show', open);
+  if(b) b.textContent = open ? '✕' : '☰';
+}
+document.addEventListener('click', function(e){
+  if(window.innerWidth <= 900 && e.target.closest && e.target.closest('.sb-item')) toggleMenu(false);
+});
 
 /* ===== PHOTO DU PORTAIL ===== */
 let fondData = null, fondOp = 85;

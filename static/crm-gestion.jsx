@@ -216,8 +216,10 @@ const emptyMonthData = (users) => {
 const CSS = `
   .crm * { box-sizing: border-box; }
   .crm { font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; color: ${NAVY}; min-height: 100vh; background: ${LIGHT}; display:flex; }
+  .burger { display:none; }
+  .scrim { display:none; }
   .crm h1,.crm h2,.crm h3 { font-family: Georgia, 'Times New Roman', serif; margin: 0; }
-  .side { width: 232px; min-height: 100vh; background: linear-gradient(180deg, ${NAVY} 0%, ${NAVY2} 100%); color:#fff; display:flex; flex-direction:column; flex-shrink:0; }
+  .side { width: 232px; height: 100vh; position: sticky; top: 0; background: linear-gradient(180deg, ${NAVY} 0%, ${NAVY2} 100%); color:#fff; display:flex; flex-direction:column; flex-shrink:0; overflow-y:auto; -webkit-overflow-scrolling:touch; z-index: 30; }
   .brand { padding: 26px 20px 18px; border-bottom: 1px solid rgba(255,255,255,.12); }
   .brand b { font-family: Georgia, serif; font-size: 19px; letter-spacing: .5px; display:block; }
   .brand span { color:${GOLD}; font-size: 11px; letter-spacing: 2.5px; text-transform: uppercase; }
@@ -227,7 +229,30 @@ const CSS = `
   .nav button.on { background: rgba(201,162,75,.18); color:#fff; border-left: 3px solid ${GOLD}; }
   .side .who { padding: 16px 20px; border-top: 1px solid rgba(255,255,255,.12); font-size: 13px; }
   .side .who b { color: ${GOLD}; }
-  .main { flex:1; padding: 30px 34px; overflow:auto; min-width: 0; }
+  .main { flex:1; padding: 30px 34px; min-width: 0; }
+
+  /* ===== MOBILE / TABLETTE ===== */
+  @media (max-width: 900px) {
+    .burger { display:flex; position:fixed; top:12px; left:12px; z-index:60; width:44px; height:44px; border-radius:12px;
+              background:${NAVY}; color:${GOLD}; border:1px solid rgba(201,162,75,.4); align-items:center; justify-content:center;
+              font-size:19px; cursor:pointer; box-shadow:0 6px 18px rgba(0,0,0,.28); }
+    .side { position:fixed; top:0; bottom:0; left:0; width: 268px; transform: translateX(-102%); transition: transform .28s ease;
+            box-shadow: 6px 0 30px rgba(0,0,0,.35); padding-top: env(safe-area-inset-top); }
+    .side.open { transform:none; }
+    .scrim.show { display:block; position:fixed; inset:0; background:rgba(11,37,69,.5); z-index:25; }
+    .main { padding: 66px 14px 30px; width:100%; }
+    .side button { padding: 14px 16px; font-size: 15px; }
+    .ph h1 { font-size: 21px; }
+    /* Tableaux : défilement horizontal propre au lieu d'un écrasement */
+    .t { display:block; overflow-x:auto; white-space:nowrap; -webkit-overflow-scrolling:touch; }
+    .card { padding: 16px; border-radius: 12px; }
+    .modal { max-width: 100% !important; }
+    .modal-bg { padding: 16px 10px; }
+    .grid { grid-template-columns: 1fr !important; }
+    /* Zones tactiles confortables */
+    .btn { padding: 10px 14px; font-size: 13.5px; }
+    input, select, textarea { font-size: 16px !important; } /* évite le zoom auto iOS */
+  }
   .ph { display:flex; align-items:flex-end; justify-content:space-between; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
   .ph h1 { font-size: 26px; }
   .ph .sub { color:#5b6b82; font-size: 13px; margin-top: 4px; }
@@ -344,6 +369,7 @@ function FileList({ files, onDelete }) {
 
 /* ================= APPLICATION ================= */
 function App() {
+  const [menuOpen, setMenuOpen] = useState(false);
   const [clientTypeFilter, setClientTypeFilter] = useState("");
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState(DEFAULT_USERS);
@@ -460,7 +486,9 @@ function App() {
   return (
     <div className="crm">
       <style>{CSS}</style>
-      <aside className="side">
+      <button className="burger" onClick={() => setMenuOpen(!menuOpen)} aria-label="Menu">{menuOpen ? "✕" : "☰"}</button>
+      <div className={"scrim" + (menuOpen ? " show" : "")} onClick={() => setMenuOpen(false)} />
+      <aside className={"side" + (menuOpen ? " open" : "")}>
         <div className="brand">
           <b>ELYON <span style={{ color: GOLD }}>&</span> ASSOCIÉS</b>
           <span>Gestion de patrimoine</span>
@@ -471,7 +499,7 @@ function App() {
         </div>
         <nav className="nav">
           {NAV.map(([k, l]) => (
-            <button key={k} className={page === k ? "on" : ""} onClick={() => { setPage(k); setOpenClient(null); }}>
+            <button key={k} className={page === k ? "on" : ""} onClick={() => { setPage(k); setOpenClient(null); setMenuOpen(false); }}>
               {l}
             </button>
           ))}
