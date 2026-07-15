@@ -250,7 +250,7 @@ const CSS = `
   table.t td { border-bottom:1px solid #edf1f6; padding: 4px 6px; text-align:center; }
   table.t input, table.t select { width:100%; border:1px solid transparent; background:transparent; padding: 6px 4px; font-size:13px; text-align:center; border-radius:6px; color:inherit; }
   table.t input:focus, table.t select:focus { background:#fff; border-color:${GOLD}; outline:none; }
-  tr.paye td { background:#e4f3e6; } tr.annule td { background:#fbe4e2; } tr.attente td { background:#fdf1dc; }
+  tr.paye td { background:#e4f3e6; } tr.annule td { background:#fbe4e2; } tr.attente td { background:#fdf1dc; } tr.rdvb td { background:#D9EAFB; }
   .totrow td { background:${NAVY}; color:#fff; font-weight:700; padding: 10px 8px; }
   .nprow td { background:#fdf6e7; font-weight:600; }
   .modal-bg { position:fixed; inset:0; background:rgba(11,37,69,.55); display:flex; align-items:flex-start; justify-content:center; padding: 40px 16px; z-index:50; overflow:auto; }
@@ -545,7 +545,7 @@ function App() {
         {page === "decom" && <DecomPage clients={clients} saveClients={saveClients} goClient={(id) => { setPage("clients"); setOpenClient(id); }} />}
         {page === "rappels" && <RappelsPage clients={clients} saveClients={saveClients} goClient={(id) => { setPage("clients"); setOpenClient(id); }} />}
         {page === "arbitrage" && <ArbitragePage clients={clients} saveClients={saveClients} sales={sales} saveSales={saveSales} me={me} />}
-        {page === "messagerie" && <MessageriePage clients={clients} />}
+        {page === "messagerie" && <MessageriePage clients={clients} saveClients={saveClients} />}
         {page === "dash" && <Dashboard clients={clients} users={users} view={view} me={me} sales={sales} saveClients={saveClients} goClient={(c) => { setOpenClient(c.id); setPage("clients"); }} goClients={(t) => { setClientTypeFilter(t || ""); setOpenClient(null); setPage("clients"); }} />}
         {page === "prospection" && (
           <ProspectionPage
@@ -818,7 +818,7 @@ function Leaderboard({ sales, users }) {
 function ClientsPage({ clients, saveClients, me, users, openClient, typeFilter, clearTypeFilter }) {
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState("alpha");
+  const [sortBy, setSortBy] = useState("date");
   const [monthTab, setMonthTab] = useState(null);
   const [ownerFilter, setOwnerFilter] = useState("all");
 
@@ -1030,6 +1030,17 @@ function ClientDetail({ client, me, users, back, update, remove }) {
           </div>
         </div>
 
+        {(client.mailLog || []).length > 0 && (
+          <div className="card">
+            <h2 style={{ fontSize: 17, marginBottom: 8 }}>📧 Mails envoyés (Messagerie)</h2>
+            {(client.mailLog || []).map((m, i) => (
+              <div key={i} style={{ fontSize: 13, padding: "5px 0", borderBottom: "1px solid #edf1f6" }}>
+                <b>{fmtDate(m.date)}</b> — {m.objet}
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="card">
           <h2 style={{ fontSize: 17, marginBottom: 6 }}>📝 Notes & à faire</h2>
           <div style={{ fontSize: 11.5, color: "#8593a8", marginBottom: 8 }}>Astuce : commence une ligne par <b>!</b> pour créer un rappel à faire (visible dans l'onglet Rappels).</div>
@@ -1240,8 +1251,9 @@ function SalesPage({ sales, saveSales, users, objectifs, saveObjectifs, me, clie
       dateSignature: r.dateCreation || todayISO(), datePrelevement: "",
       transfertInterne: "non", fraisTransfert: "non", fichiers: [],
     };
-    saveClients(clients.map((x) => (x.id === cl.id ? { ...x, decom: false, contrats: [...(x.contrats || []), contrat] } : x)));
-    alert("✅ Contrat ajouté à la fiche !");
+    const alerteT = { id: uid(), type: `Faire le transfert + appeler (vente ${r.type || "?"})`, date: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10), done: false };
+    saveClients(clients.map((x) => (x.id === cl.id ? { ...x, decom: false, contrats: [...(x.contrats || []), contrat], alertes: [...(x.alertes || []), alerteT] } : x)));
+    alert("✅ Contrat ajouté à la fiche + rappel transfert à 1 mois !");
   };
 
   /* Créer (ou compléter) la fiche client depuis une ligne de vente */
@@ -1257,6 +1269,7 @@ function SalesPage({ sales, saveSales, users, objectifs, saveObjectifs, me, clie
       dateSignature: r.dateCreation || todayISO(), datePrelevement: "",
       transfertInterne: "non", fraisTransfert: "non", fichiers: [],
     };
+    const alerteTransfert = { id: uid(), type: `Faire le transfert + appeler (vente ${r.type || "?"})`, date: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10), done: false };
     let existant = clients.find((c) => norm(c.nom + " " + (c.prenom || "")) === nomComplet || norm(c.nom) === nomComplet);
     if (!existant) {
       /* Fiches proches : le nom de famille saisi commence pareil qu'une fiche existante */
@@ -1268,13 +1281,13 @@ function SalesPage({ sales, saveSales, users, objectifs, saveObjectifs, me, clie
     if (existant) {
       if (!confirm(`${existant.civilite || ""} ${existant.nom} existe déjà — ajouter ce contrat à sa fiche ?`)) return;
       cid = existant.id;
-      saveClients(clients.map((c) => (c.id === existant.id ? { ...c, decom: false, contrats: [...(c.contrats || []), contrat] } : c)));
+      saveClients(clients.map((c) => (c.id === existant.id ? { ...c, decom: false, contrats: [...(c.contrats || []), contrat], alertes: [...(c.alertes || []), alerteTransfert] } : c)));
     } else {
       cid = uid();
       saveClients([...clients, {
         id: cid, nom: nomComplet, prenom: "", civilite: civ, dateNaissance: "", telephone: "",
         email: "", profession: "", revenus: "", situation: "Célibataire",
-        createdBy: me.id, createdAt: todayISO(), contrats: [contrat], alertes: [],
+        createdBy: me.id, createdAt: todayISO(), contrats: [contrat], alertes: [alerteTransfert],
       }]);
     }
     updateCell(userId, r.id, "clientId", cid);
@@ -1828,7 +1841,7 @@ function ProspectionPage({ prospection, saveProspection, me, users, toTrash, cli
   const [ownerFilter, setOwnerFilter] = useState("all");
   const [statutFilter, setStatutFilter] = useState("all");
   const [monthFilter, setMonthFilter] = useState("all");
-  const [viewMode, setViewMode] = useState("table"); // table | semaine | mois
+  const [viewMode, setViewMode] = useState("mois"); // table | semaine | mois
 
   /* Cloisonnement identique aux clients */
   const mine = me.isManager ? prospection : prospection.filter((p) => p.ownerId === me.id);
@@ -2626,9 +2639,9 @@ function DecomPage({ clients, saveClients, goClient }) {
 }
 
 /* ================= ARBITRAGE CLIENTS (par personne, style Gestion) ================= */
-const ARB_STATUTS = ["À appeler", "RDV pris", "Signé", "KO", "À rappeler", "NRP"];
-const ARB_OLD_MAP = { "": "À appeler", "rdv": "RDV pris", "signe": "Signé", "ko": "KO", "rappeler": "À rappeler", "nrp": "NRP" };
-const arbRowCls = (s) => (s === "Signé" ? "paye" : s === "KO" ? "annule" : (s === "À rappeler" || s === "NRP") ? "attente" : "");
+const ARB_STATUTS = ["", "RDV pris", "Signé", "KO", "À rappeler", "NRP"];
+const ARB_OLD_MAP = { "": "", "rdv": "RDV pris", "signe": "Signé", "ko": "KO", "rappeler": "À rappeler", "nrp": "NRP" };
+const arbRowCls = (s) => (s === "Signé" ? "paye" : s === "KO" ? "annule" : s === "RDV pris" ? "rdvb" : (s === "À rappeler" || s === "NRP") ? "attente" : "");
 
 function ArbitragePage({ clients, saveClients, sales, saveSales, me }) {
   const [groups, setGroups] = useState(null);
@@ -2690,7 +2703,7 @@ function ArbitragePage({ clients, saveClients, sales, saveSales, me }) {
     saveSales(ns);
     alert("✅ Fiche client + vente du mois créées !");
   };
-  const addRow = () => save(groups.map((g, i) => i !== tab ? g : { ...g, rows: [{ id: uid(), nom: "", telephone: "", montant: "", notes: "", statut: "À appeler" }, ...g.rows] }));
+  const addRow = () => save(groups.map((g, i) => i !== tab ? g : { ...g, rows: [{ id: uid(), nom: "", telephone: "", montant: "", notes: "", statut: "" }, ...g.rows] }));
   const delRow = (rowId) => { if (confirm("Supprimer cette ligne ?")) save(groups.map((g, i) => i !== tab ? g : { ...g, rows: g.rows.filter((r) => r.id !== rowId) })); };
   const addGroup = () => { const nom = prompt("Nom du nouvel onglet (ex : Théo) :"); if (nom && nom.trim()) { save([...groups, { id: uid(), nom: nom.trim(), rows: [] }]); setTab(groups.length); } };
   const renameGroup = () => { const nom = prompt("Renommer cet onglet :", grp.nom); if (nom && nom.trim()) save(groups.map((g, i) => i === tab ? { ...g, nom: nom.trim() } : g)); };
@@ -2720,20 +2733,20 @@ function ArbitragePage({ clients, saveClients, sales, saveSales, me }) {
       </div>
       <div className="card" style={{ overflowX: "auto" }}>
         <table className="t" style={{ width: "100%" }}>
-          <thead><tr><th style={{ textAlign: "left" }}>Client</th><th>Téléphone</th><th>Montant €/mois</th><th>Statut</th><th style={{ textAlign: "left" }}>Notes</th><th></th></tr></thead>
+          <thead><tr><th>Statut</th><th style={{ textAlign: "left" }}>Client</th><th>Téléphone</th><th>Montant €/mois</th><th style={{ textAlign: "left" }}>Notes</th><th></th></tr></thead>
           <tbody>
             {grp.rows.map((r) => (
               <tr key={r.id} className={arbRowCls(r.statut)}>
-                <td style={{ textAlign: "left" }}><input style={{ fontWeight: 700 }} value={r.nom} onChange={(e) => upRow(r.id, "nom", e.target.value)} placeholder="Nom du client" /></td>
-                <td style={{ width: 120 }}><input value={r.telephone || ""} onChange={(e) => upRow(r.id, "telephone", e.target.value)} placeholder="06…" /></td>
-                <td style={{ width: 120 }}><input value={r.montant} onChange={(e) => upRow(r.id, "montant", e.target.value)} placeholder="€" /></td>
-                <td style={{ width: 150 }}>
-                  <select className="sel" value={r.statut} onChange={(e) => upRow(r.id, "statut", e.target.value)}>
-                    {ARB_STATUTS.map((s) => <option key={s}>{s}</option>)}
+                <td style={{ width: 130 }}>
+                  <select value={r.statut || ""} onChange={(e) => upRow(r.id, "statut", e.target.value)}>
+                    {ARB_STATUTS.map((s) => <option key={s} value={s}>{s === "" ? "—" : s}</option>)}
                   </select>
                 </td>
+                <td style={{ textAlign: "left" }}><input style={{ fontWeight: 700, color: "#0B2545" }} value={r.nom} onChange={(e) => upRow(r.id, "nom", e.target.value)} placeholder="Nom du client" /></td>
+                <td style={{ width: 115 }}><input value={r.telephone || ""} onChange={(e) => upRow(r.id, "telephone", e.target.value)} placeholder="06…" /></td>
+                <td style={{ width: 110 }}><input value={r.montant} onChange={(e) => upRow(r.id, "montant", e.target.value)} placeholder="€" /></td>
                 <td style={{ textAlign: "left" }}><input value={r.notes} onChange={(e) => upRow(r.id, "notes", e.target.value)} placeholder="Notes…" /></td>
-                <td style={{ width: 40 }}><button onClick={() => delRow(r.id)} style={{ background: "none", border: "none", color: "#B3261E", cursor: "pointer" }}>✕</button></td>
+                <td style={{ width: 36 }}><button onClick={() => delRow(r.id)} style={{ background: "none", border: "none", color: "#B3261E", cursor: "pointer" }}>✕</button></td>
               </tr>
             ))}
             {grp.rows.length === 0 && <tr><td colSpan={5} style={{ color: "#8593a8", padding: 20 }}>Aucun client dans cet onglet. Clique sur + Ajouter un client.</td></tr>}
@@ -2774,7 +2787,15 @@ const MAIL_TEMPLATES = [
   }
 ];
 
-function MessageriePage({ clients }) {
+const MAIL_TEMPLATES_EXTRA = [
+  { nom: "Point transferts PER", objet: "Vos anciens contrats retraite : faisons le point ensemble",
+    corps: "Bonjour,\n\nDans le cadre du suivi de votre Plan d'Épargne Retraite, je souhaiterais que nous fassions un point ensemble sur vos anciens contrats retraite (PERP, Madelin, article 83, PER d'anciens employeurs...).\n\nRegrouper ces contrats sur votre PER actuel présente plusieurs avantages : une vision claire et centralisée de votre épargne retraite, une gestion simplifiée, et souvent de meilleures conditions de frais et de performance.\n\nJe vous propose un entretien téléphonique d'une quinzaine de minutes pour identifier ensemble les contrats concernés et étudier l'intérêt d'un regroupement dans votre situation.\n\nQuelles sont vos disponibilités dans les prochains jours ?\n\nBien cordialement,\nBryan Entibi\nConseiller en gestion de patrimoine" },
+  { nom: "Point annuel dossiers", objet: "Votre point annuel : vérification de vos contrats et de votre situation",
+    corps: "Bonjour,\n\nComme chaque année, je vous propose de réaliser ensemble le point annuel sur vos contrats et votre situation patrimoniale.\n\nCet entretien est important : il permet de vérifier que vos garanties sont toujours adaptées à votre situation (évolution professionnelle, familiale, projets...), de contrôler la bonne exécution de vos versements et, le cas échéant, d'optimiser vos dispositifs au regard des évolutions fiscales récentes.\n\nComptez une vingtaine de minutes, par téléphone ou en visio, selon votre préférence.\n\nJe vous laisse me proposer un créneau qui vous convient — je m'adapterai.\n\nBien cordialement,\nBryan Entibi\nConseiller en gestion de patrimoine" },
+];
+
+function MessageriePage({ clients, saveClients }) {
+  const [relance, setRelance] = useState(false);
   const [sender, setSender] = useState(MAIL_SENDERS[0]);
   const [to, setTo] = useState("");
   const [objet, setObjet] = useState("");
@@ -2811,6 +2832,17 @@ function MessageriePage({ clients }) {
     const url = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(sender)}&bcc=${encodeURIComponent(batch.join(","))}&su=${encodeURIComponent(objet)}&body=${encodeURIComponent(corps)}`;
     try { navigator.clipboard.writeText(url); } catch {}
     window.open(url, "_blank");
+    /* Journal d'envoi sur chaque fiche + rappel de relance optionnel */
+    const dans1Mois = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+    const batchSet = new Set(batch.map((e2) => e2.toLowerCase()));
+    saveClients(clients.map((cl) => {
+      if (!cl.email || !batchSet.has(cl.email.toLowerCase())) return cl;
+      const log = [{ date: todayISO(), objet: objet.slice(0, 60) }, ...(cl.mailLog || [])].slice(0, 5);
+      const alertes = relance
+        ? [...(cl.alertes || []), { id: uid(), type: "Relancer suite mail : " + objet.slice(0, 40), date: dans1Mois, done: false }]
+        : cl.alertes;
+      return { ...cl, mailLog: log, alertes };
+    }));
     if (reste.length) setTo(reste.join(", "));
     alert(`✉️ ${batch.length} destinataires en Cci.\n\nSi Gmail s'ouvre sur le MAUVAIS compte : le lien est copié, colle-le (Cmd+V) dans la barre d'adresse du Chrome connecté à ${sender}.${reste.length ? "\n\nReste " + reste.length + " destinataires — reclique sur Envoyer." : ""}`);
   };
@@ -2835,7 +2867,7 @@ function MessageriePage({ clients }) {
         <textarea className="in" style={{ width: "100%", minHeight: 64, marginBottom: 12, fontFamily: "inherit" }} value={to} onChange={(e) => setTo(e.target.value)} placeholder="email1@..., email2@... (tape librement ou utilise Choisir des clients)" />
         <div style={{ fontSize: 11.5, fontWeight: 700, color: "#44536B", marginBottom: 4 }}>MODÈLES</div>
         <div className="row" style={{ gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
-          {MAIL_TEMPLATES.map((t) => (
+          {[...MAIL_TEMPLATES, ...MAIL_TEMPLATES_EXTRA].map((t) => (
             <button key={t.nom} className="btn" onClick={() => { setObjet(t.objet); setCorps(t.corps); }}>{t.nom}</button>
           ))}
           {customTpls.map((t, i) => (
@@ -2850,6 +2882,10 @@ function MessageriePage({ clients }) {
         <input className="in" style={{ width: "100%", marginBottom: 12 }} value={objet} onChange={(e) => setObjet(e.target.value)} />
         <div style={{ fontSize: 11.5, fontWeight: 700, color: "#44536B", marginBottom: 4 }}>MESSAGE</div>
         <textarea className="in" style={{ width: "100%", minHeight: 200, marginBottom: 14, fontFamily: "inherit", lineHeight: 1.6 }} value={corps} onChange={(e) => setCorps(e.target.value)} />
+        <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13, marginBottom: 12, cursor: "pointer" }}>
+          <input type="checkbox" checked={relance} onChange={(e) => setRelance(e.target.checked)} />
+          Créer un rappel de relance à 1 mois pour chaque destinataire (visible dans 🔔 Rappels)
+        </label>
         <button className="btn gold" style={{ width: "100%", padding: 13, fontSize: 15 }} onClick={envoyer}>✉️ Préparer l'envoi dans Gmail</button>
       </div>
 
@@ -3258,7 +3294,7 @@ function RappelsPage({ clients, saveClients, goClient }) {
     const today0 = new Date(annee, now.getMonth(), now.getDate());
     if (next < today0) next = new Date(annee + 1, p.mo - 1, p.d);
     const days = Math.round((next - today0) / 86400000);
-    if (days > 30) return null;
+    if (days !== 0) return null;
     if (c.bdayWished === next.getFullYear() + "") return null;
     return { c, days, date: next, age: next.getFullYear() - p.y };
   }).filter(Boolean).sort((a, b) => a.days - b.days);
@@ -3305,15 +3341,15 @@ function RappelsPage({ clients, saveClients, goClient }) {
     <div>
       <div className="ph"><div><h1>🔔 Rappels</h1><div className="sub">Le CRM veille pour toi : anniversaires, clients à recontacter, choses à faire</div></div></div>
       <div className="row" style={{ gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
-        <TabBtn k="anniv" label="🎂 Anniversaires" count={annivs.filter((x) => x.days <= 7).length} />
+        <TabBtn k="anniv" label="🎂 Anniversaires" count={annivs.length} />
         <TabBtn k="nouvelles" label="📞 Prendre des nouvelles" count={nouvelles.length} />
         <TabBtn k="afaire" label="📝 À faire" count={afaire.length} />
       </div>
 
       {tab === "anniv" && (
         <div className="card">
-          <h2 style={{ fontSize: 16, marginBottom: 10 }}>Anniversaires des 30 prochains jours</h2>
-          {annivs.length === 0 && <div style={{ color: "#8593a8", fontSize: 13.5 }}>Aucun anniversaire à venir (pense à renseigner les dates de naissance dans les fiches !).</div>}
+          <h2 style={{ fontSize: 16, marginBottom: 10 }}>Anniversaires du jour 🎉</h2>
+          {annivs.length === 0 && <div style={{ color: "#8593a8", fontSize: 13.5 }}>Aucun anniversaire aujourd'hui.</div>}
           {annivs.map((x) => (
             <Ligne key={x.c.id} boutons={<>
               <button className="btn sm" onClick={() => goClient(x.c.id)}>Voir la fiche</button>
