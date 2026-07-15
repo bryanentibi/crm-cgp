@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#0B2545"/>
+      <stop offset="0.55" stop-color="#13315C"/>
+      <stop offset="1" stop-color="#1d4066"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#C9A24B" stop-opacity="0.05"/>
+      <stop offset="0.5" stop-color="#E3C670" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#C9A24B" stop-opacity="0.05"/>
+    </linearGradient>
+    <linearGradient id="fade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#C9A24B" stop-opacity="0.20"/>
+      <stop offset="1" stop-color="#C9A24B" stop-opacity="0.02"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1600" height="900" fill="url(#sky)"/>
+
+  <!-- Skyline patrimoniale stylisée -->
+  <g opacity="0.5">
+    <rect x="90"  y="470" width="120" height="430" fill="url(#fade)"/>
+    <rect x="230" y="560" width="90"  height="340" fill="url(#fade)"/>
+    <rect x="340" y="410" width="140" height="490" fill="url(#fade)"/>
+    <rect x="500" y="520" width="100" height="380" fill="url(#fade)"/>
+    <rect x="1010" y="500" width="110" height="400" fill="url(#fade)"/>
+    <rect x="1140" y="430" width="130" height="470" fill="url(#fade)"/>
+    <rect x="1290" y="545" width="95"  height="355" fill="url(#fade)"/>
+    <rect x="1405" y="480" width="115" height="420" fill="url(#fade)"/>
+  </g>
+
+  <!-- Colonnade classique centrale (patrimoine) -->
+  <g opacity="0.30" fill="none" stroke="#C9A24B" stroke-width="1.6">
+    <path d="M620 300 L980 300 L980 315 L620 315 Z" fill="#C9A24B" fill-opacity="0.10"/>
+    <path d="M660 200 L800 130 L940 200" stroke-width="2"/>
+    <g stroke-width="1.4">
+      <path d="M660 315 L660 720 M700 315 L700 720 M740 315 L740 720 M780 315 L780 720 M820 315 L820 720 M860 315 L860 720 M900 315 L900 720 M940 315 L940 720"/>
+    </g>
+    <path d="M630 720 L970 720 L970 740 L630 740 Z" fill="#C9A24B" fill-opacity="0.10"/>
+  </g>
+
+  <!-- Courbe de croissance -->
+  <g opacity="0.45">
+    <path d="M120 800 Q 400 760 620 660 T 1100 430 T 1500 260" fill="none" stroke="url(#gold)" stroke-width="3"/>
+    <circle cx="620" cy="660" r="4" fill="#C9A24B" opacity="0.6"/>
+    <circle cx="1100" cy="430" r="4" fill="#C9A24B" opacity="0.6"/>
+    <circle cx="1500" cy="260" r="5" fill="#E3C670" opacity="0.8"/>
+  </g>
+
+  <!-- Halo lumineux -->
+  <ellipse cx="800" cy="420" rx="620" ry="420" fill="#C9A24B" opacity="0.05"/>
+</svg>

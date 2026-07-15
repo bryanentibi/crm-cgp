@@ -268,10 +268,18 @@ const CSS = `
   .tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom: 16px; }
   .tabs button { border:1px solid #cdd6e2; background:#fff; border-radius:20px; padding: 7px 16px; cursor:pointer; font-size:13px; color:${NAVY}; }
   .tabs button.on { background:${NAVY}; color:#fff; border-color:${NAVY}; }
-  .login { min-height:100vh; width:100%; display:flex; align-items:center; justify-content:center; background: linear-gradient(135deg, ${NAVY} 0%, ${NAVY2} 60%, #1d4066 100%); }
-  .loginbox { background:#fff; border-radius: 16px; padding: 38px 36px; width: 100%; max-width: 420px; box-shadow: 0 30px 80px rgba(0,0,0,.4); }
-  .loginbox h1 { font-size: 24px; text-align:center; }
-  .loginbox .gold { color:${GOLD}; letter-spacing: 3px; font-size: 11px; text-transform: uppercase; text-align:center; display:block; margin-bottom: 26px; margin-top: 4px; }
+  .login { min-height:100vh; width:100%; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden;
+           background: linear-gradient(135deg, ${NAVY} 0%, ${NAVY2} 60%, #1d4066 100%); }
+  .login::before { content:""; position:absolute; inset:0; background:url('/static/fond-patrimoine.svg') center/cover no-repeat; opacity:.85; }
+  .login::after { content:""; position:absolute; inset:0; background:radial-gradient(ellipse at center, rgba(11,37,69,.30) 0%, rgba(11,37,69,.72) 100%); }
+  .loginbox { position:relative; z-index:2; background:rgba(255,255,255,.97); border:1px solid rgba(201,162,75,.35); border-radius: 18px; padding: 40px 38px 36px; width: 100%; max-width: 430px;
+              box-shadow: 0 40px 100px rgba(0,0,0,.55); animation: lgin .5s ease-out; }
+  @keyframes lgin { from { opacity:0; transform: translateY(14px); } to { opacity:1; transform:none; } }
+  .loginbox .crest { display:block; width:78px; height:78px; margin: 0 auto 16px; }
+  .loginbox h1 { font-size: 25px; text-align:center; letter-spacing: 1.5px; font-weight:400; }
+  .loginbox .rule { width:64px; height:1px; background:${GOLD}; margin: 12px auto 10px; opacity:.65; }
+  .loginbox .gold { color:${GOLD}; letter-spacing: 3.5px; font-size: 10px; text-transform: uppercase; text-align:center; display:block; margin-bottom: 24px; margin-top: 2px; }
+  .loginfoot { position:absolute; bottom:20px; left:0; right:0; text-align:center; z-index:2; color:rgba(255,255,255,.5); font-size:11px; letter-spacing:1.5px; }
   .userbtn { display:flex; justify-content:space-between; align-items:center; width:100%; padding: 13px 16px; border:1px solid #cdd6e2; border-radius:10px; background:#fff; cursor:pointer; font-size: 15px; margin-bottom: 10px; }
   .userbtn:hover { border-color:${GOLD}; background:#fdf9f0; }
   @media (max-width: 860px) { .crm { flex-direction: column; } .side { width:100%; min-height:0; } .main { padding: 18px 14px; } }
@@ -413,7 +421,7 @@ function App() {
       <div className="crm" style={{ alignItems: "center", justifyContent: "center", background: NAVY }}>
         <style>{CSS}</style>
         <div style={{ color: "#fff", fontFamily: "Georgia, serif", fontSize: 20 }}>
-          BRYAN <span style={{ color: GOLD }}>CGP</span> — chargement…
+          ELYON <span style={{ color: GOLD }}>&</span> ASSOCIÉS
         </div>
       </div>
     );
@@ -451,7 +459,7 @@ function App() {
       <style>{CSS}</style>
       <aside className="side">
         <div className="brand">
-          <b>BRYAN <span style={{ color: GOLD }}>·</span> CGP</b>
+          <b>ELYON <span style={{ color: GOLD }}>&</span> ASSOCIÉS</b>
           <span>Gestion de patrimoine</span>
         </div>
         <div style={{ display: "flex", gap: 4, margin: "0 10px 12px", background: "#13315C", border: "1px solid rgba(255,255,255,.12)", borderRadius: 10, padding: 4 }}>
@@ -611,8 +619,10 @@ function Login({ users, onLogin, onSetPassword }) {
       <style>{CSS}</style>
       <div className="login">
         <div className="loginbox">
-          <h1>BRYAN <span style={{ color: GOLD }}>·</span> CGP</h1>
-          <span className="gold">CRM · Gestion de patrimoine</span>
+          <img src="/static/logo-ea.svg" className="crest" alt="Elyon & Associés" />
+          <h1>ELYON <span style={{ color: GOLD }}>&</span> ASSOCIÉS</h1>
+          <div className="rule" />
+          <span className="gold">Cabinet de gestion de patrimoine</span>
           {!selected && (
             <>
               <p style={{ fontSize: 13.5, color: "#5b6b82", marginBottom: 14 }}>Sélectionnez votre espace :</p>
@@ -660,6 +670,7 @@ function Login({ users, onLogin, onSetPassword }) {
             </>
           )}
         </div>
+        <div className="loginfoot">ESPACE PROFESSIONNEL SÉCURISÉ</div>
       </div>
     </div>
   );
@@ -693,7 +704,7 @@ function Dashboard({ clients: allClients, users, view, me, sales, saveClients, g
     const bd = nextBirthday(c.dateNaissance);
     if (bd) {
       const d = daysUntil(bd);
-      if (d >= 0 && d <= 7) alerts.push({ kind: "anniv", client: c, date: bd.toISOString().slice(0, 10), days: d, age: ageAt(c.dateNaissance, bd) });
+      if (d === 0) alerts.push({ kind: "anniv", client: c, date: bd.toISOString().slice(0, 10), days: d, age: ageAt(c.dateNaissance, bd) });
     }
   });
   alerts.sort((a, b) => a.date.localeCompare(b.date));
@@ -1005,6 +1016,11 @@ function ClientDetail({ client, me, users, back, update, remove }) {
         <div className="card">
           <h2 style={{ fontSize: 17, marginBottom: 12 }}>Informations personnelles</h2>
           <div className="row" style={{ gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
+            <div onClick={() => update({ ...client, lastContact: todayISO() })}
+              style={{ cursor: "pointer", padding: "8px 14px", borderRadius: 20, fontSize: 12.5, fontWeight: 600, border: "1px solid #C9A24B", background: "#FBF6EA", color: "#7A5C17" }}
+              title="Enregistre un contact aujourd'hui (démarre le suivi « prendre des nouvelles »)">
+              📞 {client.lastContact ? "Dernier contact : " + fmtDate(client.lastContact) : "Noter un contact"}
+            </div>
             <div onClick={() => update({ ...client, transfertsFaits: client.transfertsFaits === "oui" ? "non" : "oui" })}
               style={{ cursor: "pointer", padding: "8px 14px", borderRadius: 20, fontSize: 12.5, fontWeight: 600, border: "1px solid",
                 background: client.transfertsFaits === "oui" ? "#e4f3e6" : "#fff",
@@ -2643,6 +2659,14 @@ const ARB_STATUTS = ["", "RDV pris", "Signé", "KO", "À rappeler", "NRP"];
 const ARB_OLD_MAP = { "": "", "rdv": "RDV pris", "signe": "Signé", "ko": "KO", "rappeler": "À rappeler", "nrp": "NRP" };
 const arbRowCls = (s) => (s === "Signé" ? "paye" : s === "KO" ? "annule" : s === "RDV pris" ? "rdvb" : (s === "À rappeler" || s === "NRP") ? "attente" : "");
 
+const arbNom = (s) => {
+  let t = (s || "").trim().toUpperCase().replace(/\s+/g, " ");
+  const m = /^(MME|MLLE|MELLE|MR|M\.|M)\s+/.exec(t);
+  let civ = "", reste = t;
+  if (m) { civ = /^(MME|MLLE|MELLE)/.test(m[1]) ? "MME" : "MR"; reste = t.slice(m[0].length); }
+  return (civ ? civ + " " : "") + reste;
+};
+
 function ArbitragePage({ clients, saveClients, sales, saveSales, me }) {
   const [groups, setGroups] = useState(null);
   const [tab, setTab] = useState(0);
@@ -2672,6 +2696,13 @@ function ArbitragePage({ clients, saveClients, sales, saveSales, me }) {
         if (!g.find((x) => x.nom === "Théo")) g = [...g, { id: uid(), nom: "Théo", rows: THEO_IMPORT }];
         await sSet("crm-arbitrage", g);
         await sSet("crm-arb-theo-0907", true);
+      }
+      /* Uniformisation des noms (civilité + majuscules) — une seule fois */
+      const uniOk = await sGet("crm-arb-uniform-1307");
+      if (!uniOk) {
+        g = g.map((gr) => ({ ...gr, rows: (gr.rows || []).map((r) => ({ ...r, nom: arbNom(r.nom) })) }));
+        await sSet("crm-arbitrage", g);
+        await sSet("crm-arb-uniform-1307", true);
       }
       setGroups(g);
     })();
@@ -2742,7 +2773,7 @@ function ArbitragePage({ clients, saveClients, sales, saveSales, me }) {
                     {ARB_STATUTS.map((s) => <option key={s} value={s}>{s === "" ? "—" : s}</option>)}
                   </select>
                 </td>
-                <td style={{ textAlign: "left" }}><input style={{ fontWeight: 700, color: "#0B2545" }} value={r.nom} onChange={(e) => upRow(r.id, "nom", e.target.value)} placeholder="Nom du client" /></td>
+                <td style={{ textAlign: "left" }}><input style={{ fontWeight: 700, color: "#0B2545", textTransform: "uppercase" }} value={r.nom} onChange={(e) => upRow(r.id, "nom", e.target.value)} onBlur={(e) => upRow(r.id, "nom", arbNom(e.target.value))} placeholder="MME NOM PRÉNOM" /></td>
                 <td style={{ width: 115 }}><input value={r.telephone || ""} onChange={(e) => upRow(r.id, "telephone", e.target.value)} placeholder="06…" /></td>
                 <td style={{ width: 110 }}><input value={r.montant} onChange={(e) => upRow(r.id, "montant", e.target.value)} placeholder="€" /></td>
                 <td style={{ textAlign: "left" }}><input value={r.notes} onChange={(e) => upRow(r.id, "notes", e.target.value)} placeholder="Notes…" /></td>
@@ -3271,7 +3302,8 @@ function parseNaissance(s) {
   return null;
 }
 function lastContactOf(c) {
-  const dates = [c.lastContact, c.createdAt, ...(c.contrats || []).map((k) => k.dateSignature)].filter(Boolean);
+  /* Uniquement les vrais contacts tracés : appel noté, mail envoyé. Un contrat signé n'est pas un contact. */
+  const dates = [c.lastContact, ...((c.mailLog || []).map((m) => m.date))].filter(Boolean);
   return dates.sort().pop() || null;
 }
 function moisDepuis(iso) {
@@ -3300,7 +3332,10 @@ function RappelsPage({ clients, saveClients, goClient }) {
   }).filter(Boolean).sort((a, b) => a.days - b.days);
 
   /* --- Prendre des nouvelles (aucun contact depuis X mois) --- */
-  const nouvelles = actifs.map((c) => ({ c, last: lastContactOf(c), mois: moisDepuis(lastContactOf(c)) }))
+  /* Seuls les clients avec un contact DÉJÀ tracé : sinon 800 fiches remonteraient d'un coup */
+  const nouvelles = actifs.map((c) => ({ c, last: lastContactOf(c) }))
+    .filter((x) => x.last)
+    .map((x) => ({ ...x, mois: moisDepuis(x.last) }))
     .filter((x) => x.mois >= seuil)
     .sort((a, b) => b.mois - a.mois);
 
@@ -3371,7 +3406,7 @@ function RappelsPage({ clients, saveClients, goClient }) {
               <option value={3}>3 mois</option><option value={4}>4 mois</option><option value={6}>6 mois</option><option value={12}>12 mois</option>
             </select>
           </div>
-          {nouvelles.length === 0 && <div style={{ color: "#8593a8", fontSize: 13.5 }}>Personne à recontacter — tous tes clients ont eu des nouvelles récemment. 👌</div>}
+          {nouvelles.length === 0 && <div style={{ color: "#8593a8", fontSize: 13.5 }}>Personne à recontacter pour l'instant. 👌<br /><span style={{ fontSize: 12 }}>Cette liste se remplit au fil de l'eau : dès que tu notes un contact (bouton « ✓ Contacté aujourd'hui » sur cette page) ou que tu envoies un mail via la Messagerie, le compteur démarre pour ce client.</span></div>}
           {nouvelles.slice(0, 100).map((x) => (
             <Ligne key={x.c.id} boutons={<>
               <button className="btn sm" onClick={() => goClient(x.c.id)}>Voir la fiche</button>
@@ -3386,26 +3421,114 @@ function RappelsPage({ clients, saveClients, goClient }) {
         </div>
       )}
 
-      {tab === "afaire" && (
-        <div className="card">
-          <h2 style={{ fontSize: 16, marginBottom: 4 }}>Choses à faire</h2>
-          <div style={{ fontSize: 11.5, color: "#8593a8", marginBottom: 10 }}>Alertes programmées + lignes commençant par <b>!</b> dans les notes des fiches clients.</div>
-          {afaire.length === 0 && <div style={{ color: "#8593a8", fontSize: 13.5 }}>Rien à faire — tout est carré. 🧘</div>}
-          {afaire.map((item, i) => (
-            <Ligne key={i} boutons={<>
-              <button className="btn sm" onClick={() => goClient(item.c.id)}>Voir la fiche</button>
-              <button className="btn ghost sm" onClick={() => item.kind === "alerte" ? faitAlerte(item) : faitNote(item)}>✓ Fait</button>
-            </>}>
-              {item.kind === "alerte" ? (
-                <><b>{item.a.type}</b> — {item.c.civilite ? item.c.civilite + " " : ""}{item.c.nom} {item.c.prenom}
-                  <span className={"badge " + (item.date <= todayISO() ? "b-red" : "b-gold")} style={{ marginLeft: 8 }}>{item.date <= todayISO() ? "En retard · " : ""}{fmtDate(item.date)}</span></>
-              ) : (
-                <><b>{item.texte}</b> — {item.c.civilite ? item.c.civilite + " " : ""}{item.c.nom} {item.c.prenom} <span className="badge b-gold" style={{ marginLeft: 8 }}>note</span></>
-              )}
-            </Ligne>
-          ))}
+      {tab === "afaire" && <TodoLists clients={clients} goClient={goClient} afaire={afaire} faitAlerte={faitAlerte} faitNote={faitNote} />}
+    </div>
+  );
+}
+
+/* ================= LISTES DE RAPPELS (façon iPhone) ================= */
+const TODO_COLORS = ["#C9A24B", "#2563EB", "#16A34A", "#DC2626", "#7C3AED", "#EA580C", "#0891B2"];
+
+function TodoLists({ clients, goClient, afaire, faitAlerte, faitNote }) {
+  const [lists, setLists] = useState(null);
+  const [sel, setSel] = useState("crm");
+  const [draft, setDraft] = useState("");
+  const [draftDate, setDraftDate] = useState("");
+
+  useEffect(() => { (async () => {
+    let l = await sGet("crm-todo-lists");
+    if (!l) { l = [{ id: uid(), nom: "Personnel", color: TODO_COLORS[0], items: [] }]; await sSet("crm-todo-lists", l); }
+    setLists(l);
+  })(); }, []);
+  if (!lists) return <div style={{ color: "#8593a8" }}>Chargement…</div>;
+  const save = (l) => { setLists(l); sSet("crm-todo-lists", l); };
+  const cur = lists.find((x) => x.id === sel);
+
+  const addItem = () => {
+    if (!draft.trim() || !cur) return;
+    save(lists.map((l) => l.id !== sel ? l : { ...l, items: [{ id: uid(), texte: draft.trim(), date: draftDate, done: false, createdAt: todayISO() }, ...l.items] }));
+    setDraft(""); setDraftDate("");
+  };
+  const toggle = (itemId) => save(lists.map((l) => l.id !== sel ? l : { ...l, items: l.items.map((it) => it.id === itemId ? { ...it, done: !it.done } : it) }));
+  const delItem = (itemId) => save(lists.map((l) => l.id !== sel ? l : { ...l, items: l.items.filter((it) => it.id !== itemId) }));
+  const editItem = (it) => { const t = prompt("Modifier le rappel :", it.texte); if (t && t.trim()) save(lists.map((l) => l.id !== sel ? l : { ...l, items: l.items.map((x) => x.id === it.id ? { ...x, texte: t.trim() } : x) })); };
+  const addList = () => { const nom = prompt("Nom de la nouvelle liste :"); if (nom && nom.trim()) { const nl = { id: uid(), nom: nom.trim(), color: TODO_COLORS[lists.length % TODO_COLORS.length], items: [] }; save([...lists, nl]); setSel(nl.id); } };
+  const renameList = () => { if (!cur) return; const nom = prompt("Renommer la liste :", cur.nom); if (nom && nom.trim()) save(lists.map((l) => l.id === sel ? { ...l, nom: nom.trim() } : l)); };
+  const delList = () => { if (!cur) return; if (!confirm(`Supprimer la liste « ${cur.nom} » et ses ${cur.items.length} rappel(s) ?`)) return; const rest = lists.filter((l) => l.id !== sel); save(rest.length ? rest : [{ id: uid(), nom: "Personnel", color: TODO_COLORS[0], items: [] }]); setSel("crm"); };
+  const clearDone = () => { if (!cur) return; save(lists.map((l) => l.id !== sel ? l : { ...l, items: l.items.filter((it) => !it.done) })); };
+
+  const enRetard = (d) => d && d < todayISO();
+  const Item = ({ done, children, onToggle, onEdit, onDel, color }) => (
+    <div className="row" style={{ gap: 12, alignItems: "flex-start", padding: "10px 4px", borderBottom: "1px solid #edf1f6" }}>
+      <div onClick={onToggle} style={{ width: 19, height: 19, borderRadius: "50%", border: "2px solid " + (done ? color : "#cdd6e2"), background: done ? color : "#fff", cursor: "pointer", flexShrink: 0, marginTop: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 11, fontWeight: 700 }}>{done ? "✓" : ""}</div>
+      <div style={{ flex: 1, fontSize: 13.5, opacity: done ? .45 : 1, textDecoration: done ? "line-through" : "none" }}>{children}</div>
+      <div className="row" style={{ gap: 8, flexShrink: 0 }}>
+        {onEdit && <span onClick={onEdit} style={{ cursor: "pointer", color: "#8593a8", fontSize: 12 }}>✏️</span>}
+        {onDel && <span onClick={onDel} style={{ cursor: "pointer", color: "#B3261E", fontSize: 12 }}>✕</span>}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="row" style={{ gap: 18, alignItems: "flex-start", flexWrap: "wrap" }}>
+      {/* Colonne des listes */}
+      <div className="card" style={{ width: 230, flexShrink: 0 }}>
+        <div onClick={() => setSel("crm")} style={{ padding: "10px 12px", borderRadius: 10, cursor: "pointer", background: sel === "crm" ? "#0B2545" : "transparent", color: sel === "crm" ? "#C9A24B" : "#0B2545", fontWeight: 700, fontSize: 13.5, marginBottom: 4, display: "flex", justifyContent: "space-between" }}>
+          <span>⚡ Générés par le CRM</span><span>{afaire.length}</span>
         </div>
-      )}
+        <div style={{ borderTop: "1px solid #edf1f6", margin: "8px 0" }} />
+        {lists.map((l) => (
+          <div key={l.id} onClick={() => setSel(l.id)} onDoubleClick={() => l.id === sel && renameList()}
+            style={{ padding: "10px 12px", borderRadius: 10, cursor: "pointer", background: sel === l.id ? "#F0F3F8" : "transparent", fontSize: 13.5, fontWeight: 600, marginBottom: 2, display: "flex", alignItems: "center", gap: 9 }}>
+            <span style={{ width: 10, height: 10, borderRadius: "50%", background: l.color, flexShrink: 0 }} />
+            <span style={{ flex: 1 }}>{l.nom}</span>
+            <span style={{ color: "#8593a8", fontSize: 12 }}>{l.items.filter((i) => !i.done).length}</span>
+          </div>
+        ))}
+        <button className="btn sm" style={{ width: "100%", marginTop: 10 }} onClick={addList}>+ Nouvelle liste</button>
+      </div>
+
+      {/* Contenu */}
+      <div className="card" style={{ flex: 1, minWidth: 340 }}>
+        {sel === "crm" ? (
+          <>
+            <h2 style={{ fontSize: 17, marginBottom: 4 }}>⚡ Générés par le CRM</h2>
+            <div style={{ fontSize: 11.5, color: "#8593a8", marginBottom: 12 }}>Rappels de transfert, relances après mail, alertes des fiches, et lignes commençant par <b>!</b> dans les notes clients.</div>
+            {afaire.length === 0 && <div style={{ color: "#8593a8", fontSize: 13.5 }}>Rien à faire — tout est carré. 🧘</div>}
+            {afaire.map((item, i) => (
+              <Item key={i} done={false} color="#C9A24B" onToggle={() => item.kind === "alerte" ? faitAlerte(item) : faitNote(item)}>
+                <b>{item.kind === "alerte" ? item.a.type : item.texte}</b>
+                <span style={{ color: "#5b6b82" }}> — <span onClick={() => goClient(item.c.id)} style={{ cursor: "pointer", textDecoration: "underline" }}>{item.c.civilite ? item.c.civilite + " " : ""}{item.c.nom} {item.c.prenom}</span></span>
+                {item.date && <span className={"badge " + (enRetard(item.date) ? "b-red" : "b-gold")} style={{ marginLeft: 8 }}>{enRetard(item.date) ? "En retard · " : ""}{fmtDate(item.date)}</span>}
+                {item.kind === "note" && <span className="badge b-gold" style={{ marginLeft: 8 }}>note</span>}
+              </Item>
+            ))}
+          </>
+        ) : cur ? (
+          <>
+            <div className="row" style={{ justifyContent: "space-between", marginBottom: 12 }}>
+              <h2 style={{ fontSize: 17, color: cur.color }}>{cur.nom}</h2>
+              <div className="row" style={{ gap: 6 }}>
+                <button className="btn sm" onClick={renameList}>✏️ Renommer</button>
+                <button className="btn sm" onClick={clearDone}>🧹 Vider les terminés</button>
+                <button className="btn sm" style={{ color: "#B3261E", borderColor: "#B3261E" }} onClick={delList}>🗑</button>
+              </div>
+            </div>
+            <div className="row" style={{ gap: 8, marginBottom: 14 }}>
+              <input className="in" style={{ flex: 1 }} placeholder="Nouveau rappel…" value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addItem()} />
+              <input className="in" type="date" style={{ width: 150 }} value={draftDate} onChange={(e) => setDraftDate(e.target.value)} />
+              <button className="btn gold" onClick={addItem}>+ Ajouter</button>
+            </div>
+            {cur.items.length === 0 && <div style={{ color: "#8593a8", fontSize: 13.5 }}>Liste vide. Ajoute ton premier rappel ci-dessus.</div>}
+            {[...cur.items].sort((a, b) => (a.done - b.done) || (a.date || "9999").localeCompare(b.date || "9999")).map((it) => (
+              <Item key={it.id} done={it.done} color={cur.color} onToggle={() => toggle(it.id)} onEdit={() => editItem(it)} onDel={() => delItem(it.id)}>
+                {it.texte}
+                {it.date && <span className={"badge " + (enRetard(it.date) && !it.done ? "b-red" : "b-gold")} style={{ marginLeft: 8 }}>{fmtDate(it.date)}</span>}
+              </Item>
+            ))}
+          </>
+        ) : null}
+      </div>
     </div>
   );
 }
