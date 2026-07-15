@@ -304,12 +304,25 @@ const CSS = `
   .lbl { font-size: 12px; font-weight: 600; color:#41506a; display:block; margin-bottom:4px; letter-spacing:.3px; }
   .fgrid { display:grid; grid-template-columns: repeat(auto-fit,minmax(210px,1fr)); gap: 12px; }
   table.t { width:100%; border-collapse: collapse; font-size: 13px; }
-  table.t th { background:${NAVY}; color:#fff; padding: 9px 8px; text-align:center; font-weight:600; font-size:12px; letter-spacing:.4px; white-space: nowrap; }
+  table.t th { background:${NAVY}; color:#fff; padding: 10px 8px; text-align:center; font-weight:600; font-size:11px; letter-spacing:.7px;
+               text-transform:uppercase; white-space: nowrap; border-right:1px solid rgba(255,255,255,.07); }
+  table.t th:last-child { border-right:none; }
   table.t th:first-child { border-radius: 8px 0 0 0; } table.t th:last-child { border-radius: 0 8px 0 0; }
-  table.t td { border-bottom:1px solid #edf1f6; padding: 4px 6px; text-align:center; }
-  table.t input, table.t select { width:100%; border:1px solid transparent; background:transparent; padding: 6px 4px; font-size:13px; text-align:center; border-radius:6px; color:inherit; }
-  table.t input:focus, table.t select:focus { background:#fff; border-color:${GOLD}; outline:none; }
-  tr.paye td { background:#e4f3e6; } tr.annule td { background:#fbe4e2; } tr.attente td { background:#fdf1dc; } tr.rdvb td { background:#D9EAFB; }
+  table.t td { border-bottom:1px solid #eef2f7; padding: 5px 6px; text-align:center; }
+  table.t tbody tr { transition: background .12s; }
+  table.t input, table.t select { width:100%; border:1px solid transparent; background:transparent; padding: 6px 4px; font-size:13px; text-align:center; border-radius:6px; color:inherit; font-family:inherit; }
+  table.t input:focus, table.t select:focus { background:#fff; border-color:${GOLD}; outline:none; box-shadow:0 0 0 3px rgba(201,162,75,.13); }
+  /* Le nom du client en gras navy, comme une vraie fiche */
+  table.t td.cnom input { font-weight:700; color:${NAVY}; text-align:left; letter-spacing:.2px; }
+  table.t td.eur input { font-variant-numeric: tabular-nums; font-weight:600; }
+  table.t td.rem input { font-variant-numeric: tabular-nums; font-weight:700; color:#7A5C17; }
+  /* Statuts : En attente = blanc · Payé = vert · Annulé = rouge */
+  tr.paye td { background:#EAF7EE; } tr.annule td { background:#FBEAE8; } tr.attente td { background:#fff; } tr.rdvb td { background:#D9EAFB; }
+  tr.paye td:first-child { box-shadow: inset 3px 0 0 #16A34A; }
+  tr.annule td:first-child { box-shadow: inset 3px 0 0 #DC2626; }
+  tr.attente td:first-child { box-shadow: inset 3px 0 0 #E3E9F1; }
+  table.t tbody tr:hover td { background:#F7F9FC; }
+  tr.paye:hover td { background:#E0F2E6; } tr.annule:hover td { background:#F7DFDC; }
   tr.pf-on td { background:#EAF7EE; } tr.pf-off td { background:#FBEAE8; }
   .t.pf tbody tr:hover td { filter: brightness(.97); }
   .totrow td { background:${NAVY}; color:#fff; font-weight:700; padding: 10px 8px; }
@@ -1658,7 +1671,7 @@ function SalesPage({ sales, saveSales, users, objectifs, saveObjectifs, me, clie
                 {data.rows.map((r) => (
                   <tr key={r.id} className={r.statut === "Payé" ? "paye" : r.statut === "Annulé" ? "annule" : "attente"} style={r.mirrorOf ? { background: "#fdf9f0" } : undefined} title={r.mirrorOf ? "Ligne recopiée automatiquement depuis le tableau d'un commercial — saisissez votre rémunération" : undefined}>
                     <td><input type="date" value={r.dateCreation || ""} onChange={(e) => updateCell(u.id, r.id, "dateCreation", e.target.value)} style={{ fontSize: 12 }} /></td>
-                    <td><input value={r.nom} onChange={(e) => updateCell(u.id, r.id, "nom", e.target.value)} /></td>
+                    <td className="cnom"><input value={r.nom} onChange={(e) => updateCell(u.id, r.id, "nom", e.target.value)} placeholder="MME NOM PRÉNOM" style={{ textTransform: "uppercase" }} /></td>
                     <td>
                       <select value={r.type} onChange={(e) => updateCell(u.id, r.id, "type", e.target.value)}>
                         <option value=""></option>
@@ -1684,10 +1697,10 @@ function SalesPage({ sales, saveSales, users, objectifs, saveObjectifs, me, clie
                         <option value="__new__">➕ Ajouter un nom…</option>
                       </select>
                     </td>
-                    <td><input value={r.versement || ""} onChange={(e) => updateCell(u.id, r.id, "versement", e.target.value)} placeholder="€/mois" /></td>
-                    <td><input value={r.versementAnnuel || ""} onChange={(e) => updateCell(u.id, r.id, "versementAnnuel", e.target.value)} placeholder="€/an" /></td>
-                    <td><input value={r.volume} onChange={(e) => updateCell(u.id, r.id, "volume", e.target.value)} placeholder="€" /></td>
-                    <td><input value={r.remuneration} onChange={(e) => updateCell(u.id, r.id, "remuneration", e.target.value)} placeholder="€"
+                    <td className="eur"><input value={r.versement || ""} onChange={(e) => updateCell(u.id, r.id, "versement", e.target.value)} placeholder="€/mois" /></td>
+                    <td className="eur"><input value={r.versementAnnuel || ""} onChange={(e) => updateCell(u.id, r.id, "versementAnnuel", e.target.value)} placeholder="€/an" /></td>
+                    <td className="eur"><input value={r.volume} onChange={(e) => updateCell(u.id, r.id, "volume", e.target.value)} placeholder="€" /></td>
+                    <td className="rem"><input value={r.remuneration} onChange={(e) => updateCell(u.id, r.id, "remuneration", e.target.value)} placeholder="€"
                       title={"Taux appliqué : " + (rateFor(r) * 100).toFixed(1) + "% · Double-clic pour le changer"}
                       onDoubleClick={() => {
                         const cur = (rateFor(r) * 100).toFixed(2).replace(".", ",");
