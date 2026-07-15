@@ -3578,43 +3578,65 @@ function RappelsPage({ clients, saveClients, goClient }) {
 }
 
 /* ================= PORTEFEUILLE CLIENT ================= */
+/* Colonnes calquées sur FICHIER_SUIVI_COMMISSIONS :
+   PER 1 = Optimum · PER 2 = MMA · Assurance vie = MMA ≥ 10k (annuel) · Protection juridique = IAG/SPP · Prévoyance = PREV/April
+   Les montants affichés sont les VERSEMENTS MENSUELS (annuel pour l'assurance vie). Les décommissionnés sont barrés. */
 function PortefeuillePage({ clients, saveClients, goClient }) {
   const [search, setSearch] = useState("");
   const [filtre, setFiltre] = useState("tous");
   const [tri, setTri] = useState("adhesion");
 
-  /* Une ligne = un client, ses contrats répartis par colonne produit */
+  const estDecom = (k) => /décom|decom|annul/i.test(k.statut || "");
+  const mensuel = (k) => {
+    const m = parseNum(k.versement) || 0;
+    if (m) return m;
+    const vol = parseNum(k.montant) || 0;   /* volume annuel saisi dans la fiche */
+    return vol ? Math.round(vol / 12) : 0;
+  };
+  const annuel = (k) => parseNum(k.montant) || (parseNum(k.versement) || 0) * 12;
+  const cieOf = (k) => (k.compagnie || "").toUpperCase();
+
+  /* Répartition d'un contrat dans la bonne colonne, selon la compagnie */
+  const colonne = (k) => {
+    const cie = cieOf(k), t = (k.type || "").toLowerCase();
+    if (/optimum|swiss|abeille|malakoff/i.test(cie)) return "per1";
+    if (/mma/i.test(cie)) {
+      if (t.includes("assurance vie") || annuel(k) >= 10000) return "av";
+      return "per2";
+    }
+    if (/afi|esca/i.test(cie)) return "av";
+    if (/iag|spp/i.test(cie)) return "pj";
+    if (/prev|april/i.test(cie) || t.includes("prévoyance")) return "prev";
+    if (t.includes("assurance vie")) return "av";
+    if (t.includes("protection")) return "pj";
+    if (t.includes("prévoyance")) return "prev";
+    if (t === "per") return "per1";
+    return "autre";
+  };
+
   const lignes = useMemo(() => clients.map((cl) => {
-    const ks = cl.contrats || [];
-    const par = (t) => ks.filter((k) => k.type === t);
-    const lib = (k) => [k.type === "PER" ? "PER" : "", k.montant ? parseNum(k.montant) : "", k.compagnie ? k.compagnie.toUpperCase() : ""].filter(Boolean).join(" ");
-    const pers = par("PER"), pj = par("Protection juridique"), prev = par("Prévoyance"), av = par("Assurance vie"), mut = par("Mutuelle");
-    const dates = ks.map((k) => k.dateSignature).filter(Boolean).sort();
+    const cols = { per1: [], per2: [], prev: [], pj: [], av: [], autre: [] };
+    (cl.contrats || []).forEach((k) => cols[colonne(k)].push(k));
+    const dates = (cl.contrats || []).map((k) => k.dateSignature).filter(Boolean).sort();
+    const vivants = (cl.contrats || []).filter((k) => !estDecom(k));
     return {
-      cl,
+      cl, cols,
       adhesion: dates[0] || cl.createdAt || "",
-      actif: !cl.decom,
-      per1: pers[0] ? lib(pers[0]) : "",
-      per2: pers[1] ? lib(pers[1]) : "",
-      prev: prev.map((k) => [k.compagnie, k.montant ? parseNum(k.montant) + " €" : ""].filter(Boolean).join(" ")).join(" + "),
-      pj: pj.map((k) => [k.compagnie, k.montant ? parseNum(k.montant) : ""].filter(Boolean).join("")).join(" + "),
-      av: av.map((k) => [k.compagnie, k.montant ? fmtEUR(parseNum(k.montant)) : ""].filter(Boolean).join(" ")).join(" + "),
-      mut: mut.length ? mut.map((k) => k.compagnie || "Mutuelle").join(" + ") : "",
-      nbContrats: ks.length,
+      actif: !cl.decom && vivants.length > 0,
+      nbContrats: (cl.contrats || []).length,
+      mensuelTotal: vivants.filter((k) => colonne(k) !== "av").reduce((t, k) => t + mensuel(k), 0),
     };
   }), [clients]);
 
   const kpi = useMemo(() => {
-    const t = { clients: lignes.length, actifs: 0, inactifs: 0, per: 0, prev: 0, pj: 0, av: 0, mut: 0 };
+    const t = { clients: lignes.length, actifs: 0, inactifs: 0, per: 0, prev: 0, pj: 0, av: 0, mens: 0 };
     lignes.forEach((l) => {
       l.actif ? t.actifs++ : t.inactifs++;
-      (l.cl.contrats || []).forEach((k) => {
-        if (k.type === "PER") t.per++;
-        else if (k.type === "Prévoyance") t.prev++;
-        else if (k.type === "Protection juridique") t.pj++;
-        else if (k.type === "Assurance vie") t.av++;
-        else if (k.type === "Mutuelle") t.mut++;
-      });
+      t.mens += l.mensuelTotal;
+      ["per1", "per2"].forEach((k) => (t.per += l.cols[k].filter((x) => !estDecom(x)).length));
+      t.prev += l.cols.prev.filter((x) => !estDecom(x)).length;
+      t.pj += l.cols.pj.filter((x) => !estDecom(x)).length;
+      t.av += l.cols.av.filter((x) => !estDecom(x)).length;
     });
     return t;
   }, [lignes]);
@@ -3622,33 +3644,53 @@ function PortefeuillePage({ clients, saveClients, goClient }) {
   const vues = useMemo(() => {
     let v = lignes.filter((l) => filtre === "tous" || (filtre === "actifs" ? l.actif : !l.actif));
     const q = search.trim().toLowerCase();
-    if (q) v = v.filter((l) => (l.cl.nom + " " + (l.cl.prenom || "") + " " + (l.cl.telephone || "") + " " + (l.cl.email || "") + " " + l.per1 + " " + l.per2 + " " + l.pj + " " + l.prev).toLowerCase().includes(q));
+    if (q) v = v.filter((l) => (l.cl.nom + " " + (l.cl.prenom || "") + " " + (l.cl.telephone || "") + " " + (l.cl.email || "") +
+      " " + (l.cl.contrats || []).map((k) => k.compagnie + " " + k.type).join(" ")).toLowerCase().includes(q));
     const cmp = {
       adhesion: (a, b) => (a.adhesion || "9999").localeCompare(b.adhesion || "9999"),
       adhesionRecent: (a, b) => (b.adhesion || "").localeCompare(a.adhesion || ""),
       alpha: (a, b) => a.cl.nom.localeCompare(b.cl.nom),
-      contrats: (a, b) => b.nbContrats - a.nbContrats,
+      montant: (a, b) => b.mensuelTotal - a.mensuelTotal,
     }[tri];
     return [...v].sort(cmp);
   }, [lignes, filtre, search, tri]);
 
   const toggleActif = (id) => saveClients(clients.map((c2) => (c2.id === id ? { ...c2, decom: !c2.decom } : c2)));
 
+  /* Cellule produit : montant mensuel (ou annuel pour l'AV), décommissionné = barré rouge */
+  const Cell = ({ ks, isAv }) => {
+    if (!ks.length) return <td></td>;
+    return (
+      <td style={{ fontSize: 12 }}>
+        {ks.map((k, i) => {
+          const d = estDecom(k);
+          const v = isAv ? annuel(k) : mensuel(k);
+          return (
+            <div key={i} title={(k.compagnie || "") + " · " + (k.type || "") + (d ? " · DÉCOMMISSIONNÉ" : "") + (k.dateSignature ? " · " + fmtDate(k.dateSignature) : "")}
+              style={{ textDecoration: d ? "line-through" : "none", color: d ? "#B3261E" : "#0B2545", opacity: d ? .65 : 1, whiteSpace: "nowrap" }}>
+              <b>{v ? fmtEUR(v) : "—"}</b>{isAv ? "" : "/m"} <span style={{ color: "#8593a8", fontSize: 10.5 }}>{k.compagnie}</span>
+            </div>
+          );
+        })}
+      </td>
+    );
+  };
+
   const exportCSV = () => {
-    const head = ["Adhésion", "Statut", "Téléphone", "E-mail", "Nom Prénom", "PER 1", "PER 2", "Prévoyance", "Protection juridique", "Assurance vie", "Mutuelle"];
+    const head = ["Adhésion", "Statut", "Téléphone", "E-mail", "Nom Prénom", "PER 1 (Optimum) €/mois", "PER 2 (MMA) €/mois", "Prévoyance €/mois", "Protection juridique €/mois", "Assurance vie €/an", "Total €/mois"];
+    const val = (ks, isAv) => ks.map((k) => (estDecom(k) ? "(décom) " : "") + ((isAv ? annuel(k) : mensuel(k)) || "") + " " + (k.compagnie || "")).join(" + ");
     const rows = vues.map((l) => [fmtDate(l.adhesion), l.actif ? "ACTIF" : "INACTIF", l.cl.telephone || "", l.cl.email || "",
-      (l.cl.civilite ? l.cl.civilite + " " : "") + l.cl.nom + " " + (l.cl.prenom || ""), l.per1, l.per2, l.prev, l.pj, l.av, l.mut]);
+      (l.cl.civilite ? l.cl.civilite.toUpperCase() + " " : "") + l.cl.nom + " " + (l.cl.prenom || ""),
+      val(l.cols.per1), val(l.cols.per2), val(l.cols.prev), val(l.cols.pj), val(l.cols.av, true), l.mensuelTotal]);
     const csv = [head, ...rows].map((r) => r.map((x) => `"${String(x).replace(/"/g, '""')}"`).join(";")).join("\n");
     const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `Portefeuille_client_${todayISO()}.csv`;
-    a.click();
+    a.href = URL.createObjectURL(blob); a.download = `Portefeuille_client_${todayISO()}.csv`; a.click();
   };
 
   const K = ({ v, l, color, dot }) => (
-    <div className="card" style={{ padding: "14px 18px", borderLeft: "4px solid " + (color || "#C9A24B"), minWidth: 128 }}>
-      <div style={{ fontFamily: "Georgia, serif", fontSize: 26, fontWeight: 700, color: color || "#0B2545" }}>{v}</div>
+    <div className="card" style={{ padding: "13px 17px", borderLeft: "4px solid " + (color || "#C9A24B"), minWidth: 120 }}>
+      <div style={{ fontFamily: "Georgia, serif", fontSize: 24, fontWeight: 700, color: color || "#0B2545" }}>{v}</div>
       <div style={{ fontSize: 10.5, color: "#8593a8", textTransform: "uppercase", letterSpacing: ".5px", display: "flex", alignItems: "center", gap: 5 }}>
         {dot && <span style={{ width: 7, height: 7, borderRadius: "50%", background: color }} />}{l}
       </div>
@@ -3664,7 +3706,7 @@ function PortefeuillePage({ clients, saveClients, goClient }) {
   return (
     <div>
       <div className="ph">
-        <div><h1>💼 Portefeuille client</h1><div className="sub">{vues.length} client(s) · vue d'ensemble des contrats</div></div>
+        <div><h1>💼 Portefeuille client</h1><div className="sub">{vues.length} client(s) · versements mensuels · décommissionnés barrés</div></div>
         <button className="btn" onClick={exportCSV}>📊 Export Excel</button>
       </div>
 
@@ -3676,16 +3718,16 @@ function PortefeuillePage({ clients, saveClients, goClient }) {
         <K v={kpi.prev} l="Prévoyance" />
         <K v={kpi.pj} l="Protection juridique" />
         <K v={kpi.av} l="Assurance vie" />
-        {kpi.mut > 0 && <K v={kpi.mut} l="Mutuelle" />}
+        <K v={fmtEUR(kpi.mens)} l="Total €/mois" color="#C9A24B" />
       </div>
 
       <div className="row" style={{ gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
-        <input className="in" style={{ flex: 1, minWidth: 240 }} placeholder="🔍 Rechercher (nom, produit, téléphone, email…)" value={search} onChange={(e) => setSearch(e.target.value)} />
+        <input className="in" style={{ flex: 1, minWidth: 240 }} placeholder="🔍 Rechercher (nom, compagnie, téléphone, email…)" value={search} onChange={(e) => setSearch(e.target.value)} />
         <select className="sel" style={{ width: 230 }} value={tri} onChange={(e) => setTri(e.target.value)}>
           <option value="adhesion">Trier : date d'adhésion (anciens)</option>
           <option value="adhesionRecent">Trier : date d'adhésion (récents)</option>
           <option value="alpha">Trier : nom (A → Z)</option>
-          <option value="contrats">Trier : nombre de contrats</option>
+          <option value="montant">Trier : montant mensuel</option>
         </select>
         <div className="row" style={{ gap: 6 }}>
           <Fbtn k="tous" l="Tous" />
@@ -3698,17 +3740,17 @@ function PortefeuillePage({ clients, saveClients, goClient }) {
         <table className="t pf" style={{ width: "100%" }}>
           <thead>
             <tr>
-              <th style={{ minWidth: 108 }}>Adhésion</th>
-              <th style={{ minWidth: 96 }}>Statut</th>
-              <th style={{ minWidth: 112 }}>Téléphone</th>
-              <th style={{ minWidth: 175, textAlign: "left" }}>E-mail</th>
-              <th style={{ minWidth: 190, textAlign: "left" }}>Nom Prénom</th>
-              <th style={{ minWidth: 150 }}>PER 1</th>
-              <th style={{ minWidth: 128 }}>PER 2</th>
-              <th style={{ minWidth: 128 }}>Prévoyance</th>
-              <th style={{ minWidth: 140 }}>Protection juridique</th>
-              <th style={{ minWidth: 128 }}>Assurance vie</th>
-              <th style={{ minWidth: 150, textAlign: "left" }}>Commentaires</th>
+              <th style={{ minWidth: 100 }}>Adhésion</th>
+              <th style={{ minWidth: 92 }}>Statut</th>
+              <th style={{ minWidth: 110 }}>Téléphone</th>
+              <th style={{ minWidth: 170, textAlign: "left" }}>E-mail</th>
+              <th style={{ minWidth: 185, textAlign: "left" }}>Nom Prénom</th>
+              <th style={{ minWidth: 130 }}>PER 1 <span style={{ fontWeight: 400, opacity: .6 }}>Optimum</span></th>
+              <th style={{ minWidth: 118 }}>PER 2 <span style={{ fontWeight: 400, opacity: .6 }}>MMA</span></th>
+              <th style={{ minWidth: 118 }}>Prévoyance</th>
+              <th style={{ minWidth: 130 }}>Protection jur. <span style={{ fontWeight: 400, opacity: .6 }}>IAG/SPP</span></th>
+              <th style={{ minWidth: 125 }}>Assurance vie <span style={{ fontWeight: 400, opacity: .6 }}>€/an</span></th>
+              <th style={{ minWidth: 92 }}>Total €/mois</th>
             </tr>
           </thead>
           <tbody>
@@ -3718,22 +3760,22 @@ function PortefeuillePage({ clients, saveClients, goClient }) {
                 <td>
                   <span onClick={() => toggleActif(l.cl.id)} title="Cliquer pour basculer actif / inactif"
                     style={{ cursor: "pointer", fontWeight: 700, fontSize: 11.5, letterSpacing: ".5px", color: l.actif ? "#16A34A" : "#DC2626" }}>
-                    {l.actif ? "ACTIF" : "INACTIF"} ⌄
+                    {l.actif ? "ACTIF" : "INACTIF"}
                   </span>
                 </td>
                 <td style={{ fontSize: 12 }}>{l.cl.telephone || ""}</td>
-                <td style={{ fontSize: 11.5, textAlign: "left", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }}>{l.cl.email || ""}</td>
+                <td style={{ fontSize: 11.5, textAlign: "left", maxWidth: 190, overflow: "hidden", textOverflow: "ellipsis" }}>{l.cl.email || ""}</td>
                 <td style={{ textAlign: "left" }}>
                   <b onClick={() => goClient(l.cl.id)} style={{ cursor: "pointer", fontSize: 12.5, color: "#0B2545" }}>
                     {l.cl.civilite ? l.cl.civilite.toUpperCase() + " " : ""}{l.cl.nom} {l.cl.prenom || ""}
                   </b>
                 </td>
-                <td style={{ fontSize: 12 }}>{l.per1}</td>
-                <td style={{ fontSize: 12 }}>{l.per2}</td>
-                <td style={{ fontSize: 12 }}>{l.prev}</td>
-                <td style={{ fontSize: 12 }}>{l.pj}</td>
-                <td style={{ fontSize: 12 }}>{l.av}</td>
-                <td style={{ fontSize: 11.5, textAlign: "left" }}>{[l.mut, (l.cl.notes || "").split("\n")[0]].filter(Boolean).join(" · ").slice(0, 60)}</td>
+                <Cell ks={l.cols.per1} />
+                <Cell ks={l.cols.per2} />
+                <Cell ks={l.cols.prev} />
+                <Cell ks={l.cols.pj} />
+                <Cell ks={l.cols.av} isAv />
+                <td style={{ fontSize: 12.5, fontWeight: 700, color: "#7A5C17" }}>{l.mensuelTotal ? fmtEUR(l.mensuelTotal) : ""}</td>
               </tr>
             ))}
           </tbody>
