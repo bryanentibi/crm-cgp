@@ -250,7 +250,10 @@ const CSS = `
     .side { z-index: 75; }
     .side.open { transform:none; padding-top: calc(env(safe-area-inset-top, 0px) + 8px); }
     .scrim.show { display:block; position:fixed; inset:0; background:rgba(11,37,69,.5); z-index:25; }
-    .main { padding: calc(env(safe-area-inset-top, 0px) + 74px) 14px calc(env(safe-area-inset-bottom, 0px) + 30px); width:100%; }
+    .main { padding: 14px 14px calc(env(safe-area-inset-bottom, 0px) + 30px); width:100%;
+            margin-top: calc(env(safe-area-inset-top, 0px) + 64px); }
+    /* Le tout premier titre de chaque page respire sous le bandeau */
+    .main > div > .ph:first-child, .main .ph:first-of-type { padding-top: 4px; }
     .side button { padding: 14px 16px; font-size: 15px; }
     .ph h1 { font-size: 21px; }
     /* Tableaux : défilement horizontal propre au lieu d'un écrasement */
