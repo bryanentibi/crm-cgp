@@ -19,9 +19,12 @@ const COMPANIES = {
 const CONTRACT_TYPES = Object.keys(COMPANIES);
 const SITUATIONS = ["Célibataire", "Marié(e)", "Pacsé(e)", "Concubinage"];
 const ALERT_TYPES = [
+  "Faire le transfert + appeler",
+  "Relancer le client",
   "Création de l'espace client",
   "Rappel pour documents",
   "Rappel pour signature de contrat",
+  "Point annuel",
   "Autre",
 ];
 const BAREMES = ["Manager", "Commercial"];
@@ -981,6 +984,7 @@ function ClientDetail({ client, me, users, back, update, remove }) {
   const [editContract, setEditContract] = useState(null);
   const [showEic, setShowEic] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
+  const [editAlert, setEditAlert] = useState(null);
   if (!client) return null;
 
   const addAlert = (a) => update({ ...client, alertes: [...(client.alertes || []), { ...a, id: uid(), done: false }] });
@@ -1074,7 +1078,7 @@ function ClientDetail({ client, me, users, back, update, remove }) {
         <div className="card">
           <div className="row" style={{ justifyContent: "space-between", marginBottom: 12 }}>
             <h2 style={{ fontSize: 17 }}>🔔 Alertes</h2>
-            <button className="btn sm gold" onClick={() => setShowAlert(true)}>+ Créer une alerte</button>
+            <button className="btn sm gold" onClick={() => { setEditAlert(null); setShowAlert(true); }}>+ Créer un rappel</button>
           </div>
           {(client.alertes || []).length === 0 && <div style={{ color: "#8593a8", fontSize: 13.5 }}>Aucune alerte programmée.</div>}
           {(client.alertes || []).slice().sort((a, b) => a.date.localeCompare(b.date)).map((a) => (
@@ -1084,6 +1088,7 @@ function ClientDetail({ client, me, users, back, update, remove }) {
                 <div style={{ fontSize: 12, color: "#8593a8" }}>Rappel le {fmtDate(a.date)} {a.done && "· ✓ fait"}</div>
               </div>
               <div className="row">
+                <button className="btn ghost sm" onClick={() => { setEditAlert(a); setShowAlert(true); }}>✏️ Modifier</button>
                 <button className="btn ghost sm" onClick={() => toggleAlert(a.id)}>{a.done ? "Réactiver" : "✓ Fait"}</button>
                 <button className="btn danger sm" onClick={() => delAlert(a.id)}>✕</button>
               </div>
@@ -1131,7 +1136,17 @@ function ClientDetail({ client, me, users, back, update, remove }) {
           }}
         />
       )}
-      {showAlert && <AlertForm onClose={() => setShowAlert(false)} onSave={(a) => { addAlert(a); setShowAlert(false); }} />}
+      {showAlert && (
+        <AlertForm
+          initial={editAlert}
+          onClose={() => { setShowAlert(false); setEditAlert(null); }}
+          onSave={(a) => {
+            if (editAlert) update({ ...client, alertes: (client.alertes || []).map((x) => (x.id === editAlert.id ? { ...x, ...a } : x)) });
+            else addAlert(a);
+            setShowAlert(false); setEditAlert(null);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -1231,28 +1246,43 @@ function ContractForm({ initial, onSave, onClose }) {
   );
 }
 
-function AlertForm({ onSave, onClose }) {
-  const [f, setF] = useState({ type: ALERT_TYPES[0], date: todayISO(), note: "" });
+function AlertForm({ initial, onSave, onClose }) {
+  const connu = initial && ALERT_TYPES.includes(initial.type);
+  const [f, setF] = useState(initial
+    ? { ...initial, type: connu ? initial.type : "Autre" }
+    : { type: ALERT_TYPES[0], date: todayISO(), note: "" });
+  const [libre, setLibre] = useState(initial && !connu ? initial.type : "");
+  const valider = () => {
+    const intitule = f.type === "Autre" ? libre.trim() : f.type;
+    if (!intitule) { alert("Écris l'intitulé de ton rappel."); return; }
+    if (!f.date) { alert("Choisis une date."); return; }
+    onSave({ ...f, type: intitule });
+  };
   return (
     <div className="modal-bg" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal" style={{ maxWidth: 480 }}>
-        <h2>Créer une alerte</h2>
+        <h2>{initial ? "Modifier le rappel" : "Créer un rappel"}</h2>
         <div className="grid">
-          <Field label="Type d'alerte">
+          <Field label="Type de rappel">
             <select className="sel" value={f.type} onChange={(e) => setF({ ...f, type: e.target.value })}>
               {ALERT_TYPES.map((t) => <option key={t}>{t}</option>)}
             </select>
           </Field>
+          {f.type === "Autre" && (
+            <Field label="Intitulé du rappel">
+              <input className="in" autoFocus value={libre} onChange={(e) => setLibre(e.target.value)} placeholder="Écris ce que tu veux…" />
+            </Field>
+          )}
           <Field label="Date du rappel">
             <input className="in" type="date" value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} />
           </Field>
           <Field label="Note (optionnel)">
-            <input className="in" value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })} placeholder="ex : relancer pour le RIB" />
+            <input className="in" value={f.note || ""} onChange={(e) => setF({ ...f, note: e.target.value })} placeholder="ex : relancer pour le RIB" />
           </Field>
         </div>
         <div className="row" style={{ marginTop: 18, justifyContent: "flex-end" }}>
           <button className="btn ghost" onClick={onClose}>Annuler</button>
-          <button className="btn gold" onClick={() => onSave(f)}>Programmer l'alerte</button>
+          <button className="btn gold" onClick={valider}>{initial ? "Enregistrer" : "Programmer le rappel"}</button>
         </div>
       </div>
     </div>
@@ -3359,6 +3389,23 @@ function RappelsPage({ clients, saveClients, goClient }) {
   const marquerSouhaite = (x) => saveClients(clients.map((cl) => cl.id === x.c.id ? { ...cl, bdayWished: x.date.getFullYear() + "" } : cl));
   const marquerContacte = (x) => saveClients(clients.map((cl) => cl.id === x.c.id ? { ...cl, lastContact: todayISO() } : cl));
   const faitAlerte = (item) => saveClients(clients.map((cl) => cl.id === item.c.id ? { ...cl, alertes: cl.alertes.map((a) => a.id === item.a.id ? { ...a, done: true } : a) } : cl));
+  /* Modifier l'intitulé ou la date d'un rappel directement depuis cette page */
+  const editAlerte = (item) => {
+    const t = prompt("Intitulé du rappel :", item.a.type);
+    if (t === null) return;
+    const d = prompt("Date du rappel (JJ/MM/AAAA) :", fmtDate(item.a.date));
+    if (d === null) return;
+    let iso = item.a.date;
+    const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec((d || "").trim());
+    if (m) iso = `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+    else if (/^\d{4}-\d{2}-\d{2}$/.test((d || "").trim())) iso = d.trim();
+    else if (d.trim()) { alert("Date non comprise — format attendu : 15/08/2026"); return; }
+    saveClients(clients.map((cl) => cl.id !== item.c.id ? cl : { ...cl, alertes: cl.alertes.map((a) => a.id === item.a.id ? { ...a, type: t.trim() || a.type, date: iso } : a) }));
+  };
+  const delAlerte = (item) => {
+    if (!confirm("Supprimer ce rappel ?")) return;
+    saveClients(clients.map((cl) => cl.id !== item.c.id ? cl : { ...cl, alertes: cl.alertes.filter((a) => a.id !== item.a.id) }));
+  };
   const faitNote = (item) => saveClients(clients.map((cl) => {
     if (cl.id !== item.c.id) return cl;
     const lignes = (cl.notes || "").split("\n");
@@ -3427,7 +3474,7 @@ function RappelsPage({ clients, saveClients, goClient }) {
         </div>
       )}
 
-      {tab === "afaire" && <TodoLists clients={clients} goClient={goClient} afaire={afaire} faitAlerte={faitAlerte} faitNote={faitNote} />}
+      {tab === "afaire" && <TodoLists clients={clients} goClient={goClient} afaire={afaire} faitAlerte={faitAlerte} faitNote={faitNote} editAlerte={editAlerte} delAlerte={delAlerte} />}
     </div>
   );
 }
@@ -3435,7 +3482,7 @@ function RappelsPage({ clients, saveClients, goClient }) {
 /* ================= LISTES DE RAPPELS (façon iPhone) ================= */
 const TODO_COLORS = ["#C9A24B", "#2563EB", "#16A34A", "#DC2626", "#7C3AED", "#EA580C", "#0891B2"];
 
-function TodoLists({ clients, goClient, afaire, faitAlerte, faitNote }) {
+function TodoLists({ clients, goClient, afaire, faitAlerte, faitNote, editAlerte, delAlerte }) {
   const [lists, setLists] = useState(null);
   const [sel, setSel] = useState("crm");
   const [draft, setDraft] = useState("");
@@ -3502,7 +3549,10 @@ function TodoLists({ clients, goClient, afaire, faitAlerte, faitNote }) {
             <div style={{ fontSize: 11.5, color: "#8593a8", marginBottom: 12 }}>Rappels de transfert, relances après mail, alertes des fiches, et lignes commençant par <b>!</b> dans les notes clients.</div>
             {afaire.length === 0 && <div style={{ color: "#8593a8", fontSize: 13.5 }}>Rien à faire — tout est carré. 🧘</div>}
             {afaire.map((item, i) => (
-              <Item key={i} done={false} color="#C9A24B" onToggle={() => item.kind === "alerte" ? faitAlerte(item) : faitNote(item)}>
+              <Item key={i} done={false} color="#C9A24B"
+                onToggle={() => item.kind === "alerte" ? faitAlerte(item) : faitNote(item)}
+                onEdit={item.kind === "alerte" ? () => editAlerte(item) : undefined}
+                onDel={item.kind === "alerte" ? () => delAlerte(item) : undefined}>
                 <b>{item.kind === "alerte" ? item.a.type : item.texte}</b>
                 <span style={{ color: "#5b6b82" }}> — <span onClick={() => goClient(item.c.id)} style={{ cursor: "pointer", textDecoration: "underline" }}>{item.c.civilite ? item.c.civilite + " " : ""}{item.c.nom} {item.c.prenom}</span></span>
                 {item.date && <span className={"badge " + (enRetard(item.date) ? "b-red" : "b-gold")} style={{ marginLeft: 8 }}>{enRetard(item.date) ? "En retard · " : ""}{fmtDate(item.date)}</span>}
