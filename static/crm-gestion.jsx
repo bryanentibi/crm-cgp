@@ -1513,9 +1513,34 @@ function SalesPage({ sales, saveSales, users, objectifs, saveObjectifs, me, clie
 
     saveSales({ ...sales, [month]: monthData });
   };
-  const addRows = (userId) => {
+  /* Les nouvelles lignes arrivent EN HAUT du tableau, prêtes à être remplies */
+  const addRows = (userId, n = 1) => {
     const md = sales[month];
-    saveSales({ ...sales, [month]: { ...md, [userId]: { ...md[userId], rows: [...md[userId].rows, ...Array.from({ length: 5 }, emptyRow)] } } });
+    saveSales({ ...sales, [month]: { ...md, [userId]: { ...md[userId], rows: [...Array.from({ length: n }, emptyRow), ...md[userId].rows] } } });
+  };
+  const addRowsAsk = (userId) => {
+    const r = prompt("Combien de lignes ajouter ?", "5");
+    const n = parseInt(r, 10);
+    if (n > 0 && n <= 50) addRows(userId, n);
+    else if (r !== null) alert("Entre un nombre entre 1 et 50.");
+  };
+  /* Supprimer une ligne (confirmation seulement si elle contient quelque chose) */
+  const delRow = (userId, rowId) => {
+    const md = sales[month];
+    const r = (md[userId].rows || []).find((x) => x.id === rowId);
+    const vide = !r || !(r.nom || r.type || r.compagnie || r.versement || r.versementAnnuel || r.volume || r.remuneration || r.ref);
+    if (!vide && !confirm(`Supprimer la ligne « ${r.nom || "sans nom"} » ?`)) return;
+    saveSales({ ...sales, [month]: { ...md, [userId]: { ...md[userId], rows: md[userId].rows.filter((x) => x.id !== rowId) } } });
+  };
+  /* Nettoyer toutes les lignes vides d'un coup */
+  const purgeVides = (userId) => {
+    const md = sales[month];
+    const rows = md[userId].rows || [];
+    const pleines = rows.filter((r) => r.nom || r.type || r.compagnie || r.versement || r.versementAnnuel || r.volume || r.remuneration || r.ref);
+    const n = rows.length - pleines.length;
+    if (!n) { alert("Aucune ligne vide à supprimer."); return; }
+    if (!confirm(`Supprimer ${n} ligne(s) vide(s) ?`)) return;
+    saveSales({ ...sales, [month]: { ...md, [userId]: { ...md[userId], rows: pleines } } });
   };
 
   const md = sales[month] || {};
@@ -1604,7 +1629,11 @@ function SalesPage({ sales, saveSales, users, objectifs, saveObjectifs, me, clie
               <h2 style={{ fontSize: 17 }}>
                 {u.prenom} {u.nom} <span className="badge b-gold" style={{ marginLeft: 6 }}>Barème {u.bareme}</span>
               </h2>
-              <button className="btn ghost sm" onClick={() => addRows(u.id)}>+ 5 lignes</button>
+              <div className="row" style={{ gap: 6 }}>
+                <button className="btn gold sm" onClick={() => addRows(u.id, 1)}>+ 1 ligne</button>
+                <button className="btn ghost sm" onClick={() => addRowsAsk(u.id)}>+ Plusieurs…</button>
+                <button className="btn ghost sm" onClick={() => purgeVides(u.id)} title="Supprimer toutes les lignes vides de ce tableau">🧹 Lignes vides</button>
+              </div>
             </div>
             <table className="t">
               <thead>
@@ -1622,6 +1651,7 @@ function SalesPage({ sales, saveSales, users, objectifs, saveObjectifs, me, clie
                   <th>Rémunération</th>
                   <th>Statut</th>
                   <th>Fiche</th>
+                  <th style={{ width: 30 }}></th>
                 </tr>
               </thead>
               <tbody>
@@ -1682,18 +1712,23 @@ function SalesPage({ sales, saveSales, users, objectifs, saveObjectifs, me, clie
                         <button className="btn ghost sm" style={{ padding: "3px 8px", fontSize: 11 }} title="Créer la fiche client depuis cette vente" onClick={() => addClientFromRow(u.id, r)}>+ Fiche</button>
                       )}
                     </td>
+                    <td style={{ width: 30 }}>
+                      <button onClick={() => delRow(u.id, r.id)} title="Supprimer cette ligne"
+                        style={{ background: "none", border: "none", color: "#B3261E", cursor: "pointer", fontSize: 13, padding: "2px 4px" }}>✕</button>
+                    </td>
                   </tr>
                 ))}
                 <tr className="totrow">
-                  <td colSpan={10} style={{ textAlign: "right" }}>TOTAL {monthLabel(month).toUpperCase()}</td>
+                  <td colSpan={9} style={{ textAlign: "right" }}>TOTAL {monthLabel(month).toUpperCase()}</td>
                   <td>{fmtEUR(totVol)}</td>
                   <td>{fmtEUR(totRem)}</td>
+                  <td></td>
                   <td></td>
                   <td></td>
                 </tr>
                 <tr className="nprow">
                   <td colSpan={2} style={{ textAlign: "right", paddingRight: 10 }}>AFFAIRES NON PAYÉES</td>
-                  <td colSpan={9} style={{ fontSize: 13 }}>
+                  <td colSpan={10} style={{ fontSize: 13 }}>
                     {(() => {
                       const enAttente = data.rows.filter((r) => (r.nom || "").trim() && r.statut === "En attente");
                       if (enAttente.length === 0) return <span style={{ color: "#8593a8" }}>0 — tout est payé ou annulé ✓</span>;
