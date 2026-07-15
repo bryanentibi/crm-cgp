@@ -233,14 +233,18 @@ const CSS = `
 
   /* ===== MOBILE / TABLETTE ===== */
   @media (max-width: 900px) {
-    .burger { display:flex; position:fixed; top:12px; left:12px; z-index:60; width:44px; height:44px; border-radius:12px;
-              background:${NAVY}; color:${GOLD}; border:1px solid rgba(201,162,75,.4); align-items:center; justify-content:center;
-              font-size:19px; cursor:pointer; box-shadow:0 6px 18px rgba(0,0,0,.28); }
+    .burger { display:flex; position:fixed; top: calc(env(safe-area-inset-top, 0px) + 14px); left:14px; z-index:80;
+              width:50px; height:50px; border-radius:14px;
+              background:${NAVY}; color:${GOLD}; border:1px solid rgba(201,162,75,.45); align-items:center; justify-content:center;
+              font-size:22px; cursor:pointer; box-shadow:0 8px 22px rgba(0,0,0,.35); -webkit-tap-highlight-color:transparent;
+              touch-action:manipulation; user-select:none; }
+    .burger:active { transform:scale(.93); }
     .side { position:fixed; top:0; bottom:0; left:0; width: 268px; transform: translateX(-102%); transition: transform .28s ease;
             box-shadow: 6px 0 30px rgba(0,0,0,.35); padding-top: env(safe-area-inset-top); }
-    .side.open { transform:none; }
+    .side.open { transform:none; padding-top: calc(env(safe-area-inset-top, 0px) + 8px); }
+    .side.open ~ .burger, .burger.open { left: auto; right: 14px; background:rgba(255,255,255,.12); }
     .scrim.show { display:block; position:fixed; inset:0; background:rgba(11,37,69,.5); z-index:25; }
-    .main { padding: 66px 14px 30px; width:100%; }
+    .main { padding: calc(env(safe-area-inset-top, 0px) + 76px) 14px calc(env(safe-area-inset-bottom, 0px) + 30px); width:100%; }
     .side button { padding: 14px 16px; font-size: 15px; }
     .ph h1 { font-size: 21px; }
     /* Tableaux : défilement horizontal propre au lieu d'un écrasement */
@@ -486,7 +490,7 @@ function App() {
   return (
     <div className="crm">
       <style>{CSS}</style>
-      <button className="burger" onClick={() => setMenuOpen(!menuOpen)} aria-label="Menu">{menuOpen ? "✕" : "☰"}</button>
+      <button className={"burger" + (menuOpen ? " open" : "")} onClick={() => setMenuOpen(!menuOpen)} aria-label="Menu">{menuOpen ? "✕" : "☰"}</button>
       <div className={"scrim" + (menuOpen ? " show" : "")} onClick={() => setMenuOpen(false)} />
       <aside className={"side" + (menuOpen ? " open" : "")}>
         <div className="brand">
