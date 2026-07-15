@@ -269,6 +269,13 @@ const CSS = `
     .t.arb tr.attente td:nth-child(2) { background:#fdf1dc; }
     .t.arb tr.rdvb td:nth-child(2) { background:#D9EAFB; }
     .t.arb td:first-child, .t.arb th:first-child { min-width: 118px; }
+    /* Portefeuille : la colonne Nom reste visible au défilement */
+    .t.pf th:nth-child(5), .t.pf td:nth-child(5) {
+      position: sticky; left: 0; z-index: 3; box-shadow: 2px 0 6px rgba(11,37,69,.10); min-width: 160px;
+    }
+    .t.pf thead th:nth-child(5) { z-index: 5; background: ${NAVY}; }
+    .t.pf tr.pf-on td:nth-child(5) { background:#EAF7EE; }
+    .t.pf tr.pf-off td:nth-child(5) { background:#FBEAE8; }
     .card { padding: 16px; border-radius: 12px; }
     .modal { max-width: 100% !important; }
     .modal-bg { padding: 16px 10px; }
@@ -303,6 +310,8 @@ const CSS = `
   table.t input, table.t select { width:100%; border:1px solid transparent; background:transparent; padding: 6px 4px; font-size:13px; text-align:center; border-radius:6px; color:inherit; }
   table.t input:focus, table.t select:focus { background:#fff; border-color:${GOLD}; outline:none; }
   tr.paye td { background:#e4f3e6; } tr.annule td { background:#fbe4e2; } tr.attente td { background:#fdf1dc; } tr.rdvb td { background:#D9EAFB; }
+  tr.pf-on td { background:#EAF7EE; } tr.pf-off td { background:#FBEAE8; }
+  .t.pf tbody tr:hover td { filter: brightness(.97); }
   .totrow td { background:${NAVY}; color:#fff; font-weight:700; padding: 10px 8px; }
   .nprow td { background:#fdf6e7; font-weight:600; }
   .modal-bg { position:fixed; inset:0; background:rgba(11,37,69,.55); display:flex; align-items:flex-start; justify-content:center; padding: 40px 16px; z-index:50; overflow:auto; }
@@ -500,6 +509,7 @@ function App() {
     ["ventes", "📈 Ventes"],
     ["paye", "💶 Ma rémunération"],
     ["docs", "📁 Documents"],
+    ["portefeuille", "💼 Portefeuille client"],
     ["rappels", "🔔 Rappels"],
     ["decom", "🔻 Décommissionnés"],
     ["arbitrage", "⚖️ Arbitrage clients"],
@@ -609,6 +619,7 @@ function App() {
 
       <main className="main">
         {page === "decom" && <DecomPage clients={clients} saveClients={saveClients} goClient={(id) => { setPage("clients"); setOpenClient(id); }} />}
+        {page === "portefeuille" && <PortefeuillePage clients={clients} saveClients={saveClients} goClient={(id) => { setPage("clients"); setOpenClient(id); }} />}
         {page === "rappels" && <RappelsPage clients={clients} saveClients={saveClients} goClient={(id) => { setPage("clients"); setOpenClient(id); }} />}
         {page === "arbitrage" && <ArbitragePage clients={clients} saveClients={saveClients} sales={sales} saveSales={saveSales} me={me} />}
         {page === "messagerie" && <MessageriePage clients={clients} saveClients={saveClients} />}
@@ -836,7 +847,7 @@ function Dashboard({ clients: allClients, users, view, me, sales, saveClients, g
         ))}
       </div>
 
-      <VentesJour sales={sales} users={users} clients={clients} goClient={goClient} />
+      <VentesJour sales={sales} users={users} clients={clients} goClient={goClient} me={me} />
     </div>
   );
 }
@@ -2644,7 +2655,7 @@ const clientMonths = (list) => {
 };
 
 /* ================= VENTES AUJOURD'HUI (dashboard) ================= */
-function VentesJour({ sales, users, clients, goClient }) {
+function VentesJour({ sales, users, clients, goClient, me }) {
   const today = todayISO();
   const mk = today.slice(0, 7);
   const items = [];
@@ -2685,7 +2696,11 @@ function VentesJour({ sales, users, clients, goClient }) {
               <span style={{ color: "#7A5C17", fontWeight: 700 }}>Commission : {r.remuneration ? fmtEUR(parseNum(r.remuneration)) : "—"}</span>
               <span className={"badge " + (r.statut === "Payé" ? "b-green" : r.statut === "Annulé" ? "b-red" : "b-gold")} style={{ marginLeft: 8 }}>{r.statut}</span>
             </div>
-            <div style={{ fontSize: 11, color: "#8593a8", marginTop: 4 }}>Signé par {u ? u.prenom : "?"} · {r.commentaire || ""}</div>
+            {(r.commentaire || (me.isManager && u)) && (
+              <div style={{ fontSize: 11, color: "#8593a8", marginTop: 4 }}>
+                {me.isManager && u ? "Signé par " + u.prenom + (r.commentaire ? " · " : "") : ""}{r.commentaire || ""}
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -3530,6 +3545,173 @@ function RappelsPage({ clients, saveClients, goClient }) {
       )}
 
       {tab === "afaire" && <TodoLists clients={clients} goClient={goClient} afaire={afaire} faitAlerte={faitAlerte} faitNote={faitNote} editAlerte={editAlerte} delAlerte={delAlerte} />}
+    </div>
+  );
+}
+
+/* ================= PORTEFEUILLE CLIENT ================= */
+function PortefeuillePage({ clients, saveClients, goClient }) {
+  const [search, setSearch] = useState("");
+  const [filtre, setFiltre] = useState("tous");
+  const [tri, setTri] = useState("adhesion");
+
+  /* Une ligne = un client, ses contrats répartis par colonne produit */
+  const lignes = useMemo(() => clients.map((cl) => {
+    const ks = cl.contrats || [];
+    const par = (t) => ks.filter((k) => k.type === t);
+    const lib = (k) => [k.type === "PER" ? "PER" : "", k.montant ? parseNum(k.montant) : "", k.compagnie ? k.compagnie.toUpperCase() : ""].filter(Boolean).join(" ");
+    const pers = par("PER"), pj = par("Protection juridique"), prev = par("Prévoyance"), av = par("Assurance vie"), mut = par("Mutuelle");
+    const dates = ks.map((k) => k.dateSignature).filter(Boolean).sort();
+    return {
+      cl,
+      adhesion: dates[0] || cl.createdAt || "",
+      actif: !cl.decom,
+      per1: pers[0] ? lib(pers[0]) : "",
+      per2: pers[1] ? lib(pers[1]) : "",
+      prev: prev.map((k) => [k.compagnie, k.montant ? parseNum(k.montant) + " €" : ""].filter(Boolean).join(" ")).join(" + "),
+      pj: pj.map((k) => [k.compagnie, k.montant ? parseNum(k.montant) : ""].filter(Boolean).join("")).join(" + "),
+      av: av.map((k) => [k.compagnie, k.montant ? fmtEUR(parseNum(k.montant)) : ""].filter(Boolean).join(" ")).join(" + "),
+      mut: mut.length ? mut.map((k) => k.compagnie || "Mutuelle").join(" + ") : "",
+      nbContrats: ks.length,
+    };
+  }), [clients]);
+
+  const kpi = useMemo(() => {
+    const t = { clients: lignes.length, actifs: 0, inactifs: 0, per: 0, prev: 0, pj: 0, av: 0, mut: 0 };
+    lignes.forEach((l) => {
+      l.actif ? t.actifs++ : t.inactifs++;
+      (l.cl.contrats || []).forEach((k) => {
+        if (k.type === "PER") t.per++;
+        else if (k.type === "Prévoyance") t.prev++;
+        else if (k.type === "Protection juridique") t.pj++;
+        else if (k.type === "Assurance vie") t.av++;
+        else if (k.type === "Mutuelle") t.mut++;
+      });
+    });
+    return t;
+  }, [lignes]);
+
+  const vues = useMemo(() => {
+    let v = lignes.filter((l) => filtre === "tous" || (filtre === "actifs" ? l.actif : !l.actif));
+    const q = search.trim().toLowerCase();
+    if (q) v = v.filter((l) => (l.cl.nom + " " + (l.cl.prenom || "") + " " + (l.cl.telephone || "") + " " + (l.cl.email || "") + " " + l.per1 + " " + l.per2 + " " + l.pj + " " + l.prev).toLowerCase().includes(q));
+    const cmp = {
+      adhesion: (a, b) => (a.adhesion || "9999").localeCompare(b.adhesion || "9999"),
+      adhesionRecent: (a, b) => (b.adhesion || "").localeCompare(a.adhesion || ""),
+      alpha: (a, b) => a.cl.nom.localeCompare(b.cl.nom),
+      contrats: (a, b) => b.nbContrats - a.nbContrats,
+    }[tri];
+    return [...v].sort(cmp);
+  }, [lignes, filtre, search, tri]);
+
+  const toggleActif = (id) => saveClients(clients.map((c2) => (c2.id === id ? { ...c2, decom: !c2.decom } : c2)));
+
+  const exportCSV = () => {
+    const head = ["Adhésion", "Statut", "Téléphone", "E-mail", "Nom Prénom", "PER 1", "PER 2", "Prévoyance", "Protection juridique", "Assurance vie", "Mutuelle"];
+    const rows = vues.map((l) => [fmtDate(l.adhesion), l.actif ? "ACTIF" : "INACTIF", l.cl.telephone || "", l.cl.email || "",
+      (l.cl.civilite ? l.cl.civilite + " " : "") + l.cl.nom + " " + (l.cl.prenom || ""), l.per1, l.per2, l.prev, l.pj, l.av, l.mut]);
+    const csv = [head, ...rows].map((r) => r.map((x) => `"${String(x).replace(/"/g, '""')}"`).join(";")).join("\n");
+    const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `Portefeuille_client_${todayISO()}.csv`;
+    a.click();
+  };
+
+  const K = ({ v, l, color, dot }) => (
+    <div className="card" style={{ padding: "14px 18px", borderLeft: "4px solid " + (color || "#C9A24B"), minWidth: 128 }}>
+      <div style={{ fontFamily: "Georgia, serif", fontSize: 26, fontWeight: 700, color: color || "#0B2545" }}>{v}</div>
+      <div style={{ fontSize: 10.5, color: "#8593a8", textTransform: "uppercase", letterSpacing: ".5px", display: "flex", alignItems: "center", gap: 5 }}>
+        {dot && <span style={{ width: 7, height: 7, borderRadius: "50%", background: color }} />}{l}
+      </div>
+    </div>
+  );
+  const Fbtn = ({ k, l, color }) => (
+    <div onClick={() => setFiltre(k)} style={{ padding: "7px 15px", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer",
+      background: filtre === k ? "#0B2545" : "#fff", color: filtre === k ? "#fff" : "#44536B", border: "1px solid " + (filtre === k ? "#0B2545" : "#CDD6E2"), display: "flex", alignItems: "center", gap: 6 }}>
+      {color && <span style={{ width: 8, height: 8, borderRadius: "50%", background: color }} />}{l}
+    </div>
+  );
+
+  return (
+    <div>
+      <div className="ph">
+        <div><h1>💼 Portefeuille client</h1><div className="sub">{vues.length} client(s) · vue d'ensemble des contrats</div></div>
+        <button className="btn" onClick={exportCSV}>📊 Export Excel</button>
+      </div>
+
+      <div className="row" style={{ gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
+        <K v={kpi.clients} l="Clients" />
+        <K v={kpi.actifs} l="Actifs" color="#16A34A" dot />
+        <K v={kpi.inactifs} l="Inactifs" color="#DC2626" dot />
+        <K v={kpi.per} l="PER" />
+        <K v={kpi.prev} l="Prévoyance" />
+        <K v={kpi.pj} l="Protection juridique" />
+        <K v={kpi.av} l="Assurance vie" />
+        {kpi.mut > 0 && <K v={kpi.mut} l="Mutuelle" />}
+      </div>
+
+      <div className="row" style={{ gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
+        <input className="in" style={{ flex: 1, minWidth: 240 }} placeholder="🔍 Rechercher (nom, produit, téléphone, email…)" value={search} onChange={(e) => setSearch(e.target.value)} />
+        <select className="sel" style={{ width: 230 }} value={tri} onChange={(e) => setTri(e.target.value)}>
+          <option value="adhesion">Trier : date d'adhésion (anciens)</option>
+          <option value="adhesionRecent">Trier : date d'adhésion (récents)</option>
+          <option value="alpha">Trier : nom (A → Z)</option>
+          <option value="contrats">Trier : nombre de contrats</option>
+        </select>
+        <div className="row" style={{ gap: 6 }}>
+          <Fbtn k="tous" l="Tous" />
+          <Fbtn k="actifs" l="Actifs" color="#16A34A" />
+          <Fbtn k="inactifs" l="Inactifs" color="#DC2626" />
+        </div>
+      </div>
+
+      <div className="card" style={{ overflowX: "auto", padding: 0 }}>
+        <table className="t pf" style={{ width: "100%" }}>
+          <thead>
+            <tr>
+              <th style={{ minWidth: 108 }}>Adhésion</th>
+              <th style={{ minWidth: 96 }}>Statut</th>
+              <th style={{ minWidth: 112 }}>Téléphone</th>
+              <th style={{ minWidth: 175, textAlign: "left" }}>E-mail</th>
+              <th style={{ minWidth: 190, textAlign: "left" }}>Nom Prénom</th>
+              <th style={{ minWidth: 150 }}>PER 1</th>
+              <th style={{ minWidth: 128 }}>PER 2</th>
+              <th style={{ minWidth: 128 }}>Prévoyance</th>
+              <th style={{ minWidth: 140 }}>Protection juridique</th>
+              <th style={{ minWidth: 128 }}>Assurance vie</th>
+              <th style={{ minWidth: 150, textAlign: "left" }}>Commentaires</th>
+            </tr>
+          </thead>
+          <tbody>
+            {vues.map((l) => (
+              <tr key={l.cl.id} className={l.actif ? "pf-on" : "pf-off"}>
+                <td style={{ fontSize: 12 }}>{fmtDate(l.adhesion)}</td>
+                <td>
+                  <span onClick={() => toggleActif(l.cl.id)} title="Cliquer pour basculer actif / inactif"
+                    style={{ cursor: "pointer", fontWeight: 700, fontSize: 11.5, letterSpacing: ".5px", color: l.actif ? "#16A34A" : "#DC2626" }}>
+                    {l.actif ? "ACTIF" : "INACTIF"} ⌄
+                  </span>
+                </td>
+                <td style={{ fontSize: 12 }}>{l.cl.telephone || ""}</td>
+                <td style={{ fontSize: 11.5, textAlign: "left", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }}>{l.cl.email || ""}</td>
+                <td style={{ textAlign: "left" }}>
+                  <b onClick={() => goClient(l.cl.id)} style={{ cursor: "pointer", fontSize: 12.5, color: "#0B2545" }}>
+                    {l.cl.civilite ? l.cl.civilite.toUpperCase() + " " : ""}{l.cl.nom} {l.cl.prenom || ""}
+                  </b>
+                </td>
+                <td style={{ fontSize: 12 }}>{l.per1}</td>
+                <td style={{ fontSize: 12 }}>{l.per2}</td>
+                <td style={{ fontSize: 12 }}>{l.prev}</td>
+                <td style={{ fontSize: 12 }}>{l.pj}</td>
+                <td style={{ fontSize: 12 }}>{l.av}</td>
+                <td style={{ fontSize: 11.5, textAlign: "left" }}>{[l.mut, (l.cl.notes || "").split("\n")[0]].filter(Boolean).join(" · ").slice(0, 60)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {vues.length === 0 && <div style={{ padding: 24, color: "#8593a8", fontSize: 13.5 }}>Aucun client ne correspond à cette recherche.</div>}
+      </div>
     </div>
   );
 }
