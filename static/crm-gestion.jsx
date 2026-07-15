@@ -216,7 +216,7 @@ const emptyMonthData = (users) => {
 const CSS = `
   .crm * { box-sizing: border-box; }
   .crm { font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; color: ${NAVY}; min-height: 100vh; background: ${LIGHT}; display:flex; }
-  .burger { display:none; }
+  .topbarm { display:none; }
   .scrim { display:none; }
   .crm h1,.crm h2,.crm h3 { font-family: Georgia, 'Times New Roman', serif; margin: 0; }
   .side { width: 232px; height: 100vh; position: sticky; top: 0; background: linear-gradient(180deg, ${NAVY} 0%, ${NAVY2} 100%); color:#fff; display:flex; flex-direction:column; flex-shrink:0; overflow-y:auto; -webkit-overflow-scrolling:touch; z-index: 30; }
@@ -233,22 +233,39 @@ const CSS = `
 
   /* ===== MOBILE / TABLETTE ===== */
   @media (max-width: 900px) {
-    .burger { display:flex; position:fixed; top: calc(env(safe-area-inset-top, 0px) + 14px); left:14px; z-index:80;
-              width:50px; height:50px; border-radius:14px;
-              background:${NAVY}; color:${GOLD}; border:1px solid rgba(201,162,75,.45); align-items:center; justify-content:center;
-              font-size:22px; cursor:pointer; box-shadow:0 8px 22px rgba(0,0,0,.35); -webkit-tap-highlight-color:transparent;
+    /* Bandeau fixe : masque le contenu qui défile dessous, contient le burger */
+    .topbarm { display:flex; position:fixed; top:0; left:0; right:0; z-index:70; align-items:center; gap:12px;
+               height: calc(env(safe-area-inset-top, 0px) + 60px);
+               padding: env(safe-area-inset-top, 0px) 14px 0;
+               background: ${NAVY}; box-shadow: 0 3px 16px rgba(11,37,69,.35); }
+    .topbarm .tt { color:#fff; font-family: Georgia, serif; font-size: 16px; letter-spacing: .5px; }
+    .topbarm .tt span { color:${GOLD}; }
+    .burger { display:flex; width:42px; height:42px; border-radius:11px; flex-shrink:0;
+              background:rgba(255,255,255,.10); color:${GOLD}; border:1px solid rgba(201,162,75,.45); align-items:center; justify-content:center;
+              font-size:20px; cursor:pointer; -webkit-tap-highlight-color:transparent;
               touch-action:manipulation; user-select:none; }
     .burger:active { transform:scale(.93); }
     .side { position:fixed; top:0; bottom:0; left:0; width: 268px; transform: translateX(-102%); transition: transform .28s ease;
             box-shadow: 6px 0 30px rgba(0,0,0,.35); padding-top: env(safe-area-inset-top); }
+    .side { z-index: 75; }
     .side.open { transform:none; padding-top: calc(env(safe-area-inset-top, 0px) + 8px); }
-    .side.open ~ .burger, .burger.open { left: auto; right: 14px; background:rgba(255,255,255,.12); }
     .scrim.show { display:block; position:fixed; inset:0; background:rgba(11,37,69,.5); z-index:25; }
-    .main { padding: calc(env(safe-area-inset-top, 0px) + 76px) 14px calc(env(safe-area-inset-bottom, 0px) + 30px); width:100%; }
+    .main { padding: calc(env(safe-area-inset-top, 0px) + 74px) 14px calc(env(safe-area-inset-bottom, 0px) + 30px); width:100%; }
     .side button { padding: 14px 16px; font-size: 15px; }
     .ph h1 { font-size: 21px; }
     /* Tableaux : défilement horizontal propre au lieu d'un écrasement */
     .t { display:block; overflow-x:auto; white-space:nowrap; -webkit-overflow-scrolling:touch; }
+    /* Arbitrage : le nom du client reste visible pendant le défilement horizontal */
+    .t.arb th:nth-child(2), .t.arb td:nth-child(2) {
+      position: sticky; left: 0; z-index: 3; background: #fff; min-width: 168px;
+      box-shadow: 2px 0 6px rgba(11,37,69,.10);
+    }
+    .t.arb thead th:nth-child(2) { z-index: 5; background: ${NAVY}; }
+    .t.arb tr.paye td:nth-child(2) { background:#e4f3e6; }
+    .t.arb tr.annule td:nth-child(2) { background:#fbe4e2; }
+    .t.arb tr.attente td:nth-child(2) { background:#fdf1dc; }
+    .t.arb tr.rdvb td:nth-child(2) { background:#D9EAFB; }
+    .t.arb td:first-child, .t.arb th:first-child { min-width: 118px; }
     .card { padding: 16px; border-radius: 12px; }
     .modal { max-width: 100% !important; }
     .modal-bg { padding: 16px 10px; }
@@ -490,7 +507,10 @@ function App() {
   return (
     <div className="crm">
       <style>{CSS}</style>
-      <button className={"burger" + (menuOpen ? " open" : "")} onClick={() => setMenuOpen(!menuOpen)} aria-label="Menu">{menuOpen ? "✕" : "☰"}</button>
+      <div className="topbarm">
+        <button className="burger" onClick={() => setMenuOpen(!menuOpen)} aria-label="Menu">{menuOpen ? "✕" : "☰"}</button>
+        <div className="tt">ELYON <span>&</span> ASSOCIÉS</div>
+      </div>
       <div className={"scrim" + (menuOpen ? " show" : "")} onClick={() => setMenuOpen(false)} />
       <aside className={"side" + (menuOpen ? " open" : "")}>
         <div className="brand">
@@ -2831,7 +2851,7 @@ function ArbitragePage({ clients, saveClients, sales, saveSales, me }) {
         <div onClick={addGroup} style={{ padding: "9px 16px", borderRadius: 10, fontSize: 13, cursor: "pointer", color: "#8593a8", border: "1px dashed #CDD6E2" }}>+ Onglet</div>
       </div>
       <div className="card" style={{ overflowX: "auto" }}>
-        <table className="t" style={{ width: "100%" }}>
+        <table className="t arb" style={{ width: "100%" }}>
           <thead><tr><th>Statut</th><th style={{ textAlign: "left" }}>Client</th><th>Téléphone</th><th>Montant €/mois</th><th style={{ textAlign: "left" }}>Notes</th><th></th></tr></thead>
           <tbody>
             {grp.rows.map((r) => (
