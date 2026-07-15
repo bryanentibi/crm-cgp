@@ -1357,6 +1357,26 @@ function AlertForm({ initial, onSave, onClose }) {
 
 /* ================= VENTES ÉQUIPE ================= */
 function SalesPage({ sales, saveSales, users, objectifs, saveObjectifs, me, clients, saveClients }) {
+  const [apporteurs, setApporteurs] = useState([]);
+  useEffect(() => { (async () => {
+    let a = await sGet("crm-apporteurs");
+    if (!a || !a.length) {
+      const vus = new Set();
+      (sales || []).forEach((u) => (u.rows || []).forEach((r) => r.apporteur && vus.add(r.apporteur.trim())));
+      (users || []).forEach((u) => vus.add(`${u.prenom} ${u.nom}`.trim()));
+      a = [...vus].filter(Boolean).sort();
+      await sSet("crm-apporteurs", a);
+    }
+    setApporteurs(a);
+  })(); }, []);
+  const ajouterApporteur = (userId, rowId) => {
+    const nom = prompt("Nom de l'apporteur à ajouter à la liste :");
+    if (!nom || !nom.trim()) return;
+    const v = nom.trim();
+    const maj = [...new Set([...apporteurs, v])].sort();
+    setApporteurs(maj); sSet("crm-apporteurs", maj);
+    updateCell(userId, rowId, "apporteur", v);
+  };
   /* Ajouter le contrat de la ligne à la fiche déjà liée */
   const addContractToLinked = (userId, r) => {
     const cl = clients.find((x) => x.id === r.clientId);
@@ -1595,8 +1615,7 @@ function SalesPage({ sales, saveSales, users, objectifs, saveObjectifs, me, clie
                   <th>Compagnie</th>
                   <th style={{ width: "5%" }}>Frais</th>
                   <th>Réf. contrat</th>
-                  <th style={{ width: "14%" }}>Commentaires</th>
-                  <th>Apporteur</th>
+                  <th style={{ width: "12%" }}>Apporteur</th>
                   <th>Versement/mois</th>
                   <th>Versement/an</th>
                   <th>Volume</th>
@@ -1624,8 +1643,17 @@ function SalesPage({ sales, saveSales, users, objectifs, saveObjectifs, me, clie
                     </td>
                     <td><input value={r.frais} onChange={(e) => updateCell(u.id, r.id, "frais", e.target.value)} placeholder="%" /></td>
                     <td><input value={r.ref} onChange={(e) => updateCell(u.id, r.id, "ref", e.target.value)} /></td>
-                    <td><input value={r.commentaire} onChange={(e) => updateCell(u.id, r.id, "commentaire", e.target.value)} /></td>
-                    <td><input value={r.apporteur} onChange={(e) => updateCell(u.id, r.id, "apporteur", e.target.value)} /></td>
+                    <td>
+                      <select value={r.apporteur || ""} onChange={(e) => {
+                        if (e.target.value === "__new__") { ajouterApporteur(u.id, r.id); return; }
+                        updateCell(u.id, r.id, "apporteur", e.target.value);
+                      }}>
+                        <option value=""></option>
+                        {apporteurs.map((a) => <option key={a} value={a}>{a}</option>)}
+                        {r.apporteur && !apporteurs.includes(r.apporteur) && <option value={r.apporteur}>{r.apporteur}</option>}
+                        <option value="__new__">➕ Ajouter un nom…</option>
+                      </select>
+                    </td>
                     <td><input value={r.versement || ""} onChange={(e) => updateCell(u.id, r.id, "versement", e.target.value)} placeholder="€/mois" /></td>
                     <td><input value={r.versementAnnuel || ""} onChange={(e) => updateCell(u.id, r.id, "versementAnnuel", e.target.value)} placeholder="€/an" /></td>
                     <td><input value={r.volume} onChange={(e) => updateCell(u.id, r.id, "volume", e.target.value)} placeholder="€" /></td>
