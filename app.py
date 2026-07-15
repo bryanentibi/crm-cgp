@@ -395,6 +395,39 @@ def eic_pdf_officiel():
     from flask import send_file
     return send_file(out, mimetype='application/pdf', as_attachment=True, download_name=nom_fichier)
 
+
+# ============ FOND DU PORTAIL DE CONNEXION (photo personnalisable) ============
+@app.route('/api/portal-bg', methods=['GET', 'POST', 'DELETE'])
+def portal_bg():
+    """GET public (l'écran de connexion doit pouvoir l'afficher) · POST/DELETE réservés"""
+    conn, cur = kv_conn()
+    try:
+        if request.method == 'GET':
+            cur.execute("SELECT v FROM kv_store WHERE k = %s", ['__portal::bg'])
+            row = cur.fetchone()
+            if not row:
+                return jsonify({'image': None})
+            return jsonify({'image': json.loads(row['v'])})
+        s = check_session(request)
+        if not s or s.get('role') not in ('admin', 'manager'):
+            return jsonify({'error': 'unauthorized'}), 401
+        if request.method == 'DELETE':
+            cur.execute("DELETE FROM kv_store WHERE k = %s", ['__portal::bg'])
+            conn.commit()
+            return jsonify({'ok': True})
+        data = request.json or {}
+        img = data.get('image') or ''
+        if not img.startswith('data:image/'):
+            return jsonify({'error': "Format d'image non reconnu"}), 400
+        if len(img) > 6_000_000:
+            return jsonify({'error': 'Image trop lourde (max ~4 Mo)'}), 400
+        cur.execute("INSERT INTO kv_store (k, v) VALUES (%s, %s) ON CONFLICT (k) DO UPDATE SET v = EXCLUDED.v",
+                    ['__portal::bg', json.dumps(img)])
+        conn.commit()
+        return jsonify({'ok': True})
+    finally:
+        cur.close(); conn.close()
+
 # ============ EXPORT ARBITRAGE (migration vers Gestion) ============
 @app.route('/api/arbitrage-export')
 def arbitrage_export():

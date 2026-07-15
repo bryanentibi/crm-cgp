@@ -270,7 +270,7 @@ const CSS = `
   .tabs button.on { background:${NAVY}; color:#fff; border-color:${NAVY}; }
   .login { min-height:100vh; width:100%; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden;
            background: linear-gradient(135deg, ${NAVY} 0%, ${NAVY2} 60%, #1d4066 100%); }
-  .login::before { content:""; position:absolute; inset:0; background:url('/static/fond-patrimoine.svg') center/cover no-repeat; opacity:.85; }
+  .login::before { content:""; position:absolute; inset:0; background:url('/static/fond-portail.jpg') center/cover no-repeat; opacity:.95; }
   .login::after { content:""; position:absolute; inset:0; background:radial-gradient(ellipse at center, rgba(11,37,69,.30) 0%, rgba(11,37,69,.72) 100%); }
   .loginbox { position:relative; z-index:2; background:rgba(255,255,255,.97); border:1px solid rgba(201,162,75,.35); border-radius: 18px; padding: 40px 38px 36px; width: 100%; max-width: 430px;
               box-shadow: 0 40px 100px rgba(0,0,0,.55); animation: lgin .5s ease-out; }
@@ -597,6 +597,11 @@ function Login({ users, onLogin, onSetPassword }) {
   const [pwd, setPwd] = useState("");
   const [pwd2, setPwd2] = useState("");
   const [err, setErr] = useState("");
+  const [bgPhoto, setBgPhoto] = useState(null);
+
+  useEffect(() => { (async () => {
+    try { const r = await fetch("/api/portal-bg"); const j = await r.json(); if (j.image) setBgPhoto(j.image); } catch {}
+  })(); }, []);
 
   const needsPassword = !!selected;
   const firstTime = selected && !selected.password;
@@ -618,6 +623,7 @@ function Login({ users, onLogin, onSetPassword }) {
     <div className="crm">
       <style>{CSS}</style>
       <div className="login">
+        {bgPhoto && <div style={{ position: "absolute", inset: 0, backgroundImage: `url('${bgPhoto}')`, backgroundSize: "cover", backgroundPosition: "center", opacity: .9, zIndex: 0 }} />}
         <div className="loginbox">
           <img src="/static/logo-ea.svg" className="crest" alt="Elyon & Associés" />
           <h1>ELYON <span style={{ color: GOLD }}>&</span> ASSOCIÉS</h1>

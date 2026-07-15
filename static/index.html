@@ -352,7 +352,7 @@ tbody td{padding:5px 12px;font-size:13px;vertical-align:middle}
 
 <!-- LOGIN PAGE -->
 <div id="login-page" style="display:none;position:fixed;inset:0;background:linear-gradient(135deg,#0B2545 0%,#13315C 60%,#1d4066 100%);z-index:9999;display:flex;align-items:center;justify-content:center">
-  <div style="position:absolute;inset:0;background:url('/static/fond-patrimoine.svg') center/cover no-repeat;opacity:.85"></div>
+  <div id="login-bg-photo" style="position:absolute;inset:0;background:url('/static/fond-portail.jpg') center/cover no-repeat;opacity:.95"></div>
   <div style="position:absolute;inset:0;background:radial-gradient(ellipse at center, rgba(11,37,69,.30) 0%, rgba(11,37,69,.72) 100%)"></div>
   <div style="position:relative;z-index:2;background:rgba(255,255,255,.97);border:1px solid rgba(201,162,75,.35);border-radius:18px;padding:40px 38px 36px;width:100%;max-width:430px;box-shadow:0 40px 100px rgba(0,0,0,.55)">
     <div style="text-align:center;margin-bottom:0">
@@ -426,6 +426,7 @@ tbody td{padding:5px 12px;font-size:13px;vertical-align:middle}
       <div class="sb-item" id="nav-ro" onclick="showV('ro')"><span class="sb-icon">📁</span>Ancien R&O</div>
       <div class="sb-item" id="nav-art" onclick="showV('artisans')"><span class="sb-icon">🔧</span>Artisans</div>
       <div class="sb-item" id="nav-acces" style="display:none" onclick="openAcces()"><span class="sb-icon">🔑</span>Gérer les accès</div>
+      <div class="sb-item" id="nav-fond" style="display:none" onclick="openFond()"><span class="sb-icon">🖼️</span>Photo du portail</div>
     </div>
 
     <div class="sb-lbl collapsible" style="margin-top:6px" onclick="toggleSection('flt')">Filtres rapides <span class="sb-chevron" id="chev-flt">▾</span></div>
@@ -2156,6 +2157,8 @@ function applyRestrictions(restricted) {
   /* Gérer les accès : réservé à Bryan et Quentin */
   const acc = document.getElementById('nav-acces');
   if (acc) acc.style.display = (window.myRole === 'admin' || window.myRole === 'manager') ? 'flex' : 'none';
+  const fnd = document.getElementById('nav-fond');
+  if (fnd) fnd.style.display = (window.myRole === 'admin' || window.myRole === 'manager') ? 'flex' : 'none';
   // Cacher les onglets restreints
   const map = {
     'ro': 'nav-ro',
@@ -2320,6 +2323,79 @@ window.saveRDV = async function() {
 }
 
 
+/* ===== PHOTO DU PORTAIL ===== */
+let fondData = null, fondOp = 85;
+window.openFond = async function(){
+  document.getElementById('modal-fond').style.display = 'flex';
+  document.getElementById('fond-err').style.display = 'none';
+  try {
+    const r = await fetch('/api/portal-bg');
+    const j = await r.json();
+    if(j.image){ fondData = j.image; appliquerApercu(); }
+  } catch(e){}
+}
+function appliquerApercu(){
+  const el = document.getElementById('fond-apercu');
+  if(fondData){ el.style.backgroundImage = `url('${fondData}')`; el.style.opacity = 1; }
+  const im = el.querySelector('img');
+  el.style.filter = `opacity(${1}) `;
+  el.firstElementChild.style.background = `radial-gradient(ellipse at center, rgba(11,37,69,${(100-fondOp)/100*0.5+0.15}) 0%, rgba(11,37,69,${(100-fondOp)/100*0.6+0.45}) 100%)`;
+}
+window.fondOpacite = function(v){ fondOp = +v; document.getElementById('fond-op-val').textContent = v; appliquerApercu(); }
+window.fondChoisi = function(input){
+  const f = input.files[0];
+  if(!f) return;
+  const err = document.getElementById('fond-err');
+  if(f.size > 4 * 1024 * 1024){ err.textContent = 'Photo trop lourde (max 4 Mo). Réduis-la ou choisis-en une autre.'; err.style.display='block'; return; }
+  err.style.display = 'none';
+  const reader = new FileReader();
+  reader.onload = e => {
+    // Redimensionner à 1920px de large max pour rester léger
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, 1920 / img.width);
+      const cv = document.createElement('canvas');
+      cv.width = img.width * scale; cv.height = img.height * scale;
+      cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+      fondData = cv.toDataURL('image/jpeg', 0.82);
+      appliquerApercu();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(f);
+}
+window.fondEnregistrer = async function(){
+  if(!fondData){ const e=document.getElementById('fond-err'); e.textContent='Choisis d\'abord une photo.'; e.style.display='block'; return; }
+  const btn = document.getElementById('fond-save'); btn.textContent = '⏳...'; btn.disabled = true;
+  try {
+    const r = await fetch('/api/portal-bg', {method:'POST', headers:{'Content-Type':'application/json','X-Auth-Token':authToken}, body: JSON.stringify({image: fondData, opacite: fondOp})});
+    const j = await r.json();
+    if(!r.ok){ const e=document.getElementById('fond-err'); e.textContent = j.error || 'Erreur'; e.style.display='block'; }
+    else toast('🖼️ Photo du portail enregistrée !', 'ok');
+  } catch(e){ const el=document.getElementById('fond-err'); el.textContent='Erreur de connexion'; el.style.display='block'; }
+  btn.textContent = '💾 Enregistrer'; btn.disabled = false;
+}
+window.fondSupprimer = async function(){
+  if(!confirm('Revenir au fond par défaut ?')) return;
+  await fetch('/api/portal-bg', {method:'DELETE', headers:{'X-Auth-Token':authToken}});
+  fondData = null;
+  document.getElementById('fond-apercu').style.backgroundImage = 'none';
+  toast('Fond par défaut rétabli', 'ok');
+}
+document.addEventListener('click', function(e){if(e.target.id==='modal-fond')e.target.style.display='none';});
+
+/* Charger la photo sur l'écran de connexion */
+(async function(){
+  try {
+    const r = await fetch('/api/portal-bg');
+    const j = await r.json();
+    if(j.image){
+      const el = document.getElementById('login-bg-photo');
+      if(el) el.style.backgroundImage = `url('${j.image}')`;
+    }
+  } catch(e){}
+})();
+
 /* ===== GESTION DES ACCÈS COMMERCIAUX ===== */
 window.openAcces = async function(){
   document.getElementById('modal-acces').style.display = 'flex';
@@ -2457,6 +2533,32 @@ document.addEventListener('click', function(e){if(e.target.id==='modal-rdv')clos
 </script>
 
 <!-- MODAL RDV -->
+<div id="modal-fond" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:10001;align-items:center;justify-content:center">
+  <div style="background:var(--white);border-radius:16px;padding:28px;width:560px;max-width:92vw">
+    <h2 style="font-family:Georgia,serif;font-size:19px;color:var(--navy);margin-bottom:4px">🖼️ Photo du portail de connexion</h2>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:16px">Une vraie photo (cabinet, immeuble haussmannien…) affichée en fond de l'écran de connexion des deux CRM. JPG ou PNG, 4 Mo max.</div>
+    <div id="fond-apercu" style="height:190px;border-radius:12px;border:1px solid var(--border);background:#0B2545 center/cover no-repeat;margin-bottom:14px;position:relative;overflow:hidden">
+      <div style="position:absolute;inset:0;background:radial-gradient(ellipse at center, rgba(11,37,69,.25) 0%, rgba(11,37,69,.7) 100%)"></div>
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
+        <div style="background:rgba(255,255,255,.97);border:1px solid rgba(201,162,75,.35);border-radius:10px;padding:14px 22px;font-family:Georgia,serif;font-size:13px;color:#0B2545;letter-spacing:1px">ELYON <span style="color:#C9A24B">&amp;</span> ASSOCIÉS</div>
+      </div>
+    </div>
+    <div style="margin-bottom:12px">
+      <label style="font-size:11px;font-weight:600;color:var(--text2)">Opacité de la photo : <span id="fond-op-val">85</span>%</label>
+      <input id="fond-op" type="range" min="20" max="100" value="85" oninput="fondOpacite(this.value)" style="width:100%">
+    </div>
+    <input type="file" id="fond-file" accept="image/*" style="display:none" onchange="fondChoisi(this)">
+    <div id="fond-err" style="display:none;background:var(--red-light);border:1px solid var(--red);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--red);margin-bottom:10px"></div>
+    <div style="display:flex;gap:8px">
+      <button onclick="document.getElementById('fond-file').click()" style="flex:1;background:var(--gold);color:var(--navy);border:none;border-radius:8px;padding:11px;font-weight:700;cursor:pointer">📁 Choisir une photo</button>
+      <button id="fond-save" onclick="fondEnregistrer()" style="flex:1;background:var(--navy);color:#fff;border:none;border-radius:8px;padding:11px;font-weight:700;cursor:pointer">💾 Enregistrer</button>
+      <button onclick="fondSupprimer()" style="background:var(--white);border:1px solid var(--red);color:var(--red);border-radius:8px;padding:11px 14px;cursor:pointer">🗑</button>
+      <button onclick="document.getElementById('modal-fond').style.display='none'" style="background:var(--white);border:1px solid var(--border2);color:var(--text2);border-radius:8px;padding:11px 14px;cursor:pointer">Fermer</button>
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-top:12px">💡 Photos libres de droits : unsplash.com ou pexels.com — cherche « haussmann », « luxury office », « paris apartment ».</div>
+  </div>
+</div>
+
 <div id="modal-acces" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:10001;align-items:center;justify-content:center">
   <div style="background:var(--white);border-radius:16px;padding:28px;width:480px;max-width:92vw;max-height:85vh;overflow-y:auto">
     <h2 style="font-family:Georgia,serif;font-size:19px;color:var(--navy);margin-bottom:4px">🔑 Accès commerciaux</h2>
