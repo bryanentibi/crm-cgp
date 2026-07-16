@@ -1,7 +1,7 @@
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 import json, os
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from zoneinfo import ZoneInfo
 
 def paris_today():
@@ -395,6 +395,78 @@ def eic_pdf_officiel():
     from flask import send_file
     return send_file(out, mimetype='application/pdf', as_attachment=True, download_name=nom_fichier)
 
+
+
+# ============ SAUVEGARDES AUTOMATIQUES (30 jours glissants) ============
+@app.route('/api/backups', methods=['GET', 'POST'])
+def backups():
+    """GET = liste des sauvegardes · POST = en créer une (auto ou manuelle)"""
+    s = check_session(request)
+    if not s:
+        return jsonify({'error': 'unauthorized'}), 401
+    ns = kv_namespace()
+    conn, cur = kv_conn()
+    try:
+        if request.method == 'GET':
+            cur.execute("SELECT k, v FROM kv_store WHERE k LIKE %s ORDER BY k DESC", [ns + '__backup::%'])
+            out = []
+            for row in cur.fetchall():
+                try:
+                    meta = json.loads(row['v'])
+                    payload = json.loads(meta) if isinstance(meta, str) else meta
+                except Exception:
+                    continue
+                out.append({
+                    'id': row['k'].split('__backup::')[1],
+                    'date': payload.get('_date', ''),
+                    'auto': payload.get('_auto', False),
+                    'clients': payload.get('_nbClients', 0),
+                    'ventes': payload.get('_nbVentes', 0),
+                    'taille': len(row['v']),
+                })
+            return jsonify({'backups': out})
+
+        data = request.json or {}
+        contenu = data.get('data')
+        if not contenu:
+            return jsonify({'error': 'aucune donnée'}), 400
+        bid = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        key = ns + '__backup::' + bid
+        cur.execute("INSERT INTO kv_store (k, v) VALUES (%s, %s) ON CONFLICT (k) DO UPDATE SET v = EXCLUDED.v",
+                    [key, json.dumps(contenu)])
+        # Purge : on ne garde que les 30 derniers jours
+        limite = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+        cur.execute("SELECT k FROM kv_store WHERE k LIKE %s", [ns + '__backup::%'])
+        for row in cur.fetchall():
+            jour = row['k'].split('__backup::')[1][:10]
+            if jour < limite:
+                cur.execute("DELETE FROM kv_store WHERE k = %s", [row['k']])
+        conn.commit()
+        return jsonify({'ok': True, 'id': bid})
+    finally:
+        cur.close(); conn.close()
+
+
+@app.route('/api/backups/<bid>', methods=['GET', 'DELETE'])
+def backup_one(bid):
+    s = check_session(request)
+    if not s:
+        return jsonify({'error': 'unauthorized'}), 401
+    ns = kv_namespace()
+    conn, cur = kv_conn()
+    try:
+        key = ns + '__backup::' + bid
+        if request.method == 'DELETE':
+            cur.execute("DELETE FROM kv_store WHERE k = %s", [key])
+            conn.commit()
+            return jsonify({'ok': True})
+        cur.execute("SELECT v FROM kv_store WHERE k = %s", [key])
+        row = cur.fetchone()
+        if not row:
+            return jsonify({'error': 'introuvable'}), 404
+        return jsonify({'data': json.loads(row['v'])})
+    finally:
+        cur.close(); conn.close()
 
 # ============ FOND DU PORTAIL DE CONNEXION (photo personnalisable) ============
 @app.route('/api/portal-bg', methods=['GET', 'POST', 'DELETE'])

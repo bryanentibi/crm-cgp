@@ -1,6 +1,6 @@
 /* CRM Gestion — Bryan CGP (base Elyon) · exécuté via Babel navigateur, pas de build */
 const { useState, useEffect, useMemo, useRef } = React;
-const { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } = Recharts;
+const { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LineChart, Line, ComposedChart, Legend, Area, AreaChart } = Recharts;
 
 /* ================= CONSTANTES ================= */
 const NAVY = "#0B2545";
@@ -524,6 +524,8 @@ function App() {
     ["docs", "📁 Documents"],
     ["portefeuille", "💼 Portefeuille client"],
     ["rappels", "🔔 Rappels"],
+    ["stats", "📈 Statistiques"],
+    ["reglages", "⚙️ Réglages"],
     ["decom", "🔻 Décommissionnés"],
     ["arbitrage", "⚖️ Arbitrage clients"],
     ["messagerie", "✉️ Messagerie"],
@@ -634,6 +636,22 @@ function App() {
         {page === "decom" && <DecomPage clients={clients} saveClients={saveClients} goClient={(id) => { setPage("clients"); setOpenClient(id); }} />}
         {page === "portefeuille" && <PortefeuillePage clients={clients} saveClients={saveClients} goClient={(id) => { setPage("clients"); setOpenClient(id); }} />}
         {page === "rappels" && <RappelsPage clients={clients} saveClients={saveClients} goClient={(id) => { setPage("clients"); setOpenClient(id); }} />}
+        {page === "stats" && <StatsPage sales={sales} users={users} me={me} view={view} />}
+        {page === "reglages" && (
+          <ReglagesPage
+            me={me}
+            snapshot={() => ({ version: 4, date: todayISO(), users, clients, sales, docs, bordereaux, prospection, objectifs, trash })}
+            restore={(p) => {
+              if (p.users) saveUsers(p.users);
+              if (p.clients) saveClients(p.clients);
+              if (p.sales) saveSales(p.sales);
+              if (p.docs) saveDocs(p.docs);
+              if (p.bordereaux) saveBordereaux(p.bordereaux);
+              if (p.prospection) saveProspection(p.prospection);
+              if (p.objectifs) saveObjectifs(p.objectifs);
+            }}
+          />
+        )}
         {page === "arbitrage" && <ArbitragePage clients={clients} saveClients={saveClients} sales={sales} saveSales={saveSales} me={me} />}
         {page === "messagerie" && <MessageriePage clients={clients} saveClients={saveClients} />}
         {page === "dash" && <Dashboard clients={clients} users={users} view={view} me={me} sales={sales} saveClients={saveClients} goClient={(c) => { setOpenClient(c.id); setPage("clients"); }} goClients={(t) => { setClientTypeFilter(t || ""); setOpenClient(null); setPage("clients"); }} />}
@@ -3621,6 +3639,412 @@ function RappelsPage({ clients, saveClients, goClient }) {
       )}
 
       {tab === "afaire" && <TodoLists clients={clients} goClient={goClient} afaire={afaire} faitAlerte={faitAlerte} faitNote={faitNote} editAlerte={editAlerte} delAlerte={delAlerte} />}
+    </div>
+  );
+}
+
+/* ================= STATISTIQUES & ÉVOLUTION ================= */
+function StatsPage({ sales, users, me, view }) {
+  const [scope, setScope] = useState(me.isManager ? "tous" : view.id);
+  const [annee, setAnnee] = useState("toutes");
+
+  const estAnnule = (r) => /annul|décom|decom/i.test(r.statut || "");
+  const estPleine = (r) => (r.nom || "").trim().length > 0;
+
+  /* Agrégation mois par mois depuis 2023 */
+  const parMois = useMemo(() => {
+    const mois = Object.keys(sales).sort();
+    return mois.map((m) => {
+      let brut = 0, annule = 0, net = 0, nb = 0, nbAnnule = 0, volume = 0, mensuel = 0;
+      const blocs = scope === "tous" ? Object.entries(sales[m]) : [[scope, sales[m][scope] || { rows: [] }]];
+      blocs.forEach(([uid2, blk]) => {
+        (blk.rows || []).filter(estPleine).forEach((r) => {
+          const rem = parseNum(r.remuneration);
+          nb++;
+          brut += rem;
+          volume += parseNum(r.volume);
+          mensuel += parseNum(r.versement);
+          if (estAnnule(r)) { annule += rem; nbAnnule++; }
+          else net += rem;
+        });
+      });
+      return {
+        key: m,
+        mois: monthLabel(m).replace(" 20", " '"),
+        annee: m.slice(0, 4),
+        brut: Math.round(brut), net: Math.round(net), annule: Math.round(annule),
+        nb, nbAnnule, volume: Math.round(volume), mensuel: Math.round(mensuel),
+        chute: nb ? Math.round((nbAnnule / nb) * 1000) / 10 : 0,
+      };
+    });
+  }, [sales, scope]);
+
+  const annees = useMemo(() => [...new Set(parMois.map((d) => d.annee))].sort(), [parMois]);
+  const data = annee === "toutes" ? parMois : parMois.filter((d) => d.annee === annee);
+
+  const tot = useMemo(() => {
+    const t = data.reduce((a, d) => ({
+      brut: a.brut + d.brut, net: a.net + d.net, annule: a.annule + d.annule,
+      nb: a.nb + d.nb, nbAnnule: a.nbAnnule + d.nbAnnule, volume: a.volume + d.volume,
+    }), { brut: 0, net: 0, annule: 0, nb: 0, nbAnnule: 0, volume: 0 });
+    t.chute = t.nb ? Math.round((t.nbAnnule / t.nb) * 1000) / 10 : 0;
+    t.chuteEur = t.brut ? Math.round((t.annule / t.brut) * 1000) / 10 : 0;
+    t.moyenne = data.length ? Math.round(t.net / data.length) : 0;
+    t.panier = t.nb ? Math.round(t.brut / t.nb) : 0;
+    return t;
+  }, [data]);
+
+  /* Comparaison mois en cours vs mois précédent */
+  const comp = useMemo(() => {
+    const n = parMois.length;
+    if (n < 2) return null;
+    const a = parMois[n - 1], b = parMois[n - 2];
+    const ev = (x, y) => (y ? Math.round(((x - y) / y) * 1000) / 10 : (x ? 100 : 0));
+    return { actuel: a, precedent: b, evNet: ev(a.net, b.net), evNb: ev(a.nb, b.nb), evVol: ev(a.volume, b.volume) };
+  }, [parMois]);
+
+  /* Évolution par année */
+  const parAnnee = useMemo(() => {
+    const m = {};
+    parMois.forEach((d) => {
+      if (!m[d.annee]) m[d.annee] = { annee: d.annee, net: 0, brut: 0, annule: 0, nb: 0, nbAnnule: 0 };
+      m[d.annee].net += d.net; m[d.annee].brut += d.brut; m[d.annee].annule += d.annule;
+      m[d.annee].nb += d.nb; m[d.annee].nbAnnule += d.nbAnnule;
+    });
+    return Object.values(m).map((a) => ({ ...a, chute: a.nb ? Math.round((a.nbAnnule / a.nb) * 1000) / 10 : 0 }));
+  }, [parMois]);
+
+  const K = ({ v, l, color, sub }) => (
+    <div className="card" style={{ padding: "14px 18px", borderLeft: "4px solid " + (color || "#C9A24B"), minWidth: 136, flex: 1 }}>
+      <div style={{ fontFamily: "Georgia, serif", fontSize: 24, fontWeight: 700, color: color || "#0B2545" }}>{v}</div>
+      <div style={{ fontSize: 10.5, color: "#8593a8", textTransform: "uppercase", letterSpacing: ".5px" }}>{l}</div>
+      {sub && <div style={{ fontSize: 11, color: "#8593a8", marginTop: 3 }}>{sub}</div>}
+    </div>
+  );
+  const Ev = ({ v }) => (
+    <span style={{ color: v > 0 ? "#16A34A" : v < 0 ? "#DC2626" : "#8593a8", fontWeight: 700, fontSize: 12.5 }}>
+      {v > 0 ? "▲ +" : v < 0 ? "▼ " : "= "}{v}%
+    </span>
+  );
+
+  return (
+    <div>
+      <div className="ph">
+        <div><h1>📈 Statistiques</h1><div className="sub">Évolution des ventes et taux de chute depuis 2023</div></div>
+        <div className="row" style={{ gap: 8 }}>
+          {me.isManager && (
+            <select className="sel" style={{ width: 175 }} value={scope} onChange={(e) => setScope(e.target.value)}>
+              <option value="tous">Tout le cabinet</option>
+              {users.map((u) => <option key={u.id} value={u.id}>{u.prenom} {u.nom}</option>)}
+            </select>
+          )}
+          <select className="sel" style={{ width: 135 }} value={annee} onChange={(e) => setAnnee(e.target.value)}>
+            <option value="toutes">Toutes les années</option>
+            {annees.map((a) => <option key={a} value={a}>{a}</option>)}
+          </select>
+        </div>
+      </div>
+
+      <div className="row" style={{ gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
+        <K v={fmtEUR(tot.net)} l="Rémunération nette" color="#16A34A" sub={`${tot.nb - tot.nbAnnule} affaire(s) tenue(s)`} />
+        <K v={fmtEUR(tot.brut)} l="Brut signé" sub={`${tot.nb} affaire(s)`} />
+        <K v={fmtEUR(tot.annule)} l="Perdu (décom.)" color="#DC2626" sub={`${tot.nbAnnule} affaire(s)`} />
+        <K v={tot.chute + " %"} l="Taux de chute" color={tot.chute > 30 ? "#DC2626" : tot.chute > 15 ? "#F97316" : "#16A34A"} sub={`${tot.chuteEur} % des € signés`} />
+        <K v={fmtEUR(tot.moyenne)} l="Moyenne / mois" />
+        <K v={fmtEUR(tot.panier)} l="Panier moyen" />
+      </div>
+
+      {comp && annee === "toutes" && (
+        <div className="card" style={{ marginBottom: 16, borderLeft: "4px solid #0B2545" }}>
+          <b style={{ fontSize: 15 }}>📊 {monthLabel(comp.actuel.key)} vs {monthLabel(comp.precedent.key)}</b>
+          <div className="row" style={{ gap: 26, marginTop: 10, flexWrap: "wrap" }}>
+            <div><div style={{ fontSize: 11, color: "#8593a8", textTransform: "uppercase" }}>Rémunération nette</div>
+              <div style={{ fontSize: 17, fontWeight: 700, fontFamily: "Georgia, serif" }}>{fmtEUR(comp.actuel.net)} <Ev v={comp.evNet} /></div>
+              <div style={{ fontSize: 11.5, color: "#8593a8" }}>contre {fmtEUR(comp.precedent.net)}</div></div>
+            <div><div style={{ fontSize: 11, color: "#8593a8", textTransform: "uppercase" }}>Affaires</div>
+              <div style={{ fontSize: 17, fontWeight: 700, fontFamily: "Georgia, serif" }}>{comp.actuel.nb} <Ev v={comp.evNb} /></div>
+              <div style={{ fontSize: 11.5, color: "#8593a8" }}>contre {comp.precedent.nb}</div></div>
+            <div><div style={{ fontSize: 11, color: "#8593a8", textTransform: "uppercase" }}>Volume</div>
+              <div style={{ fontSize: 17, fontWeight: 700, fontFamily: "Georgia, serif" }}>{fmtEUR(comp.actuel.volume)} <Ev v={comp.evVol} /></div>
+              <div style={{ fontSize: 11.5, color: "#8593a8" }}>contre {fmtEUR(comp.precedent.volume)}</div></div>
+            <div><div style={{ fontSize: 11, color: "#8593a8", textTransform: "uppercase" }}>Taux de chute</div>
+              <div style={{ fontSize: 17, fontWeight: 700, fontFamily: "Georgia, serif", color: comp.actuel.chute > 30 ? "#DC2626" : "#0B2545" }}>{comp.actuel.chute} %</div>
+              <div style={{ fontSize: 11.5, color: "#8593a8" }}>contre {comp.precedent.chute} %</div></div>
+          </div>
+        </div>
+      )}
+
+      <div className="card" style={{ marginBottom: 16 }}>
+        <h2 style={{ fontSize: 16, marginBottom: 12 }}>Évolution de la rémunération</h2>
+        <div style={{ width: "100%", height: 320 }}>
+          <ResponsiveContainer>
+            <ComposedChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#E3E9F1" />
+              <XAxis dataKey="mois" tick={{ fontSize: 10, fill: "#5b6b82" }} interval="preserveStartEnd" />
+              <YAxis tick={{ fontSize: 11, fill: "#5b6b82" }} tickFormatter={(v) => (v >= 1000 ? v / 1000 + "k" : v)} />
+              <Tooltip formatter={(v, k) => [fmtEUR(v), k === "net" ? "Net encaissé" : k === "annule" ? "Perdu (décom.)" : k]}
+                contentStyle={{ borderRadius: 10, border: "1px solid #E3E9F1", fontSize: 12.5 }} />
+              <Legend wrapperStyle={{ fontSize: 12 }} />
+              <Bar dataKey="net" name="Net encaissé" fill="#16A34A" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="annule" name="Perdu (décom.)" fill="#DC2626" radius={[4, 4, 0, 0]} />
+              <Line type="monotone" dataKey="brut" name="Brut signé" stroke="#C9A24B" strokeWidth={2.5} dot={{ r: 2.5 }} />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      <div className="row" style={{ gap: 16, flexWrap: "wrap", marginBottom: 16 }}>
+        <div className="card" style={{ flex: 1, minWidth: 330 }}>
+          <h2 style={{ fontSize: 16, marginBottom: 12 }}>Taux de chute mois par mois</h2>
+          <div style={{ width: "100%", height: 240 }}>
+            <ResponsiveContainer>
+              <AreaChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E3E9F1" />
+                <XAxis dataKey="mois" tick={{ fontSize: 10, fill: "#5b6b82" }} interval="preserveStartEnd" />
+                <YAxis tick={{ fontSize: 11, fill: "#5b6b82" }} tickFormatter={(v) => v + "%"} />
+                <Tooltip formatter={(v) => [v + " %", "Taux de chute"]} contentStyle={{ borderRadius: 10, fontSize: 12.5 }} />
+                <Area type="monotone" dataKey="chute" stroke="#DC2626" fill="#FBEAE8" strokeWidth={2} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+        <div className="card" style={{ flex: 1, minWidth: 330 }}>
+          <h2 style={{ fontSize: 16, marginBottom: 12 }}>Bilan par année</h2>
+          <table className="t" style={{ width: "100%" }}>
+            <thead><tr><th>Année</th><th>Affaires</th><th>Net</th><th>Perdu</th><th>Chute</th></tr></thead>
+            <tbody>
+              {parAnnee.map((a) => (
+                <tr key={a.annee}>
+                  <td style={{ fontWeight: 700 }}>{a.annee}</td>
+                  <td style={{ fontVariantNumeric: "tabular-nums" }}>{a.nb}</td>
+                  <td style={{ fontVariantNumeric: "tabular-nums", color: "#16A34A", fontWeight: 600 }}>{fmtEUR(a.net)}</td>
+                  <td style={{ fontVariantNumeric: "tabular-nums", color: "#DC2626" }}>{fmtEUR(a.annule)}</td>
+                  <td><span className={"badge " + (a.chute > 30 ? "b-red" : a.chute > 15 ? "b-orange" : "b-green")}>{a.chute} %</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="card">
+        <h2 style={{ fontSize: 16, marginBottom: 12 }}>Détail mois par mois</h2>
+        <div style={{ overflowX: "auto" }}>
+          <table className="t" style={{ width: "100%" }}>
+            <thead><tr><th>Mois</th><th>Affaires</th><th>Volume</th><th>Brut</th><th>Net</th><th>Perdu</th><th>Taux de chute</th></tr></thead>
+            <tbody>
+              {[...data].reverse().map((d) => (
+                <tr key={d.key}>
+                  <td style={{ fontWeight: 600, textTransform: "capitalize" }}>{monthLabel(d.key)}</td>
+                  <td style={{ fontVariantNumeric: "tabular-nums" }}>{d.nb}</td>
+                  <td style={{ fontVariantNumeric: "tabular-nums" }}>{fmtEUR(d.volume)}</td>
+                  <td style={{ fontVariantNumeric: "tabular-nums" }}>{fmtEUR(d.brut)}</td>
+                  <td style={{ fontVariantNumeric: "tabular-nums", color: "#16A34A", fontWeight: 700 }}>{fmtEUR(d.net)}</td>
+                  <td style={{ fontVariantNumeric: "tabular-nums", color: "#DC2626" }}>{d.annule ? fmtEUR(d.annule) : ""}</td>
+                  <td>{d.nb ? <span className={"badge " + (d.chute > 30 ? "b-red" : d.chute > 15 ? "b-orange" : "b-green")}>{d.chute} %</span> : ""}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ================= RÉGLAGES ================= */
+function ReglagesPage({ me, snapshot, restore }) {
+  const [tab, setTab] = useState("sauvegardes");
+  const [list, setList] = useState(null);
+  const [busy, setBusy] = useState("");
+  const [bg, setBg] = useState(null);
+  const [bgErr, setBgErr] = useState("");
+
+  const charger = async () => {
+    try {
+      const r = await fetch("/api/backups", { credentials: "same-origin" });
+      const j = await r.json();
+      setList(j.backups || []);
+    } catch { setList([]); }
+  };
+  useEffect(() => { charger(); (async () => {
+    try { const r = await fetch("/api/portal-bg"); const j = await r.json(); if (j.image) setBg(j.image); } catch {}
+  })(); }, []);
+
+  /* --- Sauvegarde (auto une fois par jour, ou manuelle) --- */
+  const sauvegarder = async (auto) => {
+    setBusy(auto ? "auto" : "manuel");
+    const snap = snapshot();
+    const payload = { ...snap, _date: new Date().toISOString(), _auto: !!auto,
+      _nbClients: (snap.clients || []).length,
+      _nbVentes: Object.values(snap.sales || {}).reduce((t, m) => t + Object.values(m).reduce((s, u) => s + ((u.rows || []).length), 0), 0) };
+    try {
+      const r = await fetch("/api/backups", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ data: payload }) });
+      if (!r.ok) throw new Error();
+      await charger();
+      if (!auto) alert("💾 Sauvegarde créée !");
+    } catch { if (!auto) alert("Erreur lors de la sauvegarde."); }
+    setBusy("");
+  };
+
+  /* Sauvegarde automatique quotidienne : une seule par jour, au premier passage */
+  useEffect(() => {
+    if (!list) return;
+    const auj = todayISO();
+    const dejaAuj = list.some((b) => (b.date || "").slice(0, 10) === auj && b.auto);
+    if (!dejaAuj && me.isManager) sauvegarder(true);
+  }, [list === null]);
+
+  const restaurer = async (b) => {
+    if (!confirm(`Restaurer la sauvegarde du ${fmtDate((b.date || "").slice(0, 10))} ?\n\n${b.clients} clients · ${b.ventes} ventes\n\nLes données actuelles seront remplacées (une sauvegarde de sécurité est créée avant).`)) return;
+    setBusy(b.id);
+    await sauvegarder(false); /* filet : on sauvegarde l'état actuel avant d'écraser */
+    try {
+      const r = await fetch("/api/backups/" + b.id, { credentials: "same-origin" });
+      const j = await r.json();
+      if (!j.data) throw new Error();
+      restore(j.data);
+      alert("✅ Sauvegarde restaurée !");
+    } catch { alert("Erreur lors de la restauration."); }
+    setBusy("");
+  };
+
+  const telecharger = async (b) => {
+    const r = await fetch("/api/backups/" + b.id, { credentials: "same-origin" });
+    const j = await r.json();
+    const blob = new Blob([JSON.stringify(j.data, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `ELYON_CRM_${b.id}.json`;
+    a.click();
+  };
+
+  const supprimer = async (b) => {
+    if (!confirm("Supprimer cette sauvegarde ?")) return;
+    await fetch("/api/backups/" + b.id, { method: "DELETE", credentials: "same-origin" });
+    charger();
+  };
+
+  /* --- Photo du portail --- */
+  const choisirPhoto = (input) => {
+    const f = input.files[0];
+    if (!f) return;
+    if (f.size > 8 * 1024 * 1024) { setBgErr("Photo trop lourde (8 Mo max)."); return; }
+    setBgErr("");
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, 1920 / img.width);
+        const cv = document.createElement("canvas");
+        cv.width = img.width * scale; cv.height = img.height * scale;
+        cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
+        setBg(cv.toDataURL("image/jpeg", 0.82));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(f);
+  };
+  const enregistrerPhoto = async () => {
+    if (!bg) { setBgErr("Choisis d'abord une photo."); return; }
+    setBusy("bg");
+    try {
+      const r = await fetch("/api/portal-bg", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: bg }) });
+      const j = await r.json();
+      if (!r.ok) setBgErr(j.error || "Erreur");
+      else alert("🖼️ Photo du portail enregistrée ! Elle s'affichera à la prochaine connexion.");
+    } catch { setBgErr("Erreur réseau"); }
+    setBusy("");
+  };
+  const supprimerPhoto = async () => {
+    if (!confirm("Revenir à la photo par défaut ?")) return;
+    await fetch("/api/portal-bg", { method: "DELETE", credentials: "same-origin" });
+    setBg(null);
+    alert("Photo par défaut rétablie.");
+  };
+
+  const TabBtn = ({ k, l }) => (
+    <div onClick={() => setTab(k)} style={{ padding: "9px 18px", borderRadius: 10, fontSize: 13.5, fontWeight: 700, cursor: "pointer", fontFamily: "Georgia, serif",
+      background: tab === k ? "#0B2545" : "#fff", color: tab === k ? "#C9A24B" : "#44536B", border: "1px solid " + (tab === k ? "#0B2545" : "#CDD6E2") }}>{l}</div>
+  );
+
+  return (
+    <div>
+      <div className="ph"><div><h1>⚙️ Réglages</h1><div className="sub">Sauvegardes automatiques et personnalisation</div></div></div>
+      <div className="row" style={{ gap: 8, marginBottom: 18, flexWrap: "wrap" }}>
+        <TabBtn k="sauvegardes" l="💾 Sauvegardes" />
+        <TabBtn k="apparence" l="🖼️ Écran d'accueil" />
+      </div>
+
+      {tab === "sauvegardes" && (
+        <>
+          <div className="card" style={{ marginBottom: 16, borderLeft: "4px solid #16A34A" }}>
+            <div className="row" style={{ justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+              <div>
+                <b>🛡️ Sauvegarde automatique quotidienne</b>
+                <div style={{ fontSize: 12.5, color: "#8593a8", marginTop: 3 }}>
+                  Une sauvegarde complète est créée automatiquement chaque jour à ta première connexion. Conservation : 30 jours glissants.
+                  {list && <> · <b>{list.length}</b> sauvegarde(s) disponible(s)</>}
+                </div>
+              </div>
+              <button className="btn gold" disabled={busy === "manuel"} onClick={() => sauvegarder(false)}>
+                {busy === "manuel" ? "⏳ En cours…" : "💾 Sauvegarder maintenant"}
+              </button>
+            </div>
+          </div>
+
+          <div className="card" style={{ padding: 0, overflowX: "auto" }}>
+            <table className="t" style={{ width: "100%" }}>
+              <thead><tr><th style={{ minWidth: 150 }}>Date</th><th>Type</th><th>Clients</th><th>Ventes</th><th>Taille</th><th style={{ minWidth: 230 }}>Actions</th></tr></thead>
+              <tbody>
+                {(list || []).map((b) => (
+                  <tr key={b.id}>
+                    <td style={{ fontSize: 12.5 }}>
+                      <b>{fmtDate((b.date || "").slice(0, 10))}</b>
+                      <span style={{ color: "#8593a8" }}> à {(b.date || "").slice(11, 16)}</span>
+                    </td>
+                    <td><span className={"badge " + (b.auto ? "b-gold" : "b-green")}>{b.auto ? "auto" : "manuelle"}</span></td>
+                    <td style={{ fontVariantNumeric: "tabular-nums" }}>{b.clients}</td>
+                    <td style={{ fontVariantNumeric: "tabular-nums" }}>{b.ventes}</td>
+                    <td style={{ color: "#8593a8", fontSize: 12 }}>{Math.round(b.taille / 1024)} Ko</td>
+                    <td style={{ whiteSpace: "nowrap" }}>
+                      <button className="btn gold sm" disabled={busy === b.id} onClick={() => restaurer(b)}>{busy === b.id ? "⏳" : "↩️ Restaurer"}</button>
+                      <button className="btn ghost sm" style={{ marginLeft: 5 }} onClick={() => telecharger(b)}>⬇️</button>
+                      <button className="btn ghost sm" style={{ marginLeft: 5, color: "#B3261E" }} onClick={() => supprimer(b)}>✕</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {list === null && <div style={{ padding: 22, color: "#8593a8", fontSize: 13.5 }}>Chargement…</div>}
+            {list && list.length === 0 && <div style={{ padding: 22, color: "#8593a8", fontSize: 13.5 }}>Aucune sauvegarde pour l'instant — la première sera créée automatiquement.</div>}
+          </div>
+        </>
+      )}
+
+      {tab === "apparence" && (
+        <div className="card" style={{ maxWidth: 620 }}>
+          <b>🖼️ Photo de l'écran de connexion</b>
+          <div style={{ fontSize: 12.5, color: "#8593a8", margin: "4px 0 14px" }}>Cette photo s'affiche derrière le portail Elyon & Associés, sur les deux CRM. JPG ou PNG.</div>
+          <div style={{ height: 210, borderRadius: 12, border: "1px solid #E3E9F1", marginBottom: 14, position: "relative", overflow: "hidden",
+            background: bg ? `url('${bg}') center/cover no-repeat` : "#0B2545" }}>
+            <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at center, rgba(11,37,69,.30) 0%, rgba(11,37,69,.72) 100%)" }} />
+            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ background: "rgba(255,255,255,.97)", border: "1px solid rgba(201,162,75,.35)", borderRadius: 10, padding: "14px 24px", fontFamily: "Georgia, serif", fontSize: 13.5, color: "#0B2545", letterSpacing: 1 }}>
+                ELYON <span style={{ color: "#C9A24B" }}>&</span> ASSOCIÉS
+              </div>
+            </div>
+          </div>
+          {bgErr && <div style={{ background: "#FBEAE8", border: "1px solid #DC2626", color: "#B3261E", borderRadius: 8, padding: "8px 12px", fontSize: 12.5, marginBottom: 10 }}>{bgErr}</div>}
+          <input type="file" id="bgfile" accept="image/*" style={{ display: "none" }} onChange={(e) => choisirPhoto(e.target)} />
+          <div className="row" style={{ gap: 8 }}>
+            <button className="btn" style={{ flex: 1 }} onClick={() => document.getElementById("bgfile").click()}>📁 Choisir une photo</button>
+            <button className="btn gold" style={{ flex: 1 }} disabled={busy === "bg"} onClick={enregistrerPhoto}>{busy === "bg" ? "⏳…" : "💾 Enregistrer"}</button>
+            <button className="btn" style={{ color: "#B3261E", borderColor: "#B3261E" }} onClick={supprimerPhoto}>🗑</button>
+          </div>
+          <div style={{ fontSize: 11.5, color: "#8593a8", marginTop: 12 }}>💡 Photos libres de droits : unsplash.com ou pexels.com — cherche « haussmann », « paris apartment », « luxury office ».</div>
+        </div>
+      )}
     </div>
   );
 }
