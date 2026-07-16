@@ -582,7 +582,7 @@ function App() {
         <nav className="nav">
           {SECTIONS.map((sec) => {
             const actif = sec.items.some(([k]) => k === page);
-            const ouvert = ouvertes[sec.id] || actif;
+            const ouvert = ouvertes[sec.id] !== false;
             return (
               <div key={sec.id} className="navsec">
                 <div className={"navsec-t" + (ouvert ? " open" : "")} onClick={() => basculer(sec.id)}>
