@@ -223,10 +223,23 @@ const CSS = `
   .brand { padding: 26px 20px 18px; border-bottom: 1px solid rgba(255,255,255,.12); }
   .brand b { font-family: Georgia, serif; font-size: 19px; letter-spacing: .5px; display:block; }
   .brand span { color:${GOLD}; font-size: 11px; letter-spacing: 2.5px; text-transform: uppercase; }
-  .nav { padding: 14px 10px; display:flex; flex-direction:column; gap:4px; flex:1; }
-  .nav button { text-align:left; background:none; border:none; color:rgba(255,255,255,.82); padding:11px 14px; border-radius:8px; cursor:pointer; font-size:14px; display:flex; gap:10px; align-items:center; transition: background .15s; }
-  .nav button:hover { background: rgba(255,255,255,.08); }
-  .nav button.on { background: rgba(201,162,75,.18); color:#fff; border-left: 3px solid ${GOLD}; }
+  .nav { padding: 12px 10px 8px; display:flex; flex-direction:column; gap:2px; flex:1; overflow-y:auto; }
+  .navsec { margin-bottom: 6px; }
+  .navsec-t { display:flex; align-items:center; gap:8px; padding: 9px 12px 9px 10px; cursor:pointer; user-select:none;
+              font-size:10.5px; font-weight:700; letter-spacing:1.4px; text-transform:uppercase;
+              color:rgba(255,255,255,.42); transition: color .15s; border-radius:7px; }
+  .navsec-t:hover { color:rgba(255,255,255,.75); background:rgba(255,255,255,.04); }
+  .navsec-t .chev { display:inline-block; font-size:15px; line-height:1; transition: transform .22s ease; opacity:.7; }
+  .navsec-t.open .chev { transform: rotate(90deg); }
+  .navsec-t .dot { width:5px; height:5px; border-radius:50%; background:${GOLD}; margin-left:auto; }
+  .navsec-b { overflow:hidden; transition: max-height .26s ease; display:flex; flex-direction:column; gap:2px; }
+  .nav button { text-align:left; background:none; border:none; color:rgba(255,255,255,.80); padding:9px 12px 9px 14px; margin-left:6px;
+                border-radius:8px; cursor:pointer; font-size:13.5px; display:flex; gap:11px; align-items:center;
+                transition: background .15s, color .15s; border-left: 2px solid transparent; font-family:inherit; }
+  .nav button .ico { font-size:14px; width:18px; text-align:center; flex-shrink:0; }
+  .nav button:hover { background: rgba(255,255,255,.07); color:#fff; }
+  .nav button.on { background: rgba(201,162,75,.16); color:#fff; border-left-color: ${GOLD}; font-weight:600; }
+  .nav::-webkit-scrollbar { width:5px; } .nav::-webkit-scrollbar-thumb { background:rgba(255,255,255,.13); border-radius:3px; }
   .side .who { padding: 16px 20px; border-top: 1px solid rgba(255,255,255,.12); font-size: 13px; }
   .side .who b { color: ${GOLD}; }
   .main { flex:1; padding: 30px 34px; min-width: 0; }
@@ -515,22 +528,39 @@ function App() {
   }
 
   const view = viewAs || me;
-  const NAV = [
-    ["dash", "📊 Tableau de bord"],
-    ["clients", "👥 Clients"],
-    ["prospection", "🎯 Prospection"],
-    ["ventes", "📈 Ventes"],
-    ["paye", "💶 Ma rémunération"],
-    ["docs", "📁 Documents"],
-    ["portefeuille", "💼 Portefeuille client"],
-    ["rappels", "🔔 Rappels"],
-    ["stats", "📈 Statistiques"],
-    ["reglages", "⚙️ Réglages"],
-    ["decom", "🔻 Décommissionnés"],
-    ["arbitrage", "⚖️ Arbitrage clients"],
-    ["messagerie", "✉️ Messagerie"],
-    ...(me.isManager ? [["equipe", "🧑‍💼 Mon équipe"], ["corbeille", "🗑️ Corbeille"]] : []),
+  const SECTIONS = [
+    { id: "pilotage", titre: "Pilotage", items: [
+      ["dash", "📊", "Tableau de bord"],
+      ["clients", "👥", "Clients"],
+      ["ventes", "📈", "Ventes"],
+      ["prospection", "🗓️", "Agenda"],
+      ["portefeuille", "💼", "Portefeuille client"],
+      ["decom", "🔻", "Décommissions"],
+      ["rappels", "🔔", "Rappels"],
+      ["arbitrage", "⚖️", "Arbitrage clients"],
+    ] },
+    { id: "analyse", titre: "Statistiques", items: [
+      ["stats", "📊", "Statistiques"],
+      ["paye", "💶", "Ma rémunération"],
+    ] },
+    { id: "outils", titre: "Outils", items: [
+      ["messagerie", "✉️", "Messagerie"],
+      ["reglages", "⚙️", "Réglages"],
+      ...(me.isManager ? [["equipe", "🧑‍💼", "Mon équipe"]] : []),
+      ["docs", "📁", "Documents"],
+    ] },
+    ...(me.isManager ? [{ id: "corbeille", titre: "Corbeille", items: [["corbeille", "🗑️", "Corbeille"]] }] : []),
   ];
+  /* Sections ouvertes : celle de la page courante l'est toujours */
+  const [ouvertes, setOuvertes] = useState(() => {
+    try { const s = JSON.parse(localStorage.getItem("elyon-nav") || "null"); if (s) return s; } catch {}
+    return { pilotage: true, analyse: true, outils: true, corbeille: true };
+  });
+  const basculer = (id) => {
+    const next = { ...ouvertes, [id]: !ouvertes[id] };
+    setOuvertes(next);
+    try { localStorage.setItem("elyon-nav", JSON.stringify(next)); } catch {}
+  };
 
   return (
     <div className="crm">
@@ -550,11 +580,26 @@ function App() {
           <div onClick={() => { window.location.href = "/?p=1"; }} style={{ flex: 1, textAlign: "center", padding: "8px 4px", borderRadius: 7, fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,.6)", cursor: "pointer" }}>🎯 Prospection</div>
         </div>
         <nav className="nav">
-          {NAV.map(([k, l]) => (
-            <button key={k} className={page === k ? "on" : ""} onClick={() => { setPage(k); setOpenClient(null); setMenuOpen(false); }}>
-              {l}
-            </button>
-          ))}
+          {SECTIONS.map((sec) => {
+            const actif = sec.items.some(([k]) => k === page);
+            const ouvert = ouvertes[sec.id] || actif;
+            return (
+              <div key={sec.id} className="navsec">
+                <div className={"navsec-t" + (ouvert ? " open" : "")} onClick={() => basculer(sec.id)}>
+                  <span className="chev">›</span>
+                  <span>{sec.titre}</span>
+                  {!ouvert && actif && <span className="dot" />}
+                </div>
+                <div className="navsec-b" style={{ maxHeight: ouvert ? sec.items.length * 42 + 6 : 0 }}>
+                  {sec.items.map(([k, ico, l]) => (
+                    <button key={k} className={page === k ? "on" : ""} onClick={() => { setPage(k); setOpenClient(null); setMenuOpen(false); }}>
+                      <span className="ico">{ico}</span>{l}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </nav>
         <GlobalSearch
           clients={clients} prospection={prospection} me={me} users={users}
