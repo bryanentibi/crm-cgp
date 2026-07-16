@@ -429,6 +429,16 @@ function FileList({ files, onDelete }) {
 /* ================= APPLICATION ================= */
 function App() {
   const [menuOpen, setMenuOpen] = useState(false);
+  /* Sections de la barre latérale (hook placé avec les autres : jamais après un return) */
+  const [ouvertes, setOuvertes] = useState(() => {
+    try { const s = JSON.parse(localStorage.getItem("elyon-nav") || "null"); if (s) return s; } catch {}
+    return { pilotage: true, analyse: true, outils: true, corbeille: true };
+  });
+  const basculer = (id) => {
+    const next = { ...ouvertes, [id]: !ouvertes[id] };
+    setOuvertes(next);
+    try { localStorage.setItem("elyon-nav", JSON.stringify(next)); } catch {}
+  };
   const [clientTypeFilter, setClientTypeFilter] = useState("");
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState(DEFAULT_USERS);
@@ -551,16 +561,6 @@ function App() {
     ] },
     ...(me.isManager ? [{ id: "corbeille", titre: "Corbeille", items: [["corbeille", "🗑️", "Corbeille"]] }] : []),
   ];
-  /* Sections ouvertes : celle de la page courante l'est toujours */
-  const [ouvertes, setOuvertes] = useState(() => {
-    try { const s = JSON.parse(localStorage.getItem("elyon-nav") || "null"); if (s) return s; } catch {}
-    return { pilotage: true, analyse: true, outils: true, corbeille: true };
-  });
-  const basculer = (id) => {
-    const next = { ...ouvertes, [id]: !ouvertes[id] };
-    setOuvertes(next);
-    try { localStorage.setItem("elyon-nav", JSON.stringify(next)); } catch {}
-  };
 
   return (
     <div className="crm">
