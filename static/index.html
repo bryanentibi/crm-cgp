@@ -379,7 +379,7 @@ tbody td{padding:5px 12px;font-size:13px;vertical-align:middle}
 
 .collapsible{cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none}
 .collapsible:hover{color:var(--blue)}
-.sb-chevron{font-size:15px;line-height:1;transition:transform .22s ease;opacity:.7;order:-1;transform:rotate(90deg)}
+.sb-chevron{font-size:15px;line-height:1;transition:transform .22s ease;opacity:.7;flex-shrink:0;transform:rotate(90deg)}
 .sb-chevron.closed{transform:rotate(0deg)}
 .sb-section{overflow:hidden;max-height:600px;transition:max-height .26s ease;display:flex;flex-direction:column;gap:2px;padding:2px 0 0}
 .sb-section.closed{max-height:0!important}
@@ -459,7 +459,7 @@ tbody td{padding:5px 12px;font-size:13px;vertical-align:middle}
   </div>
 
   <nav class="sb-nav" id="sb-nav-prospection">
-    <div class="sb-lbl collapsible" onclick="toggleSection('nav')">Navigation <span class="sb-chevron" id="chev-nav">▾</span></div>
+    <div class="sb-lbl collapsible" onclick="toggleSection('nav')"><span class="sb-chevron" id="chev-nav">›</span><span>Navigation</span></div>
     <div class="sb-section" id="sec-nav">
       <div class="sb-item on" id="nav-dash" onclick="showV('dashboard')"><span class="sb-icon">📊</span>Dashboard</div>
       <div class="sb-item" id="nav-inf" onclick="goProf('inf')"><span class="sb-icon">💉</span>Infirmiers</div>
@@ -474,7 +474,7 @@ tbody td{padding:5px 12px;font-size:13px;vertical-align:middle}
       <div class="sb-item" id="nav-fond" style="display:none" onclick="openFond()"><span class="sb-icon">🖼️</span>Photo du portail</div>
     </div>
 
-    <div class="sb-lbl collapsible" style="margin-top:6px" onclick="toggleSection('flt')">Filtres rapides <span class="sb-chevron" id="chev-flt">▾</span></div>
+    <div class="sb-lbl collapsible" onclick="toggleSection('flt')"><span class="sb-chevron" id="chev-flt">›</span><span>Filtres rapides</span></div>
     <div class="sb-section" id="sec-flt">
       <div class="sb-item" onclick="setF('new_today')"><span class="sb-icon">🆕</span>Nouveaux du jour</div>
       <div class="sb-item" onclick="setF('avec_tel')"><span class="sb-icon">📱</span>Avec 06 direct</div>
@@ -483,7 +483,7 @@ tbody td{padding:5px 12px;font-size:13px;vertical-align:middle}
       <div class="sb-item" onclick="setF('ko')"><span class="sb-icon">❌</span>KO</div>
     </div>
 
-    <div class="sb-lbl collapsible" style="margin-top:6px" onclick="toggleSection('out')">Outils <span class="sb-chevron" id="chev-out">▾</span></div>
+    <div class="sb-lbl collapsible" onclick="toggleSection('out')"><span class="sb-chevron" id="chev-out">›</span><span>Outils</span></div>
     <div class="sb-section" id="sec-out">
       <div class="sb-item" onclick="doLogout()" style="color:#F0A9A3"><span class="sb-icon">🚪</span>Déconnexion</div>
       <div class="sb-item" onclick="openScr()"><span class="sb-icon">⚡</span>Lancer scraping</div>
