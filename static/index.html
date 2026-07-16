@@ -379,6 +379,9 @@ tbody td{padding:5px 12px;font-size:13px;vertical-align:middle}
 
 .collapsible{cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none}
 .collapsible:hover{color:var(--blue)}
+/* La sidebar : chevron collé au texte, alignés à gauche (surcharge la règle générique ci-dessus) */
+.sb-lbl.collapsible{justify-content:flex-start!important;gap:8px}
+.sb-lbl.collapsible:hover{color:rgba(255,255,255,.75)}
 .sb-chevron{font-size:15px;line-height:1;transition:transform .22s ease;opacity:.7;flex-shrink:0;transform:rotate(90deg)}
 .sb-chevron.closed{transform:rotate(0deg)}
 .sb-section{overflow:hidden;max-height:600px;transition:max-height .26s ease;display:flex;flex-direction:column;gap:2px;padding:2px 0 0}
