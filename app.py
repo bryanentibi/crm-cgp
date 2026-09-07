@@ -885,6 +885,7 @@ def launch_scraping():
     cat = data.get('categorie')
     region = data.get('region')
     max_res = min(int(data.get('max') or 60), 120)  # plafond de sécurité budget
+    mobile_only = data.get('mobileOnly', True)  # par défaut : uniquement 06/07
     if cat not in PLACES_CATEGORIES:
         return jsonify({'error': 'Catégorie inconnue'}), 400
     if region not in PLACES_REGIONS:
@@ -897,7 +898,10 @@ def launch_scraping():
     collected = []
     page_token = None
     try:
-        while len(collected) < max_res:
+        pages_max = 15 if mobile_only else 6  # plus de pages si on filtre les portables (plus rares)
+        pages = 0
+        while len(collected) < max_res and pages < pages_max:
+            pages += 1
             body = {
                 "textQuery": query,
                 "languageCode": "fr",
@@ -920,7 +924,7 @@ def launch_scraping():
                 res = json.loads(r.read().decode())
             for p in res.get("places", []):
                 nom = (p.get("displayName") or {}).get("text", "").strip()
-                tel = (p.get("nationalPhoneNumber") or "").replace(" ", "")
+                tel = (p.get("nationalPhoneNumber") or "").replace(" ", "").replace(".", "").replace("-", "")
                 adr = p.get("formattedAddress", "")
                 ville, cp = "", ""
                 for comp in p.get("addressComponents", []):
@@ -929,8 +933,13 @@ def launch_scraping():
                         ville = comp.get("longText", "")
                     if "postal_code" in types:
                         cp = comp.get("longText", "")
+                # Filtre portable : un 06/07 français s'écrit 06.., 07.., ou +336../+337..
+                tel_norm = tel.replace("+33", "0")
+                est_mobile = tel_norm.startswith("06") or tel_norm.startswith("07")
+                if mobile_only and not est_mobile:
+                    continue
                 if nom:
-                    collected.append({"nom": nom, "tel": tel, "ville": ville, "cp": cp, "adresse": adr})
+                    collected.append({"nom": nom, "tel": tel_norm, "ville": ville, "cp": cp, "adresse": adr})
             page_token = res.get("nextPageToken")
             if not page_token:
                 break

@@ -975,6 +975,10 @@ tbody td{padding:5px 12px;font-size:13px;vertical-align:middle}
       <option value="60" selected>60 fiches (~0,50 €)</option>
       <option value="120">120 fiches (~1 €)</option>
     </select>
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:12px;cursor:pointer;user-select:none">
+      <input type="checkbox" id="scr-mobile" checked style="width:17px;height:17px;cursor:pointer">
+      <span>📱 Uniquement les portables (06 / 07)</span>
+    </label>
     <div id="scr-warn" style="display:none;background:#FEF3CD;border:1px solid #F0C36D;border-radius:8px;padding:9px 12px;font-size:12px;color:#7A5C17;margin-bottom:10px"></div>
     <button onclick="launchScr()" id="scr-go" style="width:100%;padding:11px;background:var(--blue);border:none;border-radius:9px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:'Segoe UI','Helvetica Neue',Arial,sans-serif">⚡ Lancer la recherche</button>
     <div id="scr-prog" style="display:none;margin-top:12px"><div style="font-size:12px;color:var(--text3)">⏳ Recherche en cours sur Google Maps…</div></div>
@@ -1764,12 +1768,13 @@ async function launchScr(){
   const categorie=document.getElementById('scr-cat').value;
   const region=document.getElementById('scr-reg').value;
   const max=document.getElementById('scr-max').value;
+  const mobileOnly=document.getElementById('scr-mobile').checked;
   const btn=document.getElementById('scr-go');
   btn.disabled=true;btn.style.opacity=.5;btn.textContent='⏳ Recherche…';
   document.getElementById('scr-prog').style.display='block';
   document.getElementById('scr-res').style.display='none';
   try{
-    const r=await fetch(API+'/scraping/launch',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({categorie,region,max})});
+    const r=await fetch(API+'/scraping/launch',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({categorie,region,max,mobileOnly})});
     const d=await r.json();
     document.getElementById('scr-prog').style.display='none';
     if(!r.ok){toast('❌ '+(d.error||'Erreur'),'err');btn.disabled=false;btn.style.opacity=1;btn.textContent='⚡ Lancer la recherche';return;}
