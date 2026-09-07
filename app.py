@@ -834,9 +834,156 @@ def update_pharmacies(id):
         save_json('pharmacies.json', data)
     return jsonify({'ok': True})
 
+# ============ SCRAPING VIA GOOGLE PLACES API (New) ============
+# Catégories du CRM -> requêtes textuelles Google
+PLACES_CATEGORIES = {
+    "Infirmier": "infirmier libéral",
+    "Kiné / Ostéo": "kinesitherapeute osteopathe",
+    "Médecin": "medecin generaliste",
+    "Dentiste": "dentiste chirurgien dentiste",
+    "Psy / Ortho": "psychologue orthophoniste",
+    "Pharmacie": "pharmacie",
+    "Artisan": "artisan batiment",
+}
+# Régions françaises -> terme géographique pour la recherche
+PLACES_REGIONS = [
+    "Auvergne-Rhône-Alpes", "Bourgogne-Franche-Comté", "Bretagne",
+    "Centre-Val de Loire", "Corse", "Grand Est", "Hauts-de-France",
+    "Île-de-France", "Normandie", "Nouvelle-Aquitaine", "Occitanie",
+    "Pays de la Loire", "Provence-Alpes-Côte d'Azur",
+]
+
+def _places_table_for(cat):
+    if cat == "Pharmacie":
+        return "pharmacies"
+    if cat == "Artisan":
+        return "artisans"
+    return "sante"
+
+@app.route('/api/scraping/meta')
+def scraping_meta():
+    """Renvoie les catégories et régions disponibles + si la clé est configurée"""
+    s = check_session(request)
+    if not s:
+        return jsonify({'error': 'unauthorized'}), 401
+    return jsonify({
+        'categories': list(PLACES_CATEGORIES.keys()),
+        'regions': PLACES_REGIONS,
+        'ready': bool(os.environ.get('GOOGLE_PLACES_KEY')),
+    })
+
 @app.route('/api/scraping/launch', methods=['POST'])
 def launch_scraping():
-    return jsonify({'ok': True, 'message': 'Scraping non disponible sur Railway'})
+    s = check_session(request)
+    if not s:
+        return jsonify({'error': 'unauthorized'}), 401
+    key = os.environ.get('GOOGLE_PLACES_KEY')
+    if not key:
+        return jsonify({'error': "La clé Google Places n'est pas configurée sur le serveur (variable GOOGLE_PLACES_KEY)."}), 400
+
+    data = request.json or {}
+    cat = data.get('categorie')
+    region = data.get('region')
+    max_res = min(int(data.get('max') or 60), 120)  # plafond de sécurité budget
+    if cat not in PLACES_CATEGORIES:
+        return jsonify({'error': 'Catégorie inconnue'}), 400
+    if region not in PLACES_REGIONS:
+        return jsonify({'error': 'Région inconnue'}), 400
+
+    query = f"{PLACES_CATEGORIES[cat]} en {region}"
+    table = _places_table_for(cat)
+
+    import urllib.request
+    collected = []
+    page_token = None
+    try:
+        while len(collected) < max_res:
+            body = {
+                "textQuery": query,
+                "languageCode": "fr",
+                "regionCode": "FR",
+                "maxResultCount": 20,
+            }
+            if page_token:
+                body["pageToken"] = page_token
+            req = urllib.request.Request(
+                "https://places.googleapis.com/v1/places:searchText",
+                data=json.dumps(body).encode(),
+                headers={
+                    "Content-Type": "application/json",
+                    "X-Goog-Api-Key": key,
+                    "X-Goog-FieldMask": "places.displayName,places.nationalPhoneNumber,places.formattedAddress,places.addressComponents,nextPageToken",
+                },
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=15) as r:
+                res = json.loads(r.read().decode())
+            for p in res.get("places", []):
+                nom = (p.get("displayName") or {}).get("text", "").strip()
+                tel = (p.get("nationalPhoneNumber") or "").replace(" ", "")
+                adr = p.get("formattedAddress", "")
+                ville, cp = "", ""
+                for comp in p.get("addressComponents", []):
+                    types = comp.get("types", [])
+                    if "locality" in types:
+                        ville = comp.get("longText", "")
+                    if "postal_code" in types:
+                        cp = comp.get("longText", "")
+                if nom:
+                    collected.append({"nom": nom, "tel": tel, "ville": ville, "cp": cp, "adresse": adr})
+            page_token = res.get("nextPageToken")
+            if not page_token:
+                break
+    except Exception as e:
+        return jsonify({'error': f'Erreur Google Places : {e}'}), 502
+
+    # Insertion avec dédoublonnage — on s'adapte aux colonnes réellement présentes dans la table
+    conn, cur = kv_conn()
+    ajoutes, doublons = 0, 0
+    try:
+        today = paris_today()
+        cur.execute("SELECT column_name FROM information_schema.columns WHERE table_name = %s", [table])
+        cols = {r['column_name'] for r in cur.fetchall()}
+
+        # quelle colonne accueille le téléphone selon la table
+        tel_col = 'telephone_direct' if 'telephone_direct' in cols else ('telephone' if 'telephone' in cols else None)
+
+        for item in collected:
+            # dédoublonnage sur nom (+ ville si la colonne existe)
+            if 'ville' in cols:
+                cur.execute(f"SELECT 1 FROM {table} WHERE LOWER(nom) = LOWER(%s) AND LOWER(COALESCE(ville,'')) = LOWER(%s) LIMIT 1", [item["nom"], item["ville"]])
+            else:
+                cur.execute(f"SELECT 1 FROM {table} WHERE LOWER(nom) = LOWER(%s) LIMIT 1", [item["nom"]])
+            if cur.fetchone():
+                doublons += 1; continue
+
+            # construire l'INSERT uniquement avec les colonnes qui existent
+            champs, valeurs = ["nom"], [item["nom"]]
+            def add(col, val):
+                if col in cols:
+                    champs.append(col); valeurs.append(val)
+            if 'specialite' in cols:
+                add('specialite', cat)
+            if tel_col:
+                champs.append(tel_col); valeurs.append(item["tel"])
+            add('ville', item["ville"])
+            add('cp', item["cp"])
+            add('adresse', item["adresse"])
+            add('statut', "")
+            add('date_ajout', today)
+            add('source', "google_places")
+            ph = ",".join(["%s"] * len(valeurs))
+            cur.execute(f"INSERT INTO {table} ({','.join(champs)}) VALUES ({ph})", valeurs)
+            ajoutes += 1
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'error': f'Erreur enregistrement : {e}'}), 500
+    finally:
+        cur.close(); conn.close()
+
+    return jsonify({'ok': True, 'trouves': len(collected), 'ajoutes': ajoutes, 'doublons': doublons,
+                    'message': f"{ajoutes} nouveau(x) prospect(s) ajouté(s) · {doublons} doublon(s) ignoré(s)"})
 
 @app.route('/api/scraping/status')
 def scraping_status():

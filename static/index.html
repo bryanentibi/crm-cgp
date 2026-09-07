@@ -963,15 +963,22 @@ tbody td{padding:5px 12px;font-size:13px;vertical-align:middle}
       <div style="font-size:16px;font-weight:800">⚡ Scraping automatique</div>
       <div style="cursor:pointer;color:var(--text2);font-size:18px" onclick="closeScr()">✕</div>
     </div>
-    <div style="font-size:12px;color:var(--text3);margin-bottom:2px">Sélectionne les sources</div>
-    <div class="scr-grid">
-      <div class="scr-src sel" data-src="powerbi"><div style="font-size:12.5px;font-weight:600;margin-bottom:3px">🏥 Ordre Infirmiers</div><div style="font-size:11px;color:var(--text2)">510 728 infirmiers + portables</div></div>
-      <div class="scr-src" data-src="rpps"><div style="font-size:12.5px;font-weight:600;margin-bottom:3px">📋 RPPS data.gouv.fr</div><div style="font-size:11px;color:var(--text2)">Tous pros de santé</div></div>
-      <div class="scr-src" data-src="kine"><div style="font-size:12.5px;font-weight:600;margin-bottom:3px">💪 Kinés / Ostéos</div><div style="font-size:11px;color:var(--text2)">Ordre des kinésithérapeutes</div></div>
-      <div class="scr-src" data-src="medecins"><div style="font-size:12.5px;font-weight:600;margin-bottom:3px">👨‍⚕️ Médecins</div><div style="font-size:11px;color:var(--text2)">RPPS + Ameli</div></div>
-    </div>
-    <button onclick="launchScr()" style="width:100%;padding:11px;background:var(--blue);border:none;border-radius:9px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:'Segoe UI','Helvetica Neue',Arial,sans-serif">⚡ Lancer</button>
-    <div id="scr-prog" style="display:none"><div class="prog-tr"><div class="prog-f" id="scr-bar" style="width:0%"></div></div><div id="scr-msg" style="font-size:11px;color:var(--text3)"></div></div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Recherche de nouveaux prospects via Google Maps (Places API). Choisis une catégorie et une région.</div>
+    <label style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">Catégorie</label>
+    <select id="scr-cat" style="width:100%;padding:10px;margin:5px 0 12px;border:1px solid var(--border);border-radius:9px;font-size:14px"></select>
+    <label style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">Région</label>
+    <select id="scr-reg" style="width:100%;padding:10px;margin:5px 0 12px;border:1px solid var(--border);border-radius:9px;font-size:14px"></select>
+    <label style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">Nombre max de fiches</label>
+    <select id="scr-max" style="width:100%;padding:10px;margin:5px 0 14px;border:1px solid var(--border);border-radius:9px;font-size:14px">
+      <option value="20">20 fiches (~0,15 €)</option>
+      <option value="40">40 fiches (~0,30 €)</option>
+      <option value="60" selected>60 fiches (~0,50 €)</option>
+      <option value="120">120 fiches (~1 €)</option>
+    </select>
+    <div id="scr-warn" style="display:none;background:#FEF3CD;border:1px solid #F0C36D;border-radius:8px;padding:9px 12px;font-size:12px;color:#7A5C17;margin-bottom:10px"></div>
+    <button onclick="launchScr()" id="scr-go" style="width:100%;padding:11px;background:var(--blue);border:none;border-radius:9px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:'Segoe UI','Helvetica Neue',Arial,sans-serif">⚡ Lancer la recherche</button>
+    <div id="scr-prog" style="display:none;margin-top:12px"><div style="font-size:12px;color:var(--text3)">⏳ Recherche en cours sur Google Maps…</div></div>
+    <div id="scr-res" style="display:none;margin-top:12px;background:#E6F4EA;border:1px solid #A3D9B1;border-radius:8px;padding:10px 12px;font-size:12.5px;color:#1B5E20"></div>
   </div>
 </div>
 
@@ -1729,21 +1736,53 @@ function renderPag(type,page,pages,total){
 }
 function goP(t,p){if(t==='p'){pg=p;loadP();}else if(t==='phr'){pgP=p;loadPhr();}else if(t==='art'){artPage=p;loadArt();}else if(t==='glob'){globalPage=p;loadGlobal();}}
 
-// Scraping
-function openScr(){document.getElementById('ov-scr').classList.add('show')}
-function closeScr(){document.getElementById('ov-scr').classList.remove('show')}
-document.querySelectorAll('.scr-src').forEach(s=>s.addEventListener('click',()=>s.classList.toggle('sel')));
-async function launchScr(){
-  const sources=[...document.querySelectorAll('.scr-src.sel')].map(s=>s.dataset.src);
-  if(!sources.length){toast('Sélectionne une source','err');return;}
-  toast('⚡ Scraping lancé','ok');document.getElementById('scr-prog').style.display='block';
+// Scraping via Google Places
+let scrMetaLoaded=false;
+async function openScr(){
+  document.getElementById('ov-scr').classList.add('show');
+  document.getElementById('scr-res').style.display='none';
+  document.getElementById('scr-prog').style.display='none';
+  if(scrMetaLoaded) return;
   try{
-    await fetch(API+'/scraping/launch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sources})});
-    if(scrInt)clearInterval(scrInt);
-    scrInt=setInterval(async()=>{
-      try{const r=await fetch(API+'/scraping/status');const s=await r.json();document.getElementById('scr-bar').style.width=s.progress+'%';document.getElementById('scr-msg').textContent=s.message;if(!s.running){clearInterval(scrInt);toast('✅ '+s.message,'ok');loadStats();loadDash();}}catch(ex){clearInterval(scrInt);}
-    },2000);
-  }catch(ex){toast('❌ Serveur hors ligne','err');}
+    const r=await fetch(API+'/scraping/meta',{credentials:'same-origin'});
+    const m=await r.json();
+    const cat=document.getElementById('scr-cat'), reg=document.getElementById('scr-reg');
+    cat.innerHTML=m.categories.map(c=>`<option>${c}</option>`).join('');
+    reg.innerHTML=m.regions.map(r=>`<option>${r}</option>`).join('');
+    if(!m.ready){
+      const w=document.getElementById('scr-warn');
+      w.style.display='block';
+      w.textContent="⚠️ La clé Google Places n'est pas encore configurée sur le serveur. Ajoute la variable GOOGLE_PLACES_KEY dans Railway.";
+      document.getElementById('scr-go').disabled=true;
+      document.getElementById('scr-go').style.opacity=.5;
+    }
+    scrMetaLoaded=true;
+  }catch(ex){toast('Erreur de chargement','err');}
+}
+function closeScr(){document.getElementById('ov-scr').classList.remove('show')}
+async function launchScr(){
+  const categorie=document.getElementById('scr-cat').value;
+  const region=document.getElementById('scr-reg').value;
+  const max=document.getElementById('scr-max').value;
+  const btn=document.getElementById('scr-go');
+  btn.disabled=true;btn.style.opacity=.5;btn.textContent='⏳ Recherche…';
+  document.getElementById('scr-prog').style.display='block';
+  document.getElementById('scr-res').style.display='none';
+  try{
+    const r=await fetch(API+'/scraping/launch',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({categorie,region,max})});
+    const d=await r.json();
+    document.getElementById('scr-prog').style.display='none';
+    if(!r.ok){toast('❌ '+(d.error||'Erreur'),'err');btn.disabled=false;btn.style.opacity=1;btn.textContent='⚡ Lancer la recherche';return;}
+    const res=document.getElementById('scr-res');
+    res.style.display='block';
+    res.textContent=`✅ ${d.message} (${d.trouves} fiche(s) trouvée(s) sur Google Maps)`;
+    toast('✅ '+d.message,'ok');
+    loadStats();loadDash();
+  }catch(ex){
+    document.getElementById('scr-prog').style.display='none';
+    toast('❌ Serveur hors ligne','err');
+  }
+  btn.disabled=false;btn.style.opacity=1;btn.textContent='⚡ Lancer la recherche';
 }
 
 async function doExport(){
