@@ -24,6 +24,12 @@ USERS = {
         "role": "manager",
         "nom": "Quentin",
         "restricted": ["arbitrage", "ro", "gestion", "mailing"]
+    },
+    "aurelien": {
+        "password_hash": "305800b71062b49b350208327a02ec378199b4cf35e60eeb971611bef4928394",
+        "role": "user",
+        "nom": "Aurélien",
+        "restricted": ["arbitrage", "ro", "gestion", "mailing", "acces"]
     }
 }
 
